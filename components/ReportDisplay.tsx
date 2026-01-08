@@ -190,7 +190,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 }
                                 className={styles.downloadBtn}
                             >
-                                Tải báo cáo JSON
+                                Tải báo cáo
                             </button>
                         </div>
                     </div>

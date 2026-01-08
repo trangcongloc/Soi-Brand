@@ -53,7 +53,7 @@ export default function AnalysisForm({
                 if (json.report_part_1 && json.brand_name) {
                     onUpload(json as MarketingReport);
                 } else {
-                    onError("File JSON không đúng định dạng báo cáo OurTube.");
+                    onError("File JSON không đúng định dạng báo cáo.");
                 }
             } catch (err) {
                 onError("Không thể đọc file JSON. Vui lòng kiểm tra lại.");
@@ -72,7 +72,7 @@ export default function AnalysisForm({
                         type="text"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
-                        placeholder="Dán link kênh YouTube vào đây..."
+                        placeholder="Dán link kênh YouTube..."
                         className="input"
                         disabled={isLoading}
                     />
