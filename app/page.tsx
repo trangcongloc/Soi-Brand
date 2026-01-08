@@ -47,34 +47,6 @@ export default function Home() {
     return (
         <main className="min-h-screen flex flex-col">
             {/* Ultracompact Header - Clean Branding (50px) */}
-            <header className="fixed top-0 left-0 right-0 bg-[#f7f7f7]/80 backdrop-blur-md z-50 h-[50px] border-b border-black/5">
-                <div className="container h-full flex justify-between items-center">
-                    <div
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => {
-                            setReport(null);
-                            setError(null);
-                        }}
-                    >
-                        <div className="w-6 h-6 bg-black rounded flex items-center justify-center">
-                            <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="3"
-                            >
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                            </svg>
-                        </div>
-                        <span className="font-extrabold text-[16px] tracking-tight">
-                            OurTube.
-                        </span>
-                    </div>
-                </div>
-            </header>
-
             <div
                 className={`pt-[50px] flex-1 ${!report ? "center-screen" : ""}`}
             >
@@ -83,11 +55,6 @@ export default function Home() {
                         <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
                             'Soi' Brand
                         </h1>
-                        <p className="text-[#666] text-[15px] mb-14 max-w-lg mx-auto opacity-80 leading-relaxed">
-                            Phân tích hoạt động marketing của đối thủ <br /> một
-                            cách tinh gọn và hiệu quả.
-                        </p>
-
                         <div className="max-w-md mx-auto mb-16 px-4">
                             <AnalysisForm
                                 onSubmit={handleAnalyze}
@@ -108,17 +75,6 @@ export default function Home() {
                 {report && !isLoading && (
                     <div className="container py-8 fade-in">
                         <ReportDisplay report={report} />
-                    </div>
-                )}
-
-                {report && !isLoading && (
-                    <div className="fixed bottom-6 left-6 z-40">
-                        <button
-                            onClick={() => setReport(null)}
-                            className="btn bg-white/90 backdrop-blur shadow-lg border border-gray-200 text-xs px-4 py-2 rounded-full hover:bg-black hover:text-white transition-all flex items-center gap-2"
-                        >
-                            ← Phân tích kênh khác
-                        </button>
                     </div>
                 )}
             </div>
