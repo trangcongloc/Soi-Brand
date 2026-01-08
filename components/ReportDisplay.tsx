@@ -5,6 +5,7 @@ import { downloadJSON } from "@/lib/utils";
 
 interface ReportDisplayProps {
     report: MarketingReport;
+    onReset?: () => void;
 }
 
 const formatFullNumber = (num: number | string): string => {
@@ -96,7 +97,7 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
     );
 };
 
-const ReportDisplay: React.FC<ReportDisplayProps> = ({ report }) => {
+const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const [activeTab, setActiveTab] = useState<
         "data" | "analysis" | "evaluation"
     >("data");
@@ -123,6 +124,15 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report }) => {
             {/* Sidebar */}
             <aside className={styles.sidebar}>
                 <div className={styles.stickyWrapper}>
+                    {onReset && (
+                        <button
+                            onClick={onReset}
+                            className="btn btn-primary"
+                            style={{ width: '100%', marginBottom: '1rem', fontSize: '12px' }}
+                        >
+                            ← Phân tích kênh khác
+                        </button>
+                    )}
                     <div className={styles.sidebarHeader}>
                         <h2 className={styles.sidebarTitle}>Báo cáo</h2>
                         <nav className={styles.nav}>

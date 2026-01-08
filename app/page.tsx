@@ -74,7 +74,10 @@ export default function Home() {
 
                 {report && !isLoading && (
                     <div className="container py-8 fade-in">
-                        <ReportDisplay report={report} />
+                        <ReportDisplay
+                            report={report}
+                            onReset={() => setReport(null)}
+                        />
                     </div>
                 )}
             </div>
