@@ -1,4 +1,4 @@
-# YouTube Marketing Analyzer
+# OurTube
 
 Website phân tích chiến lược marketing cho kênh YouTube sử dụng AI (Google Gemini).
 
@@ -14,14 +14,14 @@ Website phân tích chiến lược marketing cho kênh YouTube sử dụng AI (
 -   **Frontend**: Next.js 14 (App Router), TypeScript, Vanilla CSS.
 -   **Backend**: Next.js API Routes, YouTube Data API v3.
 -   **AI**: Google Gemini Pro API.
--   **Styling**: Modern Dark Theme with Gradients and Glassmorphism.
+-   **Styling**: Modern UI with Rich Aesthetics.
 
 ## Cấu hình
 
 1.  Clone project và di chuyển vào thư mục:
 
     ```bash
-    cd youtube-marketing-analyzer
+    cd OurTube
     ```
 
 2.  Cài đặt dependencies:
