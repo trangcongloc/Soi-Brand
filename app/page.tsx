@@ -81,7 +81,7 @@ export default function Home() {
                 {!report && !isLoading && (
                     <div className="container max-w-2xl mx-auto text-center fade-in py-16 md:py-24">
                         <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
-                            OurTube
+                            'Soi' Brand
                         </h1>
                         <p className="text-[#666] text-[15px] mb-14 max-w-lg mx-auto opacity-80 leading-relaxed">
                             Phân tích hoạt động marketing của đối thủ <br /> một
