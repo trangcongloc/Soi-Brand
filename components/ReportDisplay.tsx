@@ -84,11 +84,29 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
                 <div className={styles.heatmapLegend}>
                     <span>0</span>
                     <div className={styles.legendScale}>
-                        <div className={styles.legendBox} style={{ background: "#f0fdf4", border: "1px solid #e5e7eb" }}></div>
-                        <div className={styles.legendBox} style={{ background: "#dcfce7" }}></div>
-                        <div className={styles.legendBox} style={{ background: "#bbf7d0" }}></div>
-                        <div className={styles.legendBox} style={{ background: "#86efac" }}></div>
-                        <div className={styles.legendBox} style={{ background: "#4ade80" }}></div>
+                        <div
+                            className={styles.legendBox}
+                            style={{
+                                background: "#f0fdf4",
+                                border: "1px solid #e5e7eb",
+                            }}
+                        ></div>
+                        <div
+                            className={styles.legendBox}
+                            style={{ background: "#dcfce7" }}
+                        ></div>
+                        <div
+                            className={styles.legendBox}
+                            style={{ background: "#bbf7d0" }}
+                        ></div>
+                        <div
+                            className={styles.legendBox}
+                            style={{ background: "#86efac" }}
+                        ></div>
+                        <div
+                            className={styles.legendBox}
+                            style={{ background: "#4ade80" }}
+                        ></div>
                     </div>
                     <span>5</span>
                 </div>
@@ -128,7 +146,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                         <button
                             onClick={onReset}
                             className="btn btn-primary"
-                            style={{ width: '100%', marginBottom: '1rem', fontSize: '12px' }}
+                            style={{
+                                width: "100%",
+                                marginBottom: "1rem",
+                                fontSize: "12px",
+                            }}
                         >
                             ← Phân tích kênh khác
                         </button>
@@ -159,8 +181,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                     <div style={{ padding: "0 0.5rem" }}>
                         <div className={styles.downloadBox}>
                             <p className={styles.downloadText}>
-                                Báo cáo này được phân tích bằng mô hình AI
-                                chuyên nghiệp từ OurTube.
+                                Báo cáo này được phân tích bằng mô hình AI siêu
+                                cấp víp pờ rồ.
                             </p>
                             <button
                                 onClick={() =>
@@ -400,7 +422,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     index + 1
                                                                 }`}
                                                         </p>
-                                                        {post.url && (
+                                                        {/* {post.url && (
                                                             <a
                                                                 href={post.url}
                                                                 target="_blank"
@@ -429,7 +451,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                 </svg>
                                                                 Xem trên YouTube
                                                             </a>
-                                                        )}
+                                                        )} */}
                                                     </div>
                                                     <span
                                                         className={
@@ -521,48 +543,129 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     </div>
 
                                                     {/* SEO Tags Box */}
-                                                    {post.tags && post.tags.length > 0 && (
-                                                        <div className={styles.seoBox} style={{ marginBottom: '1rem' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                                                <p className={styles.seoTitle} style={{ margin: 0 }}>
-                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                                                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                                                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                                                                    </svg>
-                                                                    SEO Tags
-                                                                </p>
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleCopyTags(post.tags);
-                                                                    }}
+                                                    {post.tags &&
+                                                        post.tags.length >
+                                                            0 && (
+                                                            <div
+                                                                className={
+                                                                    styles.seoBox
+                                                                }
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "1rem",
+                                                                }}
+                                                            >
+                                                                <div
                                                                     style={{
-                                                                        fontSize: '10px',
-                                                                        padding: '2px 8px',
-                                                                        borderRadius: '4px',
-                                                                        background: '#dbeafe',
-                                                                        color: '#1e40af',
-                                                                        border: 'none',
-                                                                        cursor: 'pointer',
-                                                                        fontWeight: '600'
+                                                                        display:
+                                                                            "flex",
+                                                                        justifyContent:
+                                                                            "space-between",
+                                                                        alignItems:
+                                                                            "center",
+                                                                        marginBottom:
+                                                                            "0.5rem",
                                                                     }}
                                                                 >
-                                                                    {copyStatus === "Copied!" ? "Copied!" : "Copy Tags"}
-                                                                </button>
+                                                                    <p
+                                                                        className={
+                                                                            styles.seoTitle
+                                                                        }
+                                                                        style={{
+                                                                            margin: 0,
+                                                                        }}
+                                                                    >
+                                                                        <svg
+                                                                            width="10"
+                                                                            height="10"
+                                                                            viewBox="0 0 24 24"
+                                                                            fill="none"
+                                                                            stroke="currentColor"
+                                                                            strokeWidth="3"
+                                                                        >
+                                                                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                                                            <line
+                                                                                x1="7"
+                                                                                y1="7"
+                                                                                x2="7.01"
+                                                                                y2="7"
+                                                                            ></line>
+                                                                        </svg>
+                                                                        SEO Tags
+                                                                    </p>
+                                                                    <button
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.stopPropagation();
+                                                                            handleCopyTags(
+                                                                                post.tags
+                                                                            );
+                                                                        }}
+                                                                        style={{
+                                                                            fontSize:
+                                                                                "10px",
+                                                                            padding:
+                                                                                "2px 8px",
+                                                                            borderRadius:
+                                                                                "4px",
+                                                                            background:
+                                                                                "#dbeafe",
+                                                                            color: "#1e40af",
+                                                                            border: "none",
+                                                                            cursor: "pointer",
+                                                                            fontWeight:
+                                                                                "600",
+                                                                        }}
+                                                                    >
+                                                                        {copyStatus ===
+                                                                        "Copied!"
+                                                                            ? "Copied!"
+                                                                            : "Copy Tags"}
+                                                                    </button>
+                                                                </div>
+                                                                <div
+                                                                    className={
+                                                                        styles.tagsWrapper
+                                                                    }
+                                                                >
+                                                                    {post.tags.map(
+                                                                        (
+                                                                            tag,
+                                                                            tidx
+                                                                        ) => {
+                                                                            const cleanTag =
+                                                                                tag
+                                                                                    .replace(
+                                                                                        /['"\[]]/g,
+                                                                                        ""
+                                                                                    )
+                                                                                    .trim();
+                                                                            if (
+                                                                                !cleanTag
+                                                                            )
+                                                                                return null;
+                                                                            return (
+                                                                                <span
+                                                                                    key={
+                                                                                        tidx
+                                                                                    }
+                                                                                    className={
+                                                                                        styles.tag
+                                                                                    }
+                                                                                >
+                                                                                    #
+                                                                                    {cleanTag.replace(
+                                                                                        /^#/,
+                                                                                        ""
+                                                                                    )}
+                                                                                </span>
+                                                                            );
+                                                                        }
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className={styles.tagsWrapper}>
-                                                                {post.tags.map((tag, tidx) => {
-                                                                    const cleanTag = tag.replace(/['"\[]]/g, "").trim();
-                                                                    if (!cleanTag) return null;
-                                                                    return (
-                                                                        <span key={tidx} className={styles.tag}>
-                                                                            #{cleanTag.replace(/^#/, "")}
-                                                                        </span>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                        )}
                                                     {/* Description */}
                                                     <div>
                                                         <p
@@ -582,11 +685,44 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                         </p>
                                                     </div>
 
-                                                                                                        {/* Video URL */}
-                                                    <div style={{ marginTop: '1rem' }}>
-                                                        <p className={styles.descLabel}>Video URL</p>
-                                                        <div className={styles.descText} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, opacity: 0.8 }}>
+                                                    {/* Video URL */}
+                                                    <div
+                                                        style={{
+                                                            marginTop: "1rem",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            className={
+                                                                styles.descLabel
+                                                            }
+                                                        >
+                                                            Video URL
+                                                        </p>
+                                                        <div
+                                                            className={
+                                                                styles.descText
+                                                            }
+                                                            style={{
+                                                                display: "flex",
+                                                                alignItems:
+                                                                    "center",
+                                                                justifyContent:
+                                                                    "space-between",
+                                                                gap: "0.75rem",
+                                                            }}
+                                                        >
+                                                            <span
+                                                                style={{
+                                                                    overflow:
+                                                                        "hidden",
+                                                                    textOverflow:
+                                                                        "ellipsis",
+                                                                    whiteSpace:
+                                                                        "nowrap",
+                                                                    flex: 1,
+                                                                    opacity: 0.8,
+                                                                }}
+                                                            >
                                                                 {post.url}
                                                             </span>
                                                             <a
@@ -595,17 +731,34 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                 rel="noopener noreferrer"
                                                                 className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-blue-500 hover:text-blue-700 hover:border-blue-200 transition-all shadow-sm"
                                                                 title="Mở link"
-                                                                onClick={(e) => e.stopPropagation()}
+                                                                onClick={(e) =>
+                                                                    e.stopPropagation()
+                                                                }
                                                             >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <svg
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    width="14"
+                                                                    height="14"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="2"
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                >
                                                                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                                                     <polyline points="15 3 21 3 21 9"></polyline>
-                                                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                                                    <line
+                                                                        x1="10"
+                                                                        y1="14"
+                                                                        x2="21"
+                                                                        y2="3"
+                                                                    ></line>
                                                                 </svg>
                                                             </a>
                                                         </div>
                                                     </div>
-                                            </div>
+                                                </div>
                                             )}
                                         </div>
                                     ))}
