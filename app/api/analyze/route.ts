@@ -92,32 +92,134 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
         console.error("Error in analyze API:", error);
 
-        // Handle specific errors
-        if (error.message?.includes("quota")) {
+        // Parse error message and status code
+        const errorMessage = error.message || "";
+        const errorCode = error.code || "";
+        const statusCode = error.status || error.response?.status || 500;
+
+        // Gemini AI specific errors - Model overload
+        if (
+            errorMessage.includes("RESOURCE_EXHAUSTED") ||
+            errorMessage.includes("overload") ||
+            errorMessage.includes("overloaded") ||
+            errorCode === "RESOURCE_EXHAUSTED"
+        ) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "API quota exceeded. Please try again later.",
+                    error: "⚠️ Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
+                    errorType: "MODEL_OVERLOAD",
+                } as AnalyzeResponse,
+                { status: 503 }
+            );
+        }
+
+        // Rate limit errors
+        if (
+            errorMessage.includes("RATE_LIMIT_EXCEEDED") ||
+            errorMessage.includes("429") ||
+            errorMessage.includes("Too Many Requests") ||
+            statusCode === 429
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "🚫 Đã vượt quá giới hạn số lần phân tích. Vui lòng thử lại sau 1 giờ.",
+                    errorType: "RATE_LIMIT",
                 } as AnalyzeResponse,
                 { status: 429 }
             );
         }
 
-        if (error.message?.includes("API key")) {
+        // YouTube API quota errors
+        if (
+            errorMessage.includes("quota") ||
+            errorMessage.includes("quotaExceeded") ||
+            errorMessage.includes("dailyLimitExceeded")
+        ) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "API configuration error",
+                    error: "📊 Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
+                    errorType: "YOUTUBE_QUOTA",
+                } as AnalyzeResponse,
+                { status: 429 }
+            );
+        }
+
+        // API key errors
+        if (
+            errorMessage.includes("API key") ||
+            errorMessage.includes("INVALID_ARGUMENT") ||
+            errorMessage.includes("API_KEY_INVALID") ||
+            errorCode === "INVALID_ARGUMENT"
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "🔑 Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
+                    errorType: "API_CONFIG",
                 } as AnalyzeResponse,
                 { status: 500 }
             );
         }
 
-        // Generic error response
+        // Network/timeout errors
+        if (
+            errorMessage.includes("ECONNREFUSED") ||
+            errorMessage.includes("ETIMEDOUT") ||
+            errorMessage.includes("ENOTFOUND") ||
+            errorMessage.includes("network") ||
+            errorCode === "ECONNREFUSED" ||
+            errorCode === "ETIMEDOUT"
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "🌐 Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
+                    errorType: "NETWORK_ERROR",
+                } as AnalyzeResponse,
+                { status: 503 }
+            );
+        }
+
+        // JSON parsing errors (from Gemini)
+        if (
+            errorMessage.includes("JSON") ||
+            errorMessage.includes("parse") ||
+            errorMessage.includes("Unexpected token") ||
+            errorMessage.includes("SyntaxError")
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "🤖 AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
+                    errorType: "AI_PARSE_ERROR",
+                } as AnalyzeResponse,
+                { status: 500 }
+            );
+        }
+
+        // Channel not found (404 from YouTube)
+        if (statusCode === 404 || errorMessage.includes("not found")) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "❌ Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
+                    errorType: "CHANNEL_NOT_FOUND",
+                } as AnalyzeResponse,
+                { status: 404 }
+            );
+        }
+
+        // Generic error with more context
         return NextResponse.json(
             {
                 success: false,
-                error: error.message || "An unexpected error occurred",
+                error:
+                    errorMessage ||
+                    "❌ Có lỗi không xác định. Vui lòng thử lại sau.",
+                errorType: "UNKNOWN",
             } as AnalyzeResponse,
             { status: 500 }
         );

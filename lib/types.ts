@@ -207,4 +207,13 @@ export interface AnalyzeResponse {
     success: boolean;
     data?: MarketingReport;
     error?: string;
+    errorType?:
+        | "MODEL_OVERLOAD"
+        | "RATE_LIMIT"
+        | "YOUTUBE_QUOTA"
+        | "API_CONFIG"
+        | "NETWORK_ERROR"
+        | "AI_PARSE_ERROR"
+        | "CHANNEL_NOT_FOUND"
+        | "UNKNOWN";
 }

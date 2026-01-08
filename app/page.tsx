@@ -30,10 +30,27 @@ export default function Home() {
             }
         } catch (err: any) {
             console.error("Analysis error:", err);
-            setError(
-                err.response?.data?.error ||
-                    "Không thể kết nối với máy chủ. Vui lòng thử lại sau."
-            );
+
+            // Try to get error from response
+            const errorData = err.response?.data;
+            const errorMessage = errorData?.error;
+            const errorType = errorData?.errorType;
+
+            // Display error message
+            let displayError = errorMessage;
+
+            // Fallback for network errors without response
+            if (!err.response) {
+                displayError =
+                    "🌐 Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet và thử lại.";
+            }
+            // Fallback for unknown errors
+            else if (!displayError) {
+                displayError =
+                    "❌ Có lỗi xảy ra khi phân tích. Vui lòng thử lại sau.";
+            }
+
+            setError(displayError);
         } finally {
             setIsLoading(false);
         }

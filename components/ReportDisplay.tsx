@@ -875,6 +875,156 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 </div>
                             </section>
 
+                            {/* Funnel Analysis */}
+                            <section>
+                                <h3 className={styles.sectionTitle}>
+                                    Phân tích Phễu Marketing
+                                </h3>
+                                <div style={{ marginTop: "1rem" }}>
+                                    <div className={styles.card}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                            {/* TOFU */}
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                    <span style={{ 
+                                                        fontSize: '10px', 
+                                                        fontWeight: '700',
+                                                        padding: '0.25rem 0.5rem',
+                                                        background: '#3b82f6',
+                                                        color: 'white',
+                                                        borderRadius: '0.25rem'
+                                                    }}>TOFU</span>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>
+                                                        Top of Funnel - Thu hút
+                                                    </span>
+                                                </div>
+                                                <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
+                                                    {report_part_2.funnel_analysis.tofu}
+                                                </p>
+                                            </div>
+
+                                            {/* MOFU */}
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                    <span style={{ 
+                                                        fontSize: '10px', 
+                                                        fontWeight: '700',
+                                                        padding: '0.25rem 0.5rem',
+                                                        background: '#f59e0b',
+                                                        color: 'white',
+                                                        borderRadius: '0.25rem'
+                                                    }}>MOFU</span>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>
+                                                        Middle of Funnel - Nuôi dưỡng
+                                                    </span>
+                                                </div>
+                                                <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
+                                                    {report_part_2.funnel_analysis.mofu}
+                                                </p>
+                                            </div>
+
+                                            {/* BOFU */}
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                    <span style={{ 
+                                                        fontSize: '10px', 
+                                                        fontWeight: '700',
+                                                        padding: '0.25rem 0.5rem',
+                                                        background: '#10b981',
+                                                        color: 'white',
+                                                        borderRadius: '0.25rem'
+                                                    }}>BOFU</span>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>
+                                                        Bottom of Funnel - Chuyển đổi
+                                                    </span>
+                                                </div>
+                                                <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
+                                                    {report_part_2.funnel_analysis.bofu}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Quantitative Synthesis */}
+                            <section>
+                                <h3 className={styles.sectionTitle}>
+                                    Tổng Hợp Định Lượng
+                                </h3>
+                                <div style={{ marginTop: "1rem" }}>
+                                    <div className={styles.grid2}>
+                                        {/* Summary Stats */}
+                                        <div className={styles.card}>
+                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
+                                                📊 Tổng Quan Số Liệu
+                                            </h5>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Tổng số bài:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_posts.toLocaleString('vi-VN')}
+                                                </div>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Tổng lượt xem:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_views.toLocaleString('vi-VN')}
+                                                </div>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Tổng lượt thích:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_likes.toLocaleString('vi-VN')}
+                                                </div>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Tổng video:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_videos.toLocaleString('vi-VN')}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Channel Health */}
+                                        <div className={styles.card}>
+                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
+                                                💚 Sức Khỏe Kênh
+                                            </h5>
+                                            <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
+                                                <p style={{ marginBottom: '0.5rem' }}><strong>Người đăng ký:</strong> {report_part_2.quantitative_synthesis.channel_health.follower_count}</p>
+                                                <p style={{ marginBottom: '0.5rem' }}><strong>Tần suất đăng:</strong> {report_part_2.quantitative_synthesis.channel_health.posting_frequency}</p>
+                                                <p style={{ marginBottom: 0 }}><strong>Tỷ lệ tương tác (ER):</strong> {report_part_2.quantitative_synthesis.channel_health.er_rate}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Channel Metrics */}
+                                        <div className={styles.card}>
+                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
+                                                📈 Chỉ Số Kênh
+                                            </h5>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Số video:</strong> {report_part_2.quantitative_synthesis.channel_metrics.video_count.toLocaleString('vi-VN')}
+                                                </div>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Người theo dõi:</strong> {report_part_2.quantitative_synthesis.channel_metrics.follower_count.toLocaleString('vi-VN')}
+                                                </div>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Đang theo dõi:</strong> {report_part_2.quantitative_synthesis.channel_metrics.following_count.toLocaleString('vi-VN')}
+                                                </div>
+                                                <div style={{ fontSize: '11px' }}>
+                                                    <strong>Lượt thích:</strong> {report_part_2.quantitative_synthesis.channel_metrics.heart_count.toLocaleString('vi-VN')}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Content Performance */}
+                                        <div className={styles.card}>
+                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
+                                                🎯 Hiệu Suất Nội Dung
+                                            </h5>
+                                            <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
+                                                <p style={{ marginBottom: '0.5rem' }}><strong>Lượt xem TB:</strong> {report_part_2.quantitative_synthesis.content_performance.avg_view}</p>
+                                                <p style={{ marginBottom: '0.5rem' }}><strong>Điểm Viral:</strong> {report_part_2.quantitative_synthesis.content_performance.viral_score}</p>
+                                                <p style={{ marginBottom: '0.5rem' }}><strong>Điểm Giá Trị:</strong> {report_part_2.quantitative_synthesis.content_performance.value_score}</p>
+                                                <p style={{ marginBottom: 0 }}><strong>Tỷ lệ Quảng Cáo:</strong> {report_part_2.quantitative_synthesis.content_performance.ad_ratio}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+
                             <section>
                                 <h3 className={styles.sectionTitle}>
                                     Trụ cột nội dung (Content Pillars)
