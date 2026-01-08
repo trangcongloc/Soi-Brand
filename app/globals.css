@@ -1,0 +1,214 @@
+:root {
+    --primary: #1a1a1a;
+    --primary-hover: #000000;
+    --bg-main: #f7f7f7;
+    --bg-card: #ffffff;
+    --bg-sidebar: rgba(242, 242, 242, 0.3);
+    --text-main: #1a1a1a;
+    --text-secondary: #808080;
+    --text-muted: #8e8e8e;
+    --border: #ebebeb;
+    --pill-bg: #1a1a1a;
+    --pill-text: #f7f7f7;
+    --radius-xl: 10px;
+    --radius-lg: 8px;
+    --radius-md: 6px;
+    --radius-sm: 4px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.04);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Ultracompact font sizes (scaled down another 20%) */
+    --fs-xs: 10px;
+    --fs-sm: 11px;
+    --fs-base: 12px;
+    --fs-lg: 14px;
+    --fs-xl: 16px;
+    --fs-2xl: 22px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    outline: none;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        sans-serif;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    font-size: var(--fs-base);
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    background: none;
+    transition: var(--transition);
+}
+
+input {
+    font-family: inherit;
+}
+
+.container {
+    max-width: 1200px; /* Increased for better report view */
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Base UI Elements */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 8px 12px;
+    border-radius: var(--radius-lg);
+    font-weight: 500;
+    font-size: var(--fs-base);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #000000;
+    transform: translateY(-0.5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+    background: #fdfdfd;
+    border-color: var(--text-main);
+    color: var(--text-main);
+}
+
+.input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-size: var(--fs-base);
+    transition: var(--transition);
+}
+
+.input:focus {
+    border-color: var(--text-main);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.02);
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Toast/Popup Errors */
+.toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: #1a1a1a;
+    color: white;
+    padding: 8px 12px;
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-base);
+    font-weight: 500;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    pointer-events: auto;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-error {
+    border-left: 3px solid #ef4444;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Centering Utility */
+.center-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 120px);
+}
+
+/* Utilities */
+.text-center {
+    text-align: center;
+}
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+.mb-4 {
+    margin-bottom: 1rem;
+}
+.mb-8 {
+    margin-bottom: 2rem;
+}
+.mt-auto {
+    margin-top: auto;
+}
+.opacity-80 {
+    opacity: 0.8;
+}
