@@ -164,6 +164,25 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
         return score.toFixed(2);
     };
 
+    // Calculate top 3 posts by rating score
+    const postsWithScores = posts.map((post, index) => ({
+        index,
+        score: parseFloat(
+            calculateHackerNewsScore(
+                post.statistics.digg_count,
+                post.statistics.comment_count,
+                post.published_at
+            )
+        ),
+    }));
+
+    const sortedByScore = [...postsWithScores].sort(
+        (a, b) => b.score - a.score
+    );
+    const top3Indices = new Set(
+        sortedByScore.slice(0, 3).map((item) => item.index)
+    );
+
     return (
         <div className={styles.container}>
             {/* Sidebar */}
@@ -496,6 +515,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     .comment_count,
                                                                 post.published_at
                                                             )}
+                                                            {top3Indices.has(
+                                                                index
+                                                            ) && " 🔥"}
                                                         </span>
                                                     </div>
                                                     {post.thumbnail && (
@@ -1257,6 +1279,23 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                 <p style={{ marginBottom: 0 }}>
                                                     <strong>
                                                         Tỷ lệ tương tác (ER):
+                                                        <span
+                                                            className={
+                                                                styles.infoIcon
+                                                            }
+                                                        >
+                                                            ℹ
+                                                            <span
+                                                                className={
+                                                                    styles.tooltip
+                                                                }
+                                                            >
+                                                                (Tổng Like +
+                                                                Tổng Bình luận)
+                                                                / Tổng Lượt xem
+                                                                × 100%
+                                                            </span>
+                                                        </span>
                                                     </strong>{" "}
                                                     {
                                                         report_part_2
@@ -1349,6 +1388,21 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                 >
                                                     <strong>
                                                         Lượt xem TB:
+                                                        <span
+                                                            className={
+                                                                styles.infoIcon
+                                                            }
+                                                        >
+                                                            ℹ
+                                                            <span
+                                                                className={
+                                                                    styles.tooltip
+                                                                }
+                                                            >
+                                                                Tổng lượt xem /
+                                                                Số lượng video
+                                                            </span>
+                                                        </span>
                                                     </strong>{" "}
                                                     {
                                                         report_part_2
