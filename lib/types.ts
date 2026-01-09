@@ -62,6 +62,7 @@ export interface Post {
     tags: string[];
     raw_content_for_ai: string | null;
     published_at: string;
+    duration: string;
 }
 
 export interface ChannelInfo {

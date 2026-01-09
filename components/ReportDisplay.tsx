@@ -14,6 +14,29 @@ const formatFullNumber = (num: number | string): string => {
     return n.toLocaleString("vi-VN");
 };
 
+const formatDuration = (isoDuration: string): string => {
+    // Parse ISO 8601 duration format (e.g., PT1H2M10S, PT5M30S, PT45S)
+    const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return "0:00";
+
+    const hours = parseInt(match[1] || "0");
+    const minutes = parseInt(match[2] || "0");
+    const seconds = parseInt(match[3] || "0");
+
+    const paddedSeconds = seconds.toString().padStart(2, "0");
+
+    // If video is 60 minutes or longer, show HH:MM:SS
+    if (hours > 0 || minutes >= 60) {
+        const totalHours = hours + Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        const paddedMinutes = remainingMinutes.toString().padStart(2, "0");
+        return `${totalHours}:${paddedMinutes}:${paddedSeconds}`;
+    }
+
+    // Otherwise show MM:SS
+    return `${minutes}:${paddedSeconds}`;
+};
+
 const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
     // Generate last 30 days
     const days = Array.from({ length: 30 }, (_, i) => {
@@ -571,14 +594,16 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             </a>
                                                         )} */}
                                                     </div>
-                                                    <span
-                                                        className={
-                                                            styles.videoBadge
-                                                        }
-                                                    >
-                                                        Video
-                                                    </span>
                                                 </div>
+                                                <span
+                                                    className={
+                                                        styles.videoBadge
+                                                    }
+                                                >
+                                                    {formatDuration(
+                                                        post.duration
+                                                    )}
+                                                </span>
                                                 <svg
                                                     width="12"
                                                     height="12"

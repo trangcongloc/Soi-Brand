@@ -239,6 +239,7 @@ QUAN TRỌNG:
                     transcript: "",
                     raw_content_for_ai: null,
                     published_at: video.publishedAt,
+                    duration: video.contentDetails.duration,
                 })),
                 channel_info: {
                     stats: {
