@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "⚠️ Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
+                    error: "Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
                     errorType: "MODEL_OVERLOAD",
                 } as AnalyzeResponse,
                 { status: 503 }
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "🚫 Đã vượt quá giới hạn số lần phân tích. Vui lòng thử lại sau 1 giờ.",
+                    error: "Đã vượt quá giới hạn số lần phân tích. Vui lòng thử lại sau 1 giờ.",
                     errorType: "RATE_LIMIT",
                 } as AnalyzeResponse,
                 { status: 429 }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "📊 Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
+                    error: "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
                     errorType: "YOUTUBE_QUOTA",
                 } as AnalyzeResponse,
                 { status: 429 }
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "🔑 Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
+                    error: "Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
                     errorType: "API_CONFIG",
                 } as AnalyzeResponse,
                 { status: 500 }
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "🌐 Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
+                    error: "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
                     errorType: "NETWORK_ERROR",
                 } as AnalyzeResponse,
                 { status: 503 }
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "🤖 AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
+                    error: "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
                     errorType: "AI_PARSE_ERROR",
                 } as AnalyzeResponse,
                 { status: 500 }
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "❌ Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
+                    error: "Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
                     errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
                 { status: 404 }

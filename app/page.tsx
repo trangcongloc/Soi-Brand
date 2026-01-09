@@ -42,12 +42,12 @@ export default function Home() {
             // Fallback for network errors without response
             if (!err.response) {
                 displayError =
-                    "🌐 Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet và thử lại.";
+                    "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet và thử lại.";
             }
             // Fallback for unknown errors
             else if (!displayError) {
                 displayError =
-                    "❌ Có lỗi xảy ra khi phân tích. Vui lòng thử lại sau.";
+                    "Có lỗi xảy ra khi phân tích. Vui lòng thử lại sau.";
             }
 
             setError(displayError);

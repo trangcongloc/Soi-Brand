@@ -77,6 +77,7 @@ export interface ChannelInfo {
     nickname: string;
     uniqueId: string;
     signature: string;
+    joinedAt?: string;
 }
 
 export interface AdStrategy {

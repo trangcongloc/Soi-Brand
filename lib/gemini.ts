@@ -131,8 +131,8 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
       },
       "channel_health": {
         "follower_count": "${channelData.subscriberCount.toLocaleString()}",
-        "posting_frequency": "Ước tính tần suất đăng bài",
-        "er_rate": "Tính toán engagement rate"
+        "posting_frequency": "Ước tính tần suất đăng bài, trả về kết quả ngắn gọn (VD: '1 video/ngày', '3-4 video/tuần')",
+        "er_rate": "Tính tỷ lệ tương tác theo công thức: (Tổng Like + Tổng Bình luận) / Tổng Lượt xem * 100%. CHỈ trả về kết quả cuối cùng dạng 'X.XX%', KHÔNG bao gồm công thức hay giải thích."
       },
       "channel_metrics": {
         "video_count": ${channelData.videoCount},
@@ -141,10 +141,10 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
         "heart_count": ${videosData.reduce((sum, v) => sum + v.likes, 0)}
       },
       "content_performance": {
-        "avg_view": "Trung bình lượt xem",
-        "viral_score": "Điểm viral",
-        "value_score": "Điểm giá trị",
-        "ad_ratio": "Tỷ lệ quảng cáo"
+        "avg_view": "Trung bình lượt xem, chỉ trả về số (VD: '134,769 lượt xem/video')",
+        "viral_score": "Điểm viral, trả về đánh giá ngắn gọn (VD: 'Cao', 'Trung bình', 'Thấp')",
+        "value_score": "Điểm giá trị, trả về đánh giá ngắn gọn (VD: 'Cao', 'Trung bình', 'Thấp')",
+        "ad_ratio": "Tỷ lệ quảng cáo, trả về kết quả ngắn gọn (VD: 'Không xác định', '5%')"
       }
     }
   },
@@ -259,6 +259,7 @@ QUAN TRỌNG:
                     nickname: channelInfo.title,
                     uniqueId: channelInfo.customUrl || channelInfo.id,
                     signature: channelInfo.description.substring(0, 100),
+                    joinedAt: channelInfo.publishedAt,
                 },
             },
             report_part_2: aiAnalysis.report_part_2,

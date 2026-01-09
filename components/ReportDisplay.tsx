@@ -137,6 +137,24 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const posts = report_part_1?.posts || [];
     const channelInfo = report_part_1?.channel_info;
 
+    // Hacker News Ranking Algorithm
+    const calculateHackerNewsScore = (
+        likes: number,
+        comments: number,
+        publishedAt: string
+    ) => {
+        const points = likes + comments;
+        const now = new Date();
+        const published = new Date(publishedAt);
+        const hours = Math.max(
+            0,
+            (now.getTime() - published.getTime()) / (1000 * 60 * 60)
+        );
+        const gravity = 1.8;
+        const score = (points - 1) / Math.pow(hours + 2, gravity);
+        return score.toFixed(2);
+    };
+
     return (
         <div className={styles.container}>
             {/* Sidebar */}
@@ -229,133 +247,149 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 <h3 className={styles.sectionTitle}>Kênh</h3>
                                 <div className={styles.grid2}>
                                     {channelInfo && (
-                                        <div
-                                            className={styles.card}
-                                            style={{ height: "100%" }}
-                                        >
-                                            <h4 className={styles.cardTitle}>
-                                                Chỉ số Hiệu suất
-                                            </h4>
+                                        <div className={styles.channelCard}>
                                             <div
-                                                className={styles.grid2}
-                                                style={{
-                                                    gridTemplateColumns:
-                                                        "1fr 1fr",
-                                                    gap: "1rem",
-                                                    marginBottom: "1.5rem",
-                                                }}
+                                                className={
+                                                    styles.channelInfoTop
+                                                }
+                                            >
+                                                {channelInfo.avatar && (
+                                                    <img
+                                                        src={channelInfo.avatar}
+                                                        alt={
+                                                            channelInfo.nickname
+                                                        }
+                                                        className={
+                                                            styles.channelAvatar
+                                                        }
+                                                    />
+                                                )}
+                                                <div
+                                                    className={
+                                                        styles.channelTitles
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.channelNickname
+                                                        }
+                                                    >
+                                                        {channelInfo.nickname}
+                                                    </span>
+                                                    <span
+                                                        className={
+                                                            styles.channelSubscribers
+                                                        }
+                                                    >
+                                                        Joined Date:{" "}
+                                                        {channelInfo.joinedAt
+                                                            ? new Date(
+                                                                  channelInfo.joinedAt
+                                                              ).toLocaleDateString(
+                                                                  "vi-VN"
+                                                              )
+                                                            : "Chưa cập nhật"}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className={
+                                                    styles.channelStatsGrid
+                                                }
                                             >
                                                 <div
-                                                    className={styles.statItem}
+                                                    className={
+                                                        styles.channelStatCard
+                                                    }
                                                 >
-                                                    <p
+                                                    <span
                                                         className={
-                                                            styles.statValue
-                                                        }
-                                                    >
-                                                        {formatFullNumber(
-                                                            channelInfo.stats
-                                                                .viewCount
-                                                        )}
-                                                    </p>
-                                                    <p
-                                                        className={
-                                                            styles.statLabel
-                                                        }
-                                                    >
-                                                        Total Views
-                                                    </p>
-                                                </div>
-                                                <div
-                                                    className={styles.statItem}
-                                                >
-                                                    <p
-                                                        className={
-                                                            styles.statValue
-                                                        }
-                                                    >
-                                                        {formatFullNumber(
-                                                            channelInfo.stats
-                                                                .followerCount
-                                                        )}
-                                                    </p>
-                                                    <p
-                                                        className={
-                                                            styles.statLabel
-                                                        }
-                                                    >
-                                                        Subs
-                                                    </p>
-                                                </div>
-                                                <div
-                                                    className={styles.statItem}
-                                                >
-                                                    <p
-                                                        className={
-                                                            styles.statValue
+                                                            styles.channelStatValue
                                                         }
                                                     >
                                                         {formatFullNumber(
                                                             channelInfo.stats
                                                                 .videoCount
                                                         )}
-                                                    </p>
-                                                    <p
+                                                    </span>
+                                                    <span
                                                         className={
-                                                            styles.statLabel
+                                                            styles.channelStatLabel
                                                         }
                                                     >
                                                         Videos
-                                                    </p>
+                                                    </span>
                                                 </div>
                                                 <div
-                                                    className={styles.statItem}
+                                                    className={
+                                                        styles.channelStatCard
+                                                    }
                                                 >
-                                                    <p
+                                                    <span
                                                         className={
-                                                            styles.statValue
+                                                            styles.channelStatValue
+                                                        }
+                                                    >
+                                                        {formatFullNumber(
+                                                            channelInfo.stats
+                                                                .viewCount
+                                                        )}
+                                                    </span>
+                                                    <span
+                                                        className={
+                                                            styles.channelStatLabel
+                                                        }
+                                                    >
+                                                        Views
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    className={
+                                                        styles.channelStatCard
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.channelStatValue
+                                                        }
+                                                    >
+                                                        {formatFullNumber(
+                                                            channelInfo.stats
+                                                                .followerCount
+                                                        )}
+                                                    </span>
+                                                    <span
+                                                        className={
+                                                            styles.channelStatLabel
+                                                        }
+                                                    >
+                                                        Subs
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    className={
+                                                        styles.channelStatCard
+                                                    }
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.channelStatValue
                                                         }
                                                     >
                                                         {formatFullNumber(
                                                             channelInfo.stats
                                                                 .heartCount
                                                         )}
-                                                    </p>
-                                                    <p
+                                                    </span>
+                                                    <span
                                                         className={
-                                                            styles.statLabel
+                                                            styles.channelStatLabel
                                                         }
                                                     >
-                                                        Likes (recent)
-                                                    </p>
+                                                        Likes
+                                                    </span>
                                                 </div>
-                                            </div>
-
-                                            <div className={styles.profileInfo}>
-                                                <h4
-                                                    className={styles.cardTitle}
-                                                    style={{
-                                                        fontSize: "12px",
-                                                        marginBottom: "0.5rem",
-                                                    }}
-                                                >
-                                                    Thông tin Hồ sơ
-                                                </h4>
-                                                <p
-                                                    className={
-                                                        styles.profileText
-                                                    }
-                                                >
-                                                    <span className="font-semibold">
-                                                        Unique ID:
-                                                    </span>{" "}
-                                                    {channelInfo.uniqueId}
-                                                </p>
-                                                <p
-                                                    className={`${styles.profileText} ${styles.mutedText}`}
-                                                >
-                                                    {channelInfo.signature}
-                                                </p>
                                             </div>
                                         </div>
                                     )}
@@ -395,13 +429,32 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                 <div
                                                     className={styles.postMeta}
                                                 >
-                                                    <span
+                                                    <div
                                                         className={
-                                                            styles.postIndex
+                                                            styles.ratingBox
                                                         }
                                                     >
-                                                        #{index + 1}
-                                                    </span>
+                                                        <span
+                                                            className={
+                                                                styles.postIndex
+                                                            }
+                                                        >
+                                                            #{index + 1}
+                                                        </span>
+                                                        <span
+                                                            className={
+                                                                styles.ratingScore
+                                                            }
+                                                        >
+                                                            {calculateHackerNewsScore(
+                                                                post.statistics
+                                                                    .digg_count,
+                                                                post.statistics
+                                                                    .comment_count,
+                                                                post.published_at
+                                                            )}
+                                                        </span>
+                                                    </div>
                                                     {post.thumbnail && (
                                                         <img
                                                             src={post.thumbnail}
@@ -882,64 +935,162 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 </h3>
                                 <div style={{ marginTop: "1rem" }}>
                                     <div className={styles.card}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: "1.5rem",
+                                            }}
+                                        >
                                             {/* TOFU */}
                                             <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                                    <span style={{ 
-                                                        fontSize: '10px', 
-                                                        fontWeight: '700',
-                                                        padding: '0.25rem 0.5rem',
-                                                        background: '#3b82f6',
-                                                        color: 'white',
-                                                        borderRadius: '0.25rem'
-                                                    }}>TOFU</span>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "0.5rem",
+                                                        marginBottom: "0.75rem",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontSize: "10px",
+                                                            fontWeight: "700",
+                                                            padding:
+                                                                "0.25rem 0.5rem",
+                                                            background:
+                                                                "#3b82f6",
+                                                            color: "white",
+                                                            borderRadius:
+                                                                "0.25rem",
+                                                        }}
+                                                    >
+                                                        TOFU
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            fontWeight: "600",
+                                                            color: "#666",
+                                                        }}
+                                                    >
                                                         Top of Funnel - Thu hút
                                                     </span>
                                                 </div>
-                                                <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
-                                                    {report_part_2.funnel_analysis.tofu}
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        lineHeight: "1.6",
+                                                        color: "#444",
+                                                    }}
+                                                >
+                                                    {
+                                                        report_part_2
+                                                            .funnel_analysis
+                                                            .tofu
+                                                    }
                                                 </p>
                                             </div>
 
                                             {/* MOFU */}
                                             <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                                    <span style={{ 
-                                                        fontSize: '10px', 
-                                                        fontWeight: '700',
-                                                        padding: '0.25rem 0.5rem',
-                                                        background: '#f59e0b',
-                                                        color: 'white',
-                                                        borderRadius: '0.25rem'
-                                                    }}>MOFU</span>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>
-                                                        Middle of Funnel - Nuôi dưỡng
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "0.5rem",
+                                                        marginBottom: "0.75rem",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontSize: "10px",
+                                                            fontWeight: "700",
+                                                            padding:
+                                                                "0.25rem 0.5rem",
+                                                            background:
+                                                                "#f59e0b",
+                                                            color: "white",
+                                                            borderRadius:
+                                                                "0.25rem",
+                                                        }}
+                                                    >
+                                                        MOFU
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            fontWeight: "600",
+                                                            color: "#666",
+                                                        }}
+                                                    >
+                                                        Middle of Funnel - Nuôi
+                                                        dưỡng
                                                     </span>
                                                 </div>
-                                                <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
-                                                    {report_part_2.funnel_analysis.mofu}
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        lineHeight: "1.6",
+                                                        color: "#444",
+                                                    }}
+                                                >
+                                                    {
+                                                        report_part_2
+                                                            .funnel_analysis
+                                                            .mofu
+                                                    }
                                                 </p>
                                             </div>
 
                                             {/* BOFU */}
                                             <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                                    <span style={{ 
-                                                        fontSize: '10px', 
-                                                        fontWeight: '700',
-                                                        padding: '0.25rem 0.5rem',
-                                                        background: '#10b981',
-                                                        color: 'white',
-                                                        borderRadius: '0.25rem'
-                                                    }}>BOFU</span>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>
-                                                        Bottom of Funnel - Chuyển đổi
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "0.5rem",
+                                                        marginBottom: "0.75rem",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontSize: "10px",
+                                                            fontWeight: "700",
+                                                            padding:
+                                                                "0.25rem 0.5rem",
+                                                            background:
+                                                                "#10b981",
+                                                            color: "white",
+                                                            borderRadius:
+                                                                "0.25rem",
+                                                        }}
+                                                    >
+                                                        BOFU
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            fontWeight: "600",
+                                                            color: "#666",
+                                                        }}
+                                                    >
+                                                        Bottom of Funnel -
+                                                        Chuyển đổi
                                                     </span>
                                                 </div>
-                                                <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
-                                                    {report_part_2.funnel_analysis.bofu}
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        lineHeight: "1.6",
+                                                        color: "#444",
+                                                    }}
+                                                >
+                                                    {
+                                                        report_part_2
+                                                            .funnel_analysis
+                                                            .bofu
+                                                    }
                                                 </p>
                                             </div>
                                         </div>
@@ -956,74 +1107,257 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                     <div className={styles.grid2}>
                                         {/* Summary Stats */}
                                         <div className={styles.card}>
-                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
-                                                📊 Tổng Quan Số Liệu
+                                            <h5
+                                                style={{
+                                                    fontSize: "13px",
+                                                    fontWeight: "700",
+                                                    marginBottom: "0.75rem",
+                                                }}
+                                            >
+                                                Tổng Quan Số Liệu
                                             </h5>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Tổng số bài:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_posts.toLocaleString('vi-VN')}
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: "0.5rem",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>
+                                                        Tổng số bài:
+                                                    </strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.summary_stats.total_posts.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Tổng lượt xem:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_views.toLocaleString('vi-VN')}
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>
+                                                        Tổng lượt xem:
+                                                    </strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.summary_stats.total_views.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Tổng lượt thích:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_likes.toLocaleString('vi-VN')}
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>
+                                                        Tổng lượt thích:
+                                                    </strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.summary_stats.total_likes.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Tổng video:</strong> {report_part_2.quantitative_synthesis.summary_stats.total_videos.toLocaleString('vi-VN')}
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>Tổng video:</strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.summary_stats.total_videos.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Channel Health */}
                                         <div className={styles.card}>
-                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
-                                                💚 Sức Khỏe Kênh
+                                            <h5
+                                                style={{
+                                                    fontSize: "13px",
+                                                    fontWeight: "700",
+                                                    marginBottom: "0.75rem",
+                                                }}
+                                            >
+                                                Tương Tác Kênh
                                             </h5>
-                                            <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
-                                                <p style={{ marginBottom: '0.5rem' }}><strong>Người đăng ký:</strong> {report_part_2.quantitative_synthesis.channel_health.follower_count}</p>
-                                                <p style={{ marginBottom: '0.5rem' }}><strong>Tần suất đăng:</strong> {report_part_2.quantitative_synthesis.channel_health.posting_frequency}</p>
-                                                <p style={{ marginBottom: 0 }}><strong>Tỷ lệ tương tác (ER):</strong> {report_part_2.quantitative_synthesis.channel_health.er_rate}</p>
+                                            <div
+                                                style={{
+                                                    fontSize: "11px",
+                                                    lineHeight: "1.6",
+                                                }}
+                                            >
+                                                <p
+                                                    style={{
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        Người đăng ký:
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .channel_health
+                                                            .follower_count
+                                                    }
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        Tần suất đăng:
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .channel_health
+                                                            .posting_frequency
+                                                    }
+                                                </p>
+                                                <p style={{ marginBottom: 0 }}>
+                                                    <strong>
+                                                        Tỷ lệ tương tác (ER):
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .channel_health
+                                                            .er_rate
+                                                    }
+                                                </p>
                                             </div>
                                         </div>
 
                                         {/* Channel Metrics */}
                                         <div className={styles.card}>
-                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
-                                                📈 Chỉ Số Kênh
+                                            <h5
+                                                style={{
+                                                    fontSize: "13px",
+                                                    fontWeight: "700",
+                                                    marginBottom: "0.75rem",
+                                                }}
+                                            >
+                                                Chỉ Số Kênh
                                             </h5>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Số video:</strong> {report_part_2.quantitative_synthesis.channel_metrics.video_count.toLocaleString('vi-VN')}
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: "0.5rem",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>Số video:</strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.channel_metrics.video_count.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Người theo dõi:</strong> {report_part_2.quantitative_synthesis.channel_metrics.follower_count.toLocaleString('vi-VN')}
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>
+                                                        Người theo dõi:
+                                                    </strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.channel_metrics.follower_count.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Đang theo dõi:</strong> {report_part_2.quantitative_synthesis.channel_metrics.following_count.toLocaleString('vi-VN')}
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>
+                                                        Đang theo dõi:
+                                                    </strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.channel_metrics.following_count.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
-                                                <div style={{ fontSize: '11px' }}>
-                                                    <strong>Lượt thích:</strong> {report_part_2.quantitative_synthesis.channel_metrics.heart_count.toLocaleString('vi-VN')}
+                                                <div
+                                                    style={{ fontSize: "11px" }}
+                                                >
+                                                    <strong>Lượt thích:</strong>{" "}
+                                                    {report_part_2.quantitative_synthesis.channel_metrics.heart_count.toLocaleString(
+                                                        "vi-VN"
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Content Performance */}
                                         <div className={styles.card}>
-                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
-                                                🎯 Hiệu Suất Nội Dung
+                                            <h5
+                                                style={{
+                                                    fontSize: "13px",
+                                                    fontWeight: "700",
+                                                    marginBottom: "0.75rem",
+                                                }}
+                                            >
+                                                Hiệu Suất Nội Dung
                                             </h5>
-                                            <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
-                                                <p style={{ marginBottom: '0.5rem' }}><strong>Lượt xem TB:</strong> {report_part_2.quantitative_synthesis.content_performance.avg_view}</p>
-                                                <p style={{ marginBottom: '0.5rem' }}><strong>Điểm Viral:</strong> {report_part_2.quantitative_synthesis.content_performance.viral_score}</p>
-                                                <p style={{ marginBottom: '0.5rem' }}><strong>Điểm Giá Trị:</strong> {report_part_2.quantitative_synthesis.content_performance.value_score}</p>
-                                                <p style={{ marginBottom: 0 }}><strong>Tỷ lệ Quảng Cáo:</strong> {report_part_2.quantitative_synthesis.content_performance.ad_ratio}</p>
+                                            <div
+                                                style={{
+                                                    fontSize: "11px",
+                                                    lineHeight: "1.6",
+                                                }}
+                                            >
+                                                <p
+                                                    style={{
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        Lượt xem TB:
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .content_performance
+                                                            .avg_view
+                                                    }
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>Điểm Viral:</strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .content_performance
+                                                            .viral_score
+                                                    }
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        Điểm Giá Trị:
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .content_performance
+                                                            .value_score
+                                                    }
+                                                </p>
+                                                <p style={{ marginBottom: 0 }}>
+                                                    <strong>
+                                                        Tỷ lệ Quảng Cáo:
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .quantitative_synthesis
+                                                            .content_performance
+                                                            .ad_ratio
+                                                    }
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </section>
-
 
                             <section>
                                 <h3 className={styles.sectionTitle}>
