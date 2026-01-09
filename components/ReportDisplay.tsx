@@ -15,6 +15,9 @@ const formatFullNumber = (num: number | string): string => {
 };
 
 const formatDuration = (isoDuration: string): string => {
+    // Handle missing or invalid duration
+    if (!isoDuration) return "0:00";
+
     // Parse ISO 8601 duration format (e.g., PT1H2M10S, PT5M30S, PT45S)
     const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return "0:00";
@@ -35,6 +38,36 @@ const formatDuration = (isoDuration: string): string => {
 
     // Otherwise show MM:SS
     return `${minutes}:${paddedSeconds}`;
+};
+
+const truncateText = (text: string, limit: number): string => {
+    if (text.length <= limit) return text;
+    const truncated = text.substring(0, limit);
+    const lastSpaceIndex = truncated.lastIndexOf(" ");
+    return (
+        (lastSpaceIndex > 0
+            ? truncated.substring(0, lastSpaceIndex)
+            : truncated) + " . . ."
+    );
+};
+
+const getVideoTypeBadge = (videoType: string) => {
+    const badgeClass =
+        {
+            Short: styles.videoTypeShort,
+            Live: styles.videoTypeLive,
+            Upcoming: styles.videoTypeUpcoming,
+            Premiere: styles.videoTypePremiere,
+            Video: "", // No special badge for regular videos
+        }[videoType] || "";
+
+    if (!badgeClass && videoType === "Video") return null;
+
+    return (
+        <span className={`${styles.videoTypeBadge} ${badgeClass}`}>
+            {videoType}
+        </span>
+    );
 };
 
 const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
@@ -202,8 +235,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const sortedByScore = [...postsWithScores].sort(
         (a, b) => b.score - a.score
     );
-    const top3Indices = new Set(
-        sortedByScore.slice(0, 3).map((item) => item.index)
+    const topIndices = new Set(
+        sortedByScore.slice(0, 5).map((item) => item.index)
     );
 
     return (
@@ -471,8 +504,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             styles.channelDescText
                                                         }
                                                     >
-                                                        {channelInfo.signature}
-                                                        ...
+                                                        {truncateText(
+                                                            channelInfo.signature,
+                                                            150
+                                                        )}
                                                     </p>
                                                 </div>
                                             )}
@@ -538,7 +573,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     .comment_count,
                                                                 post.published_at
                                                             )}
-                                                            {top3Indices.has(
+                                                            {topIndices.has(
                                                                 index
                                                             ) && " 🔥"}
                                                         </span>

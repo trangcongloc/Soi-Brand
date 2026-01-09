@@ -22,7 +22,7 @@ export async function generateMarketingReport(
     videos: YouTubeVideo[]
 ): Promise<MarketingReport> {
     const genAI = initGemini();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // Prepare data for analysis
     const channelData = {
@@ -225,9 +225,7 @@ QUAN TRỌNG:
                     is_pinned: false,
                     post_type: "Video",
                     thumbnail: video.thumbnails.medium?.url || "",
-                    created_at: new Date(video.publishedAt).toLocaleDateString(
-                        "vi-VN"
-                    ),
+                    created_at: video.publishedAt,
                     statistics: {
                         digg_count: parseInt(video.statistics.likeCount),
                         play_count: parseInt(video.statistics.viewCount),
@@ -239,7 +237,7 @@ QUAN TRỌNG:
                     transcript: "",
                     raw_content_for_ai: null,
                     published_at: video.publishedAt,
-                    duration: video.contentDetails.duration,
+                    duration: video.contentDetails?.duration || "PT0S",
                 })),
                 channel_info: {
                     stats: {
