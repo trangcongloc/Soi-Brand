@@ -275,55 +275,109 @@ QUAN TRỌNG:
         const errorMessage = error?.message || "";
         const errorStatus = error?.status || error?.response?.status;
 
-        // Handle specific Gemini API errors
+        // Handle specific Gemini API errors based on official documentation
+        // Reference: https://ai.google.dev/gemini-api/docs/troubleshooting
+
+        // 400 Bad Request - Invalid parameters
         if (
-            errorStatus === 401 ||
-            errorMessage.includes("401") ||
-            errorMessage.includes("Unauthorized")
+            errorStatus === 400 ||
+            errorMessage.includes("400") ||
+            errorMessage.includes("Bad Request") ||
+            errorMessage.includes("invalid")
         ) {
             throw new Error(
-                "Authentication failure: Invalid API key or insufficient permissions. " +
-                    "Please check your GEMINI_API_KEY in environment variables, regenerate the key if needed, " +
-                    "or verify your account eligibility."
+                "Invalid request parameters: The model parameters or request format is incorrect. " +
+                    "Please verify your API call parameters are within valid ranges. " +
+                    "Check the model supports the features you're using and you're using the correct API version."
             );
         }
 
+        // 401 Unauthorized - Authentication failure
+        if (
+            errorStatus === 401 ||
+            errorMessage.includes("401") ||
+            errorMessage.includes("Unauthorized") ||
+            errorMessage.includes("API key")
+        ) {
+            throw new Error(
+                "Authentication failed: Invalid or missing API key. " +
+                    "Please check your GEMINI_API_KEY in environment variables. " +
+                    "If the key was leaked, generate a new one at Google AI Studio. " +
+                    "Ensure proper authentication is set up."
+            );
+        }
+
+        // 403 Forbidden - Permission denied
+        if (
+            errorStatus === 403 ||
+            errorMessage.includes("403") ||
+            errorMessage.includes("Forbidden") ||
+            errorMessage.includes("Permission denied")
+        ) {
+            throw new Error(
+                "Permission denied: Your API key doesn't have access to this resource or model. " +
+                    "Verify you have the necessary permissions and are using a supported model. " +
+                    "Check if your key is blocked due to security concerns."
+            );
+        }
+
+        // 404 Not Found - Resource not found
+        if (
+            errorStatus === 404 ||
+            errorMessage.includes("404") ||
+            errorMessage.includes("Not Found")
+        ) {
+            throw new Error(
+                "Resource not found: The requested model or endpoint doesn't exist. " +
+                    "Verify you're using a supported model name (e.g., gemini-2.5-flash-lite). " +
+                    "Check the models page for available models."
+            );
+        }
+
+        // 429 Resource Exhausted - Rate limit or quota exceeded
         if (
             errorStatus === 429 ||
             errorMessage.includes("429") ||
             errorMessage.includes("Resource Exhausted") ||
-            errorMessage.includes("quota")
+            errorMessage.includes("quota") ||
+            errorMessage.includes("rate limit")
         ) {
             throw new Error(
-                "Quota limit exceeded: You've hit the API rate limit (requests/minute or daily quota). " +
-                    "Please wait a few minutes and try again, apply for a quota increase, " +
-                    "or consider using a different model."
+                "Rate limit exceeded: You've hit the API quota (requests per minute or daily limit). " +
+                    "Wait a few minutes before retrying. " +
+                    "Consider requesting a quota increase or using a different model. " +
+                    "Check your usage at Google AI Studio."
             );
         }
 
+        // 500 Internal Server Error
         if (
             errorStatus === 500 ||
             errorMessage.includes("500") ||
             errorMessage.includes("Internal Server Error")
         ) {
             throw new Error(
-                "Internal server error: Unexpected error on Google's side. " +
-                    "Try reducing the input size, switching to a different model (e.g., gemini-2.5-flash), " +
-                    "or retry in a few moments."
+                "Internal server error: Unexpected error on Google's servers. " +
+                    "Try reducing input size, using a different model (e.g., gemini-2.5-flash), " +
+                    "or retry in a few moments. If the issue persists, check Google AI status."
             );
         }
 
+        // 503 Service Unavailable
         if (
             errorStatus === 503 ||
             errorMessage.includes("503") ||
-            errorMessage.includes("Service Unavailable")
+            errorMessage.includes("Service Unavailable") ||
+            errorMessage.includes("overloaded")
         ) {
             throw new Error(
-                "Service temporarily unavailable: Google's servers are experiencing high load. " +
-                    "Please wait a few minutes and retry, or try switching to a different model."
+                "Service temporarily unavailable: The Gemini API is experiencing high load. " +
+                    "Wait a few minutes and retry. " +
+                    "Consider using a different model or try during off-peak hours."
             );
         }
 
+        // 504 Gateway Timeout / Deadline Exceeded
         if (
             errorStatus === 504 ||
             errorMessage.includes("504") ||
@@ -331,17 +385,43 @@ QUAN TRỌNG:
             errorMessage.includes("timeout")
         ) {
             throw new Error(
-                "Request timeout: The prompt or context is too large or complex. " +
-                    "Try simplifying your request, reducing the number of videos analyzed, " +
-                    "or increase the client timeout setting."
+                "Request timeout: The request took too long to process. " +
+                    "Try reducing the number of videos analyzed, simplifying your prompt, " +
+                    "or using a faster model. Consider breaking large requests into smaller batches."
             );
         }
 
-        // Handle JSON parsing errors
+        // Safety/Content filtering
+        if (
+            errorMessage.includes("SAFETY") ||
+            errorMessage.includes("blocked") ||
+            errorMessage.includes("BlockedReason")
+        ) {
+            throw new Error(
+                "Content blocked: The request or response was blocked by safety filters. " +
+                    "Review your content against safety settings. " +
+                    "If you see BlockedReason.OTHER, the content may violate terms of service."
+            );
+        }
+
+        // Recitation issue
+        if (
+            errorMessage.includes("RECITATION") ||
+            errorMessage.includes("recitation")
+        ) {
+            throw new Error(
+                "Recitation detected: The model output may resemble training data. " +
+                    "Try making your prompt more unique and specific. " +
+                    "Consider using a higher temperature setting to increase output diversity."
+            );
+        }
+
+        // JSON parsing errors
         if (error instanceof SyntaxError || errorMessage.includes("JSON")) {
             throw new Error(
-                "AI response parsing error: The AI returned an invalid response format. " +
-                    "This may be due to model overload or an unexpected response. Please try again."
+                "Response parsing error: The AI returned an invalid JSON format. " +
+                    "This may be due to model overload or unexpected output. " +
+                    "Try again or adjust your prompt to request more structured output."
             );
         }
 
@@ -349,7 +429,9 @@ QUAN TRỌNG:
         throw new Error(
             `Failed to generate marketing analysis: ${
                 errorMessage || "Unknown error occurred"
-            }. ` + "Please try again or contact support if the issue persists."
+            }. ` +
+                "Please try again. If the issue persists, check your API key status at Google AI Studio " +
+                "or contact support with the error details."
         );
     }
 }
