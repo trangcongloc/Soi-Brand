@@ -76,6 +76,7 @@ export interface ChannelInfo {
     bioLink: string;
     nickname: string;
     uniqueId: string;
+    channelId: string;
     signature: string;
     joinedAt?: string;
 }

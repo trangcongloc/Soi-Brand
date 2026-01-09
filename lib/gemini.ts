@@ -22,7 +22,7 @@ export async function generateMarketingReport(
     videos: YouTubeVideo[]
 ): Promise<MarketingReport> {
     const genAI = initGemini();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Prepare data for analysis
     const channelData = {
@@ -258,7 +258,8 @@ QUAN TRỌNG:
                     bioLink: "",
                     nickname: channelInfo.title,
                     uniqueId: channelInfo.customUrl || channelInfo.id,
-                    signature: channelInfo.description.substring(0, 100),
+                    channelId: channelInfo.id,
+                    signature: channelInfo.description,
                     joinedAt: channelInfo.publishedAt,
                 },
             },
@@ -268,8 +269,88 @@ QUAN TRỌNG:
         };
 
         return report;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating marketing report:", error);
-        throw new Error("Failed to generate marketing analysis");
+
+        // Extract error details
+        const errorMessage = error?.message || "";
+        const errorStatus = error?.status || error?.response?.status;
+
+        // Handle specific Gemini API errors
+        if (
+            errorStatus === 401 ||
+            errorMessage.includes("401") ||
+            errorMessage.includes("Unauthorized")
+        ) {
+            throw new Error(
+                "Authentication failure: Invalid API key or insufficient permissions. " +
+                    "Please check your GEMINI_API_KEY in environment variables, regenerate the key if needed, " +
+                    "or verify your account eligibility."
+            );
+        }
+
+        if (
+            errorStatus === 429 ||
+            errorMessage.includes("429") ||
+            errorMessage.includes("Resource Exhausted") ||
+            errorMessage.includes("quota")
+        ) {
+            throw new Error(
+                "Quota limit exceeded: You've hit the API rate limit (requests/minute or daily quota). " +
+                    "Please wait a few minutes and try again, apply for a quota increase, " +
+                    "or consider using a different model."
+            );
+        }
+
+        if (
+            errorStatus === 500 ||
+            errorMessage.includes("500") ||
+            errorMessage.includes("Internal Server Error")
+        ) {
+            throw new Error(
+                "Internal server error: Unexpected error on Google's side. " +
+                    "Try reducing the input size, switching to a different model (e.g., gemini-2.5-flash), " +
+                    "or retry in a few moments."
+            );
+        }
+
+        if (
+            errorStatus === 503 ||
+            errorMessage.includes("503") ||
+            errorMessage.includes("Service Unavailable")
+        ) {
+            throw new Error(
+                "Service temporarily unavailable: Google's servers are experiencing high load. " +
+                    "Please wait a few minutes and retry, or try switching to a different model."
+            );
+        }
+
+        if (
+            errorStatus === 504 ||
+            errorMessage.includes("504") ||
+            errorMessage.includes("Deadline Exceeded") ||
+            errorMessage.includes("timeout")
+        ) {
+            throw new Error(
+                "Request timeout: The prompt or context is too large or complex. " +
+                    "Try simplifying your request, reducing the number of videos analyzed, " +
+                    "or increase the client timeout setting."
+            );
+        }
+
+        // Handle JSON parsing errors
+        if (error instanceof SyntaxError || errorMessage.includes("JSON")) {
+            throw new Error(
+                "AI response parsing error: The AI returned an invalid response format. " +
+                    "This may be due to model overload or an unexpected response. Please try again."
+            );
+        }
+
+        // Generic fallback error
+        throw new Error(
+            `Failed to generate marketing analysis: ${
+                errorMessage || "Unknown error occurred"
+            }. ` + "Please try again or contact support if the issue persists."
+        );
     }
 }

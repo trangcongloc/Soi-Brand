@@ -87,25 +87,25 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
                         <div
                             className={styles.legendBox}
                             style={{
-                                background: "#f0fdf4",
-                                border: "1px solid #e5e7eb",
+                                background: "#ffe4e4",
+                                // border: "1px solid #e5e7eb",
                             }}
                         ></div>
                         <div
                             className={styles.legendBox}
-                            style={{ background: "#dcfce7" }}
+                            style={{ background: "#ffd9d9" }}
                         ></div>
                         <div
                             className={styles.legendBox}
-                            style={{ background: "#bbf7d0" }}
+                            style={{ background: "#ffc8c8" }}
                         ></div>
                         <div
                             className={styles.legendBox}
-                            style={{ background: "#86efac" }}
+                            style={{ background: "#ffa8a8" }}
                         ></div>
                         <div
                             className={styles.legendBox}
-                            style={{ background: "#4ade80" }}
+                            style={{ background: "#fa9191" }}
                         ></div>
                     </div>
                     <span>5</span>
@@ -121,6 +121,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     >("data");
     const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
     const [copyStatus, setCopyStatus] = useState<string | null>(null);
+    const [isChannelHovered, setIsChannelHovered] = useState(false);
+    const [isDescExpanded, setIsDescExpanded] = useState(false);
 
     const handleCopyTags = (tags: string[]) => {
         const text = tags.join(", ");
@@ -136,6 +138,13 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const { report_part_1, report_part_2, report_part_3 } = report;
     const posts = report_part_1?.posts || [];
     const channelInfo = report_part_1?.channel_info;
+
+    const handleChannelClick = () => {
+        if (channelInfo?.channelId) {
+            const channelUrl = `https://www.youtube.com/channel/${channelInfo.channelId}`;
+            window.open(channelUrl, "_blank");
+        }
+    };
 
     // Hacker News Ranking Algorithm
     const calculateHackerNewsScore = (
@@ -273,15 +282,31 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                         className={
                                                             styles.channelNickname
                                                         }
+                                                        onMouseEnter={() =>
+                                                            setIsChannelHovered(
+                                                                true
+                                                            )
+                                                        }
+                                                        onMouseLeave={() =>
+                                                            setIsChannelHovered(
+                                                                false
+                                                            )
+                                                        }
+                                                        onClick={
+                                                            handleChannelClick
+                                                        }
                                                     >
-                                                        {channelInfo.nickname}
+                                                        {isChannelHovered &&
+                                                        channelInfo.uniqueId
+                                                            ? channelInfo.uniqueId
+                                                            : channelInfo.nickname}
                                                     </span>
                                                     <span
                                                         className={
                                                             styles.channelSubscribers
                                                         }
                                                     >
-                                                        Joined Date:{" "}
+                                                        Ngày tạo kênh:{" "}
                                                         {channelInfo.joinedAt
                                                             ? new Date(
                                                                   channelInfo.joinedAt
@@ -391,6 +416,24 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     </span>
                                                 </div>
                                             </div>
+
+                                            {/* Channel Description */}
+                                            {channelInfo.signature && (
+                                                <div
+                                                    className={
+                                                        styles.channelDescription
+                                                    }
+                                                >
+                                                    <p
+                                                        className={
+                                                            styles.channelDescText
+                                                        }
+                                                    >
+                                                        {channelInfo.signature}
+                                                        ...
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
