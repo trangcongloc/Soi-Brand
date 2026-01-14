@@ -6,8 +6,10 @@ import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
+import { useLang } from "@/lib/lang";
 
 export default function Home() {
+    const lang = useLang();
     const [isLoading, setIsLoading] = useState(false);
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function Home() {
                 const reportData = response.data.data;
                 setReport(reportData);
             } else {
-                setError(response.data.error || "Có lỗi xảy ra khi phân tích");
+                setError(response.data.error || lang.form.errors.analysisError);
             }
         } catch (err: any) {
             console.error("Analysis error:", err);
@@ -41,13 +43,11 @@ export default function Home() {
 
             // Fallback for network errors without response
             if (!err.response) {
-                displayError =
-                    "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet và thử lại.";
+                displayError = lang.form.errors.networkError;
             }
             // Fallback for unknown errors
             else if (!displayError) {
-                displayError =
-                    "Có lỗi xảy ra khi phân tích. Vui lòng thử lại sau.";
+                displayError = lang.form.errors.unknownError;
             }
 
             setError(displayError);
@@ -70,7 +70,7 @@ export default function Home() {
                 {!report && !isLoading && (
                     <div className="container max-w-2xl mx-auto text-center fade-in py-16 md:py-24">
                         <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
-                            'Soi' Brand
+                            {lang.home.title}
                         </h1>
                         <div className="max-w-md mx-auto mb-16 px-4">
                             <AnalysisForm

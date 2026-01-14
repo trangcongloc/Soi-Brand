@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { defaultLanguage } from "@/lib/lang";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
 export const metadata: Metadata = {
-    title: "'Soi' Brand",
-    description:
-        "Công cụ phân tích chiến lược marketing YouTube chuyên nghiệp, sử dụng AI để tạo báo cáo chi tiết về kênh YouTube của bạn.",
-    keywords:
-        "OurTube, YouTube, marketing, analysis, AI, phân tích, chiến lược",
+    title: defaultLanguage.metadata.title,
+    description: defaultLanguage.metadata.description,
+    keywords: defaultLanguage.metadata.keywords,
 };
 
 export default function RootLayout({

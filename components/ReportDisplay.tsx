@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { MarketingReport, Post } from "@/lib/types";
 import styles from "./ReportDisplay.module.css";
 import { downloadJSON } from "@/lib/utils";
+import { useLang, formatString } from "@/lib/lang";
 
 interface ReportDisplayProps {
     report: MarketingReport;
@@ -71,6 +72,7 @@ const getVideoTypeBadge = (videoType: string) => {
 };
 
 const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
+    const lang = useLang();
     // Generate last 30 days
     const days = Array.from({ length: 30 }, (_, i) => {
         const d = new Date();
@@ -115,7 +117,7 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
                 }}
             >
                 <h4 className={styles.cardTitle} style={{ marginBottom: 0 }}>
-                    Tần suất đăng (30 ngày qua)
+                    {lang.heatmap.title}
                 </h4>
             </div>
 
@@ -127,7 +129,10 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
                             key={idx}
                             className={styles.dailyCell}
                             data-level={getLevel(day.count)}
-                            title={`${day.dateStr}: ${day.count} video`}
+                            title={`${day.dateStr}: ${formatString(
+                                lang.heatmap.videoCount,
+                                { count: day.count.toString() }
+                            )}`}
                         >
                             {/* Show day number if needed, or just boolean */}
                             <span className={styles.dayNumber}>
@@ -172,6 +177,7 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
 };
 
 const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
+    const lang = useLang();
     const [activeTab, setActiveTab] = useState<
         "data" | "analysis" | "evaluation"
     >("data");
@@ -202,13 +208,13 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
         }
     };
 
-    // Hacker News Ranking Algorithm
+    // Time-based Ranking Algorithm (no longer uses likes/comments)
     const calculateHackerNewsScore = (
         likes: number,
         comments: number,
         publishedAt: string
     ) => {
-        const points = likes + comments;
+        const points = 1; // Constant base score, no longer using likes + comments
         const now = new Date();
         const published = new Date(publishedAt);
         const hours = Math.max(
@@ -254,11 +260,13 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 fontSize: "12px",
                             }}
                         >
-                            ← Phân tích kênh khác
+                            {lang.sidebar.backButton}
                         </button>
                     )}
                     <div className={styles.sidebarHeader}>
-                        <h2 className={styles.sidebarTitle}>Báo cáo</h2>
+                        <h2 className={styles.sidebarTitle}>
+                            {lang.sidebar.title}
+                        </h2>
                         <nav className={styles.nav}>
                             {[
                                 { id: "data", label: "Dữ liệu" },
@@ -283,8 +291,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                     <div style={{ padding: "0 0.5rem" }}>
                         <div className={styles.downloadBox}>
                             <p className={styles.downloadText}>
-                                Báo cáo này được phân tích bằng mô hình AI siêu
-                                cấp víp pờ rồ.
+                                {lang.sidebar.downloadBox.text}
                             </p>
                             <button
                                 onClick={() =>
@@ -292,7 +299,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 }
                                 className={styles.downloadBtn}
                             >
-                                Tải báo cáo
+                                {lang.sidebar.downloadBox.button}
                             </button>
                         </div>
                     </div>
@@ -305,14 +312,15 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                 <div className={styles.header}>
                     <h1 className={styles.title}>
                         {activeTab === "data"
-                            ? "Dữ liệu"
+                            ? lang.report.headers.data
                             : activeTab === "analysis"
-                            ? "Phân tích"
-                            : "Đánh giá"}
+                            ? lang.report.headers.analysis
+                            : lang.report.headers.evaluation}
                     </h1>
                     <p className={styles.description}>
-                        Dữ liệu thô từ YouTube của kênh {report.brand_name} với
-                        các bài đăng gần nhất.
+                        {formatString(lang.report.description, {
+                            brandName: report.brand_name,
+                        })}
                     </p>
                 </div>
 
@@ -328,7 +336,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                         >
                             {/* Data Section Grid: Stats (Left) + Heatmap (Right) */}
                             <section>
-                                <h3 className={styles.sectionTitle}>Kênh</h3>
+                                <h3 className={styles.sectionTitle}>
+                                    {lang.channel.sectionTitle}
+                                </h3>
                                 <div className={styles.grid2}>
                                     {channelInfo && (
                                         <div className={styles.channelCard}>
@@ -381,14 +391,18 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             styles.channelSubscribers
                                                         }
                                                     >
-                                                        Ngày tạo kênh:{" "}
+                                                        {
+                                                            lang.channel
+                                                                .createdDate
+                                                        }{" "}
                                                         {channelInfo.joinedAt
                                                             ? new Date(
                                                                   channelInfo.joinedAt
                                                               ).toLocaleDateString(
                                                                   "vi-VN"
                                                               )
-                                                            : "Chưa cập nhật"}
+                                                            : lang.channel
+                                                                  .notUpdated}
                                                     </span>
                                                 </div>
                                             </div>
@@ -418,7 +432,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             styles.channelStatLabel
                                                         }
                                                     >
-                                                        Videos
+                                                        {
+                                                            lang.channel.stats
+                                                                .videos
+                                                        }
                                                     </span>
                                                 </div>
                                                 <div
@@ -441,7 +458,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             styles.channelStatLabel
                                                         }
                                                     >
-                                                        Views
+                                                        {
+                                                            lang.channel.stats
+                                                                .views
+                                                        }
                                                     </span>
                                                 </div>
                                                 <div
@@ -464,7 +484,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             styles.channelStatLabel
                                                         }
                                                     >
-                                                        Subs
+                                                        {
+                                                            lang.channel.stats
+                                                                .subs
+                                                        }
                                                     </span>
                                                 </div>
                                                 <div
@@ -487,7 +510,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             styles.channelStatLabel
                                                         }
                                                     >
-                                                        Likes
+                                                        {
+                                                            lang.channel.stats
+                                                                .likes
+                                                        }
                                                     </span>
                                                 </div>
                                             </div>
@@ -526,7 +552,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                             {/* Posts Accordion */}
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Nội dung trên kênh
+                                    {lang.posts.sectionTitle}
                                 </h3>
                                 <div className={styles.postList}>
                                     {posts.map((post, index) => (
@@ -676,7 +702,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     styles.mutedText
                                                                 }
                                                             >
-                                                                Lượt xem:{" "}
+                                                                {
+                                                                    lang.posts
+                                                                        .viewCount
+                                                                }{" "}
                                                             </span>
                                                             <span className="font-bold">
                                                                 {formatFullNumber(
@@ -692,7 +721,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     styles.mutedText
                                                                 }
                                                             >
-                                                                Lượt thích:{" "}
+                                                                {
+                                                                    lang.posts
+                                                                        .likeCount
+                                                                }{" "}
                                                             </span>
                                                             <span className="font-bold">
                                                                 {formatFullNumber(
@@ -708,7 +740,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     styles.mutedText
                                                                 }
                                                             >
-                                                                Ngày đăng:{" "}
+                                                                {
+                                                                    lang.posts
+                                                                        .publishDate
+                                                                }{" "}
                                                             </span>
                                                             <span className="font-semibold">
                                                                 {new Date(
@@ -769,7 +804,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                                 y2="7"
                                                                             ></line>
                                                                         </svg>
-                                                                        SEO Tags
+                                                                        {
+                                                                            lang
+                                                                                .posts
+                                                                                .seoTags
+                                                                        }
                                                                     </p>
                                                                     <button
                                                                         onClick={(
@@ -798,8 +837,12 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                     >
                                                                         {copyStatus ===
                                                                         "Copied!"
-                                                                            ? "Copied!"
-                                                                            : "Copy Tags"}
+                                                                            ? lang
+                                                                                  .posts
+                                                                                  .copied
+                                                                            : lang
+                                                                                  .posts
+                                                                                  .copyTags}
                                                                     </button>
                                                                 </div>
                                                                 <div
@@ -851,7 +894,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                 styles.descLabel
                                                             }
                                                         >
-                                                            Mô tả video
+                                                            {
+                                                                lang.posts
+                                                                    .description
+                                                            }
                                                         </p>
                                                         <p
                                                             className={
@@ -859,7 +905,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             }
                                                         >
                                                             {post.desc ||
-                                                                "Không có mô tả"}
+                                                                lang.posts
+                                                                    .noDescription}
                                                         </p>
                                                     </div>
 
@@ -874,7 +921,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                 styles.descLabel
                                                             }
                                                         >
-                                                            Video URL
+                                                            {
+                                                                lang.posts
+                                                                    .videoUrl
+                                                            }
                                                         </p>
                                                         <div
                                                             className={
@@ -955,17 +1005,20 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                         >
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Phân tích Chiến lược
+                                    {lang.analysis.strategyTitle}
                                 </h3>
                                 <div className={styles.grid2}>
                                     <div className={styles.card}>
                                         <h4 className={styles.cardTitle}>
-                                            Tính cách thương hiệu
+                                            {lang.analysis.brandIdentity.title}
                                         </h4>
                                         <div className={styles.analysisText}>
                                             <p>
                                                 <span className="font-semibold">
-                                                    Style:
+                                                    {
+                                                        lang.analysis
+                                                            .brandIdentity.style
+                                                    }
                                                 </span>{" "}
                                                 {
                                                     report_part_2
@@ -976,7 +1029,10 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                             </p>
                                             <p>
                                                 <span className="font-semibold">
-                                                    Tone:
+                                                    {
+                                                        lang.analysis
+                                                            .brandIdentity.tone
+                                                    }
                                                 </span>{" "}
                                                 {
                                                     report_part_2
@@ -987,7 +1043,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                             </p>
                                             <p>
                                                 <span className="font-semibold">
-                                                    Định vị:
+                                                    {
+                                                        lang.analysis
+                                                            .brandIdentity
+                                                            .positioning
+                                                    }
                                                 </span>{" "}
                                                 {
                                                     report_part_2
@@ -1000,14 +1060,15 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                     </div>
                                     <div className={styles.card}>
                                         <h4 className={styles.cardTitle}>
-                                            Nội dung đăng trên kênh
+                                            {lang.analysis.contentFocus.title}
                                         </h4>
                                         <p
                                             className={`${styles.analysisText} ${styles.mutedText}`}
                                         >
                                             {report_part_2.strategy_analysis
                                                 .content_focus?.overview ||
-                                                "Chưa có dữ liệu"}
+                                                lang.analysis.contentFocus
+                                                    .noData}
                                         </p>
                                         <div className={styles.adAngles}>
                                             {report_part_2.strategy_analysis.content_focus?.topics?.map(
@@ -1028,7 +1089,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 <div style={{ marginTop: "1rem" }}>
                                     <div className={styles.card}>
                                         <h4 className={styles.cardTitle}>
-                                            Chiến lược Quảng cáo
+                                            {lang.analysis.adStrategy.title}
                                         </h4>
                                         <p
                                             className={`${styles.analysisText} ${styles.mutedText}`}
@@ -1056,7 +1117,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                             {/* Funnel Analysis */}
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Phân tích Phễu Marketing
+                                    {lang.analysis.funnelAnalysis.title}
                                 </h3>
                                 <div style={{ marginTop: "1rem" }}>
                                     <div className={styles.card}>
@@ -1099,7 +1160,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             color: "#666",
                                                         }}
                                                     >
-                                                        Top of Funnel - Thu hút
+                                                        {
+                                                            lang.analysis
+                                                                .funnelAnalysis
+                                                                .tofu
+                                                        }
                                                     </span>
                                                 </div>
                                                 <p
@@ -1149,8 +1214,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             color: "#666",
                                                         }}
                                                     >
-                                                        Middle of Funnel - Nuôi
-                                                        dưỡng
+                                                        {
+                                                            lang.analysis
+                                                                .funnelAnalysis
+                                                                .mofu
+                                                        }
                                                     </span>
                                                 </div>
                                                 <p
@@ -1200,8 +1268,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             color: "#666",
                                                         }}
                                                     >
-                                                        Bottom of Funnel -
-                                                        Chuyển đổi
+                                                        {
+                                                            lang.analysis
+                                                                .funnelAnalysis
+                                                                .bofu
+                                                        }
                                                     </span>
                                                 </div>
                                                 <p
@@ -1226,7 +1297,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                             {/* Quantitative Synthesis */}
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Tổng Hợp Định Lượng
+                                    {lang.analysis.quantitativeSynthesis.title}
                                 </h3>
                                 <div style={{ marginTop: "1rem" }}>
                                     <div className={styles.grid2}>
@@ -1239,7 +1310,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     marginBottom: "0.75rem",
                                                 }}
                                             >
-                                                Tổng Quan Số Liệu
+                                                {
+                                                    lang.analysis
+                                                        .quantitativeSynthesis
+                                                        .summaryStats.title
+                                                }
                                             </h5>
                                             <div
                                                 style={{
@@ -1252,17 +1327,12 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     style={{ fontSize: "11px" }}
                                                 >
                                                     <strong>
-                                                        Tổng số bài:
-                                                    </strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.summary_stats.total_posts.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>
-                                                        Tổng lượt xem:
+                                                        {
+                                                            lang.analysis
+                                                                .quantitativeSynthesis
+                                                                .summaryStats
+                                                                .totalViews
+                                                        }
                                                     </strong>{" "}
                                                     {report_part_2.quantitative_synthesis.summary_stats.total_views.toLocaleString(
                                                         "vi-VN"
@@ -1272,7 +1342,12 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     style={{ fontSize: "11px" }}
                                                 >
                                                     <strong>
-                                                        Tổng lượt thích:
+                                                        {
+                                                            lang.analysis
+                                                                .quantitativeSynthesis
+                                                                .summaryStats
+                                                                .totalLikes
+                                                        }
                                                     </strong>{" "}
                                                     {report_part_2.quantitative_synthesis.summary_stats.total_likes.toLocaleString(
                                                         "vi-VN"
@@ -1281,7 +1356,14 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                 <div
                                                     style={{ fontSize: "11px" }}
                                                 >
-                                                    <strong>Tổng video:</strong>{" "}
+                                                    <strong>
+                                                        {
+                                                            lang.analysis
+                                                                .quantitativeSynthesis
+                                                                .summaryStats
+                                                                .totalVideos
+                                                        }
+                                                    </strong>{" "}
                                                     {report_part_2.quantitative_synthesis.summary_stats.total_videos.toLocaleString(
                                                         "vi-VN"
                                                     )}
@@ -1298,7 +1380,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     marginBottom: "0.75rem",
                                                 }}
                                             >
-                                                Tương Tác Kênh
+                                                {
+                                                    lang.analysis
+                                                        .quantitativeSynthesis
+                                                        .channelHealth.title
+                                                }
                                             </h5>
                                             <div
                                                 style={{
@@ -1312,7 +1398,12 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     }}
                                                 >
                                                     <strong>
-                                                        Người đăng ký:
+                                                        {
+                                                            lang.analysis
+                                                                .quantitativeSynthesis
+                                                                .channelHealth
+                                                                .followerCount
+                                                        }
                                                     </strong>{" "}
                                                     {
                                                         report_part_2
@@ -1518,7 +1609,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
 
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Trụ cột nội dung (Content Pillars)
+                                    {lang.analysis.contentPillars.title}
                                 </h3>
                                 <div
                                     style={{ display: "grid", gap: "0.75rem" }}
@@ -1574,7 +1665,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                         >
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Đánh giá chung
+                                    {lang.evaluation.overallTitle}
                                 </h3>
                                 <div
                                     className={`${styles.card} ${styles.summaryCard}`}
@@ -1582,7 +1673,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                     <h4
                                         className={`${styles.cardTitle} ${styles.textBlue}`}
                                     >
-                                        Executive Summary
+                                        {lang.evaluation.executiveSummary}
                                     </h4>
                                     <p
                                         className={`${styles.analysisText}`}
@@ -1612,7 +1703,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     background: "#22c55e",
                                                 }}
                                             ></span>
-                                            Điểm mạnh
+                                            {lang.evaluation.strengths.title}
                                         </h4>
                                         <ul className={styles.list}>
                                             {report_part_3.strengths.map(
@@ -1646,7 +1737,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     background: "#f97316",
                                                 }}
                                             ></span>
-                                            Điểm yếu & Cơ hội
+                                            {lang.evaluation.weaknesses.title}
                                         </h4>
                                         <ul className={styles.list}>
                                             {report_part_3.weaknesses_opportunities.map(
@@ -1666,7 +1757,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
 
                             <section>
                                 <h3 className={styles.sectionTitle}>
-                                    Đề xuất hành động
+                                    {lang.evaluation.insights.title}
                                 </h3>
                                 <div
                                     style={{ display: "grid", gap: "0.75rem" }}

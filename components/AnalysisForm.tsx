@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { isValidYouTubeUrl } from "@/lib/utils";
 import styles from "./AnalysisForm.module.css";
 import { MarketingReport } from "@/lib/types";
+import { useLang } from "@/lib/lang";
 
 interface AnalysisFormProps {
     onSubmit: (url: string) => void;
@@ -18,6 +19,7 @@ export default function AnalysisForm({
     onError,
     isLoading,
 }: AnalysisFormProps) {
+    const lang = useLang();
     const [url, setUrl] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -25,7 +27,7 @@ export default function AnalysisForm({
         e.preventDefault();
 
         if (!url.trim()) {
-            onError("Vui lòng nhập link kênh YouTube");
+            onError(lang.form.errors.emptyUrl);
             return;
         }
 
@@ -33,9 +35,7 @@ export default function AnalysisForm({
         const ytRegex =
             /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(@|channel\/|c\/|user\/)[a-zA-Z0-9_-]+/;
         if (!ytRegex.test(url) && !isValidYouTubeUrl(url)) {
-            onError(
-                "Link YouTube không hợp lệ. Hãy nhập link kênh (ví dụ: youtube.com/@username)"
-            );
+            onError(lang.form.errors.invalidUrl);
             return;
         }
 
@@ -53,10 +53,10 @@ export default function AnalysisForm({
                 if (json.report_part_1 && json.brand_name) {
                     onUpload(json as MarketingReport);
                 } else {
-                    onError("File JSON không đúng định dạng báo cáo.");
+                    onError(lang.form.errors.invalidJson);
                 }
             } catch (err) {
-                onError("Không thể đọc file JSON. Vui lòng kiểm tra lại.");
+                onError(lang.form.errors.cannotReadJson);
             }
         };
         reader.readAsText(file);
@@ -72,7 +72,7 @@ export default function AnalysisForm({
                         type="text"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
-                        placeholder="Dán link kênh YouTube..."
+                        placeholder={lang.form.placeholder}
                         className="input"
                         disabled={isLoading}
                     />
@@ -85,7 +85,9 @@ export default function AnalysisForm({
                         disabled={isLoading}
                         style={{ flex: 1 }}
                     >
-                        {isLoading ? "Đang xử lý..." : "Phân tích ngay"}
+                        {isLoading
+                            ? lang.form.submitButtonLoading
+                            : lang.form.submitButton}
                     </button>
 
                     <button
@@ -93,7 +95,7 @@ export default function AnalysisForm({
                         className="btn btn-outline"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isLoading}
-                        title="Tải lên báo cáo JSON đã có"
+                        title={lang.form.uploadButtonTitle}
                     >
                         <svg
                             width="16"

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import styles from "./LoadingState.module.css";
+import { useLang } from "@/lib/lang";
 
 export default function LoadingState() {
+    const lang = useLang();
     const [step, setStep] = useState(0);
 
     useEffect(() => {
@@ -21,7 +23,7 @@ export default function LoadingState() {
                 <div className={styles.spinnerRing}></div>
             </div>
 
-            <h3 className={styles.title}>Đang phân tích kênh YouTube...</h3>
+            <h3 className={styles.title}>{lang.loading.title}</h3>
 
             <div className={styles.steps}>
                 <div
@@ -32,7 +34,7 @@ export default function LoadingState() {
                     <div className={styles.stepIcon}>
                         {step > 0 ? "✓" : "⟳"}
                     </div>
-                    <p>Đang lấy thông tin kênh</p>
+                    <p>{lang.loading.steps.fetchingChannel}</p>
                 </div>
                 <div
                     className={`${styles.step} ${
@@ -42,7 +44,7 @@ export default function LoadingState() {
                     <div className={styles.stepIcon}>
                         {step > 1 ? "✓" : step === 1 ? "⟳" : "◯"}
                     </div>
-                    <p>Đang phân tích nội dung</p>
+                    <p>{lang.loading.steps.analyzingContent}</p>
                 </div>
                 <div
                     className={`${styles.step} ${
@@ -52,13 +54,11 @@ export default function LoadingState() {
                     <div className={styles.stepIcon}>
                         {step === 2 ? "⟳" : "◯"}
                     </div>
-                    <p>Đang tạo báo cáo</p>
+                    <p>{lang.loading.steps.generatingReport}</p>
                 </div>
             </div>
 
-            <p className={styles.note}>
-                Quá trình này có thể mất 30-60 giây...
-            </p>
+            <p className={styles.note}>{lang.loading.note}</p>
         </div>
     );
 }
