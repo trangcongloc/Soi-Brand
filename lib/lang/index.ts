@@ -1,18 +1,77 @@
-import { vi, type ViLanguage } from "./vi";
+"use client";
 
-export type Language = ViLanguage;
+import { createContext, useContext } from "react";
+import {
+    languages,
+    defaultLanguage,
+    defaultLanguageCode,
+    getLanguage,
+    formatString,
+} from "./data";
+import type { Language, LanguageCode } from "./data";
 
-export const defaultLanguage = vi;
+// Re-export from data for convenience
+export type { Language, LanguageCode };
+export {
+    languages,
+    defaultLanguage,
+    defaultLanguageCode,
+    getLanguage,
+    formatString,
+};
 
-export function useLang(): Language {
-    return vi;
+// Language Context (client-only)
+interface LanguageContextType {
+    lang: Language;
+    langCode: LanguageCode;
+    setLanguage: (code: LanguageCode) => void;
 }
 
-export function formatString(
-    template: string,
-    values: Record<string, string | number>
-): string {
-    return template.replace(/\{(\w+)\}/g, (match, key) => {
-        return values[key]?.toString() || match;
-    });
+export const LanguageContext = createContext<LanguageContextType>({
+    lang: defaultLanguage,
+    langCode: defaultLanguageCode,
+    setLanguage: () => {},
+});
+
+// Hook to use language
+export function useLang(): Language {
+    const context = useContext(LanguageContext);
+    return context.lang;
+}
+
+// Hook to use language with setter
+export function useLanguage() {
+    return useContext(LanguageContext);
+}
+
+// Detect browser language
+export function detectBrowserLanguage(): LanguageCode {
+    if (typeof window === "undefined") return defaultLanguageCode;
+
+    const browserLang = navigator.language.toLowerCase();
+
+    if (browserLang.startsWith("vi")) return "vi";
+    if (browserLang.startsWith("en")) return "en";
+
+    return defaultLanguageCode;
+}
+
+// Storage key for language preference
+export const LANGUAGE_STORAGE_KEY = "ourtube-language";
+
+// Get stored language preference
+export function getStoredLanguage(): LanguageCode | null {
+    if (typeof window === "undefined") return null;
+
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored === "vi" || stored === "en") {
+        return stored;
+    }
+    return null;
+}
+
+// Store language preference
+export function storeLanguage(code: LanguageCode): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, code);
 }

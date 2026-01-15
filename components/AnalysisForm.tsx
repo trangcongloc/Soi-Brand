@@ -65,17 +65,26 @@ export default function AnalysisForm({
     };
 
     return (
-        <div className={styles.container}>
-            <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.container} role="search">
+            <form onSubmit={handleSubmit} className={styles.form} aria-label="YouTube Channel Analysis">
                 <div className={styles.inputGroup}>
+                    <label htmlFor="channel-url" className="sr-only">
+                        YouTube Channel URL
+                    </label>
                     <input
+                        id="channel-url"
                         type="text"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder={lang.form.placeholder}
                         className="input"
                         disabled={isLoading}
+                        aria-describedby="url-hint"
+                        autoComplete="url"
                     />
+                    <span id="url-hint" className="sr-only">
+                        Enter a YouTube channel URL like youtube.com/@username
+                    </span>
                 </div>
 
                 <div className={styles.actions}>
@@ -84,6 +93,7 @@ export default function AnalysisForm({
                         className="btn btn-primary"
                         disabled={isLoading}
                         style={{ flex: 1 }}
+                        aria-busy={isLoading}
                     >
                         {isLoading
                             ? lang.form.submitButtonLoading
@@ -96,6 +106,7 @@ export default function AnalysisForm({
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isLoading}
                         title={lang.form.uploadButtonTitle}
+                        aria-label={lang.form.uploadButtonTitle}
                     >
                         <svg
                             width="16"
@@ -104,6 +115,7 @@ export default function AnalysisForm({
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2.5"
+                            aria-hidden="true"
                         >
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                         </svg>
@@ -114,6 +126,7 @@ export default function AnalysisForm({
                         onChange={handleFileUpload}
                         accept=".json"
                         style={{ display: "none" }}
+                        aria-label="Upload JSON report"
                     />
                 </div>
             </form>

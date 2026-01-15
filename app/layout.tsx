@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { defaultLanguage } from "@/lib/lang";
+import { defaultLanguage } from "@/lib/lang/data";
+import LanguageProvider from "@/components/LanguageProvider";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
@@ -17,8 +18,13 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="vi">
-            <body className={inter.className}>{children}</body>
+        <html lang="vi" suppressHydrationWarning>
+            <body className={inter.className}>
+                <a href="#main-content" className="skip-link">
+                    Skip to content
+                </a>
+                <LanguageProvider>{children}</LanguageProvider>
+            </body>
         </html>
     );
 }

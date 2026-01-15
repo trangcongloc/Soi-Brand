@@ -43,9 +43,36 @@ export async function generateMarketingReport(
         tags: video.tags || [],
     }));
 
+    // Analyze posting patterns for content calendar insights
+    const postingDays: { [key: string]: number } = {};
+    const postingHours: { [key: string]: number } = {};
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    videosData.forEach((v) => {
+        const date = new Date(v.publishedAt);
+        const dayName = dayNames[date.getDay()];
+        const hour = date.getHours();
+        postingDays[dayName] = (postingDays[dayName] || 0) + 1;
+        postingHours[hour] = (postingHours[hour] || 0) + 1;
+    });
+
+    const topPostingDays = Object.entries(postingDays)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([day]) => day);
+
+    const topPostingHours = Object.entries(postingHours)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([hour]) => `${hour}:00`);
+
+    // Calculate average engagement for video idea estimates
+    const avgViews = Math.round(videosData.reduce((sum, v) => sum + v.views, 0) / videosData.length);
+    const topVideoViews = Math.max(...videosData.map((v) => v.views));
+
     // Create comprehensive prompt for Gemini
     const prompt = `
-Bạn là chuyên gia phân tích marketing YouTube. Hãy phân tích kênh YouTube sau và tạo báo cáo marketing chi tiết.
+Bạn là chuyên gia phân tích marketing YouTube cấp cao. Hãy phân tích kênh YouTube sau và tạo báo cáo marketing chi tiết, chuyên sâu.
 
 THÔNG TIN KÊNH:
 - Tên kênh: ${channelData.name}
@@ -53,6 +80,12 @@ THÔNG TIN KÊNH:
 - Số người đăng ký: ${channelData.subscriberCount.toLocaleString()}
 - Tổng số video: ${channelData.videoCount}
 - Tổng lượt xem: ${channelData.totalViews.toLocaleString()}
+- Lượt xem trung bình/video: ${avgViews.toLocaleString()}
+- Video hiệu suất cao nhất: ${topVideoViews.toLocaleString()} lượt xem
+
+PHÂN TÍCH THỜI GIAN ĐĂNG:
+- Các ngày đăng phổ biến: ${topPostingDays.join(", ")}
+- Các giờ đăng phổ biến: ${topPostingHours.join(", ")}
 
 DANH SÁCH VIDEO GẦN ĐÂY (${videos.length} videos):
 ${videosData
@@ -62,7 +95,8 @@ ${i + 1}. ${v.title}
    - Lượt xem: ${v.views.toLocaleString()}
    - Lượt thích: ${v.likes.toLocaleString()}
    - Bình luận: ${v.comments.toLocaleString()}
-   - Ngày đăng: ${new Date(v.publishedAt).toLocaleDateString("vi-VN")}
+   - Ngày đăng: ${new Date(v.publishedAt).toLocaleDateString("vi-VN")} lúc ${new Date(v.publishedAt).getHours()}:00
+   - Tags: ${v.tags.slice(0, 5).join(", ") || "Không có"}
    - Mô tả: ${v.description.substring(0, 200)}...
 `
     )
@@ -119,6 +153,33 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
         "emotional_triggers": "Các yếu tố cảm xúc được khai thác"
       }
     },
+    "audience_personas": [
+      {
+        "name": "Tên persona đại diện (VD: 'Sinh viên đam mê công nghệ')",
+        "demographics": "Nhân khẩu học: tuổi, giới tính, nghề nghiệp, vị trí địa lý",
+        "interests": ["Sở thích 1", "Sở thích 2", "Sở thích 3"],
+        "pain_points": ["Nỗi đau/vấn đề 1", "Nỗi đau/vấn đề 2"],
+        "content_preferences": "Loại nội dung họ thích xem (video dài/ngắn, hướng dẫn, giải trí...)"
+      }
+    ],
+    "content_calendar": {
+      "best_posting_days": ["Ngày tốt nhất 1", "Ngày tốt nhất 2"],
+      "best_posting_times": ["Giờ tốt nhất 1", "Giờ tốt nhất 2"],
+      "recommended_frequency": "Tần suất đăng đề xuất (VD: '3-4 video/tuần')",
+      "content_mix": [
+        {"pillar": "Loại nội dung 1", "percentage": 40},
+        {"pillar": "Loại nội dung 2", "percentage": 30},
+        {"pillar": "Loại nội dung 3", "percentage": 30}
+      ]
+    },
+    "growth_opportunities": [
+      {
+        "opportunity": "Tên cơ hội tăng trưởng",
+        "description": "Mô tả chi tiết cơ hội",
+        "priority": "high",
+        "expected_impact": "Tác động dự kiến (VD: '+20% subscriber trong 3 tháng')"
+      }
+    ],
     "quantitative_synthesis": {
       "summary_stats": {
         "total_posts": ${videos.length},
@@ -160,16 +221,22 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
       "avoid": "Những gì nên tránh",
       "video_ideas": [
         {
-          "title": "Ý tưởng video 1",
-          "concept": "Mô tả concept"
+          "title": "Tiêu đề video hấp dẫn, cụ thể cho kênh này",
+          "concept": "Mô tả chi tiết concept, cách triển khai",
+          "estimated_views": "Ước tính lượt xem dựa trên hiệu suất kênh (VD: '${Math.round(avgViews * 0.8).toLocaleString()} - ${Math.round(avgViews * 1.5).toLocaleString()}')",
+          "content_type": "Loại nội dung (hướng dẫn/review/vlog/giải trí...)"
         },
         {
-          "title": "Ý tưởng video 2",
-          "concept": "Mô tả concept"
+          "title": "Tiêu đề video 2 - viral potential",
+          "concept": "Mô tả concept có tiềm năng viral dựa trên video hiệu suất cao nhất của kênh",
+          "estimated_views": "Ước tính lượt xem (VD: '${Math.round(topVideoViews * 0.5).toLocaleString()} - ${Math.round(topVideoViews * 0.8).toLocaleString()}')",
+          "content_type": "Loại nội dung"
         },
         {
-          "title": "Ý tưởng video 3",
-          "concept": "Mô tả concept"
+          "title": "Tiêu đề video 3 - safe bet",
+          "concept": "Mô tả concept an toàn, phù hợp với khán giả hiện tại",
+          "estimated_views": "Ước tính lượt xem",
+          "content_type": "Loại nội dung"
         }
       ]
     },
@@ -186,6 +253,10 @@ QUAN TRỌNG:
 - Phân tích sâu sắc, chi tiết dựa trên dữ liệu thực tế
 - Sử dụng tiếng Việt
 - Đảm bảo tất cả các trường đều có giá trị hợp lệ
+- Tạo ÍT NHẤT 2 audience personas khác nhau
+- Tạo ÍT NHẤT 3 growth opportunities với priority khác nhau (high, medium, low)
+- Video ideas phải CỤ THỂ cho kênh này, không chung chung
+- Content calendar phải dựa trên phân tích thời gian đăng thực tế đã cung cấp
 `;
 
     try {

@@ -32,9 +32,11 @@ export const vi = {
     loading: {
         title: "Đang phân tích kênh YouTube...",
         steps: {
+            validating: "Đang kiểm tra URL...",
             fetchingChannel: "Đang lấy thông tin kênh",
+            fetchingVideos: "Đang tải danh sách video",
             analyzingContent: "Đang phân tích nội dung",
-            generatingReport: "Đang tạo báo cáo",
+            generatingReport: "Đang tạo báo cáo AI",
         },
         note: "Quá trình này có thể mất 30-60 giây...",
     },
@@ -151,6 +153,22 @@ export const vi = {
         contentPillars: {
             title: "Trụ cột nội dung (Content Pillars)",
         },
+        audiencePersonas: {
+            title: "Chân dung khách hàng",
+            demographics: "Nhân khẩu học:",
+            interests: "Sở thích:",
+            painPoints: "Nỗi đau:",
+            contentPreferences: "Nội dung yêu thích:",
+        },
+        contentCalendar: {
+            title: "Lịch đăng nội dung",
+            bestDays: "Ngày đăng tốt nhất:",
+            bestTimes: "Giờ đăng tốt nhất:",
+            recommendedFrequency: "Tần suất đề xuất:",
+        },
+        growthOpportunities: {
+            title: "Cơ hội tăng trưởng",
+        },
     },
 
     evaluation: {
@@ -165,6 +183,16 @@ export const vi = {
         insights: {
             title: "Đề xuất hành động",
         },
+        videoIdeas: {
+            title: "Ý tưởng Video",
+            estimatedPerformance: "Hiệu suất dự kiến:",
+        },
+    },
+
+    language: {
+        selector: "Ngôn ngữ",
+        vietnamese: "Tiếng Việt",
+        english: "Tiếng Anh",
     },
 } as const;
 

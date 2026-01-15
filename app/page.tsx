@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
+import LanguageSelector from "@/components/LanguageSelector";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
 
@@ -62,10 +63,18 @@ export default function Home() {
     };
 
     return (
-        <main className="min-h-screen flex flex-col">
-            {/* Ultracompact Header - Clean Branding (50px) */}
+        <main id="main-content" className="min-h-screen flex flex-col">
+            {/* Header with Language Selector */}
+            <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--bg-main)] border-b border-[var(--border)]" role="banner">
+                <div className="container flex items-center justify-end h-[40px]">
+                    <LanguageSelector />
+                </div>
+            </header>
+
+            {/* Main Content */}
             <div
                 className={`pt-[50px] flex-1 ${!report ? "center-screen" : ""}`}
+                role="main"
             >
                 {!report && !isLoading && (
                     <div className="container max-w-2xl mx-auto text-center fade-in py-16 md:py-24">
@@ -84,7 +93,7 @@ export default function Home() {
                 )}
 
                 {isLoading && (
-                    <div className="container py-8">
+                    <div className="container py-8" aria-live="polite" aria-busy="true">
                         <LoadingState />
                     </div>
                 )}
@@ -100,12 +109,13 @@ export default function Home() {
             </div>
 
             {error && (
-                <div className="toast-container">
+                <div className="toast-container" role="alert" aria-live="assertive">
                     <div className="toast toast-error">
                         <span className="text-[12px]">{error}</span>
                         <button
                             onClick={() => setError(null)}
                             className="ml-1 opacity-50 hover:opacity-100"
+                            aria-label="Dismiss error"
                         >
                             ✕
                         </button>

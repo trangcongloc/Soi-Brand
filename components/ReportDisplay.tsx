@@ -1,8 +1,15 @@
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import { MarketingReport, Post } from "@/lib/types";
 import styles from "./ReportDisplay.module.css";
 import { downloadJSON } from "@/lib/utils";
 import { useLang, formatString } from "@/lib/lang";
+
+// Dynamically import chart to avoid SSR issues
+const VideoPerformanceChart = dynamic(
+    () => import("./VideoPerformanceChart"),
+    { ssr: false, loading: () => <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>Loading chart...</div> }
+);
 
 interface ReportDisplayProps {
     report: MarketingReport;
@@ -269,9 +276,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                         </h2>
                         <nav className={styles.nav}>
                             {[
-                                { id: "data", label: "Dữ liệu" },
-                                { id: "analysis", label: "Phân tích" },
-                                { id: "evaluation", label: "Đánh giá" },
+                                { id: "data", label: lang.sidebar.tabs.data },
+                                { id: "analysis", label: lang.sidebar.tabs.analysis },
+                                { id: "evaluation", label: lang.sidebar.tabs.evaluation },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
@@ -1604,6 +1611,16 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Video Performance Chart */}
+                                    {posts.length > 0 && (
+                                        <div className={styles.card} style={{ marginTop: '1rem' }}>
+                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
+                                                Top Video Performance
+                                            </h5>
+                                            <VideoPerformanceChart posts={posts} maxItems={8} />
+                                        </div>
+                                    )}
                                 </div>
                             </section>
 
@@ -1652,6 +1669,124 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                     )}
                                 </div>
                             </section>
+
+                            {/* Audience Personas - New Section */}
+                            {report_part_2.audience_personas && report_part_2.audience_personas.length > 0 && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {lang.analysis.audiencePersonas.title}
+                                    </h3>
+                                    <div className={styles.grid2}>
+                                        {report_part_2.audience_personas.map((persona, idx) => (
+                                            <div key={idx} className={styles.card}>
+                                                <h4 className={styles.cardTitle} style={{ color: '#6366f1' }}>
+                                                    {persona.name}
+                                                </h4>
+                                                <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
+                                                    <p style={{ marginBottom: '0.5rem' }}>
+                                                        <strong>{lang.analysis.audiencePersonas.demographics}</strong>{' '}
+                                                        {persona.demographics}
+                                                    </p>
+                                                    <p style={{ marginBottom: '0.5rem' }}>
+                                                        <strong>{lang.analysis.audiencePersonas.interests}</strong>{' '}
+                                                        {persona.interests.join(', ')}
+                                                    </p>
+                                                    <p style={{ marginBottom: '0.5rem' }}>
+                                                        <strong>{lang.analysis.audiencePersonas.painPoints}</strong>{' '}
+                                                        {persona.pain_points.join(', ')}
+                                                    </p>
+                                                    <p style={{ marginBottom: 0 }}>
+                                                        <strong>{lang.analysis.audiencePersonas.contentPreferences}</strong>{' '}
+                                                        {persona.content_preferences}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Content Calendar - New Section */}
+                            {report_part_2.content_calendar && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {lang.analysis.contentCalendar.title}
+                                    </h3>
+                                    <div className={styles.card}>
+                                        <div className={styles.grid2} style={{ gap: '1rem' }}>
+                                            <div>
+                                                <p style={{ fontSize: '11px', marginBottom: '0.5rem' }}>
+                                                    <strong>{lang.analysis.contentCalendar.bestDays}</strong>{' '}
+                                                    {report_part_2.content_calendar.best_posting_days.join(', ')}
+                                                </p>
+                                                <p style={{ fontSize: '11px', marginBottom: '0.5rem' }}>
+                                                    <strong>{lang.analysis.contentCalendar.bestTimes}</strong>{' '}
+                                                    {report_part_2.content_calendar.best_posting_times.join(', ')}
+                                                </p>
+                                                <p style={{ fontSize: '11px', marginBottom: 0 }}>
+                                                    <strong>{lang.analysis.contentCalendar.recommendedFrequency}</strong>{' '}
+                                                    {report_part_2.content_calendar.recommended_frequency}
+                                                </p>
+                                            </div>
+                                            {report_part_2.content_calendar.content_mix && (
+                                                <div>
+                                                    <p style={{ fontSize: '11px', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                                        Content Mix:
+                                                    </p>
+                                                    {report_part_2.content_calendar.content_mix.map((mix, idx) => (
+                                                        <div key={idx} style={{ marginBottom: '0.25rem' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                                                <span>{mix.pillar}</span>
+                                                                <span style={{ fontWeight: '600' }}>{mix.percentage}%</span>
+                                                            </div>
+                                                            <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
+                                                                <div style={{ width: `${mix.percentage}%`, height: '100%', background: '#3b82f6', borderRadius: '2px' }}></div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Growth Opportunities - New Section */}
+                            {report_part_2.growth_opportunities && report_part_2.growth_opportunities.length > 0 && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {lang.analysis.growthOpportunities.title}
+                                    </h3>
+                                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                        {report_part_2.growth_opportunities.map((opp, idx) => (
+                                            <div key={idx} className={styles.card} style={{ borderLeft: `3px solid ${opp.priority === 'high' ? '#ef4444' : opp.priority === 'medium' ? '#f59e0b' : '#10b981'}` }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                    <span style={{
+                                                        fontSize: '9px',
+                                                        fontWeight: '700',
+                                                        padding: '0.125rem 0.375rem',
+                                                        borderRadius: '0.25rem',
+                                                        textTransform: 'uppercase',
+                                                        background: opp.priority === 'high' ? '#fef2f2' : opp.priority === 'medium' ? '#fffbeb' : '#f0fdf4',
+                                                        color: opp.priority === 'high' ? '#ef4444' : opp.priority === 'medium' ? '#f59e0b' : '#10b981',
+                                                    }}>
+                                                        {opp.priority}
+                                                    </span>
+                                                    <h4 style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                                                        {opp.opportunity}
+                                                    </h4>
+                                                </div>
+                                                <p style={{ fontSize: '11px', color: '#666', marginBottom: '0.5rem' }}>
+                                                    {opp.description}
+                                                </p>
+                                                <p style={{ fontSize: '10px', color: '#10b981', fontWeight: '500' }}>
+                                                    {opp.expected_impact}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
                         </div>
                     )}
 
@@ -1782,7 +1917,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                                                     </svg>
                                                 </div>
-                                                <div>
+                                                <div style={{ flex: 1 }}>
                                                     <h4
                                                         className={
                                                             styles.ideaTitle
@@ -1797,6 +1932,20 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     >
                                                         {idea.concept}
                                                     </p>
+                                                    {(idea.estimated_views || idea.content_type) && (
+                                                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '10px' }}>
+                                                            {idea.content_type && (
+                                                                <span style={{ color: '#6366f1', fontWeight: '500' }}>
+                                                                    {idea.content_type}
+                                                                </span>
+                                                            )}
+                                                            {idea.estimated_views && (
+                                                                <span style={{ color: '#10b981', fontWeight: '500' }}>
+                                                                    {lang.evaluation.videoIdeas.estimatedPerformance} {idea.estimated_views}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )

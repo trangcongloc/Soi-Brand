@@ -82,10 +82,16 @@ export interface ChannelInfo {
     joinedAt?: string;
 }
 
+export interface AdCreative {
+    type: string;
+    description: string;
+    hook: string;
+}
+
 export interface AdStrategy {
     overview: string;
     ad_angles: string[];
-    ad_creatives: any;
+    ad_creatives: AdCreative[] | null;
     target_audience_clues: string;
 }
 
@@ -171,6 +177,33 @@ export interface QuantitativeSynthesis {
 export interface VideoIdea {
     title: string;
     concept: string;
+    estimated_views?: string;
+    content_type?: string;
+}
+
+export interface AudiencePersona {
+    name: string;
+    demographics: string;
+    interests: string[];
+    pain_points: string[];
+    content_preferences: string;
+}
+
+export interface ContentCalendar {
+    best_posting_days: string[];
+    best_posting_times: string[];
+    recommended_frequency: string;
+    content_mix: {
+        pillar: string;
+        percentage: number;
+    }[];
+}
+
+export interface GrowthOpportunity {
+    opportunity: string;
+    description: string;
+    priority: "high" | "medium" | "low";
+    expected_impact: string;
 }
 
 export interface ActionableInsights {
@@ -192,6 +225,10 @@ export interface MarketingReport {
         funnel_analysis: FunnelAnalysis;
         strategy_analysis: StrategyAnalysis;
         quantitative_synthesis: QuantitativeSynthesis;
+        // New enhanced fields (optional for backward compatibility)
+        audience_personas?: AudiencePersona[];
+        content_calendar?: ContentCalendar;
+        growth_opportunities?: GrowthOpportunity[];
     };
     report_part_3: {
         strengths: string[];
