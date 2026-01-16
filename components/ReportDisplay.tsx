@@ -205,6 +205,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const [copyStatus, setCopyStatus] = useState<string | null>(null);
     const [isChannelHovered, setIsChannelHovered] = useState(false);
     const [isDescExpanded, setIsDescExpanded] = useState(false);
+    const [actionPlanPhase, setActionPlanPhase] = useState<"30" | "60" | "90">(
+        "30"
+    );
 
     const handleCopyTags = (tags: string[]) => {
         const text = tags.join(", ");
@@ -1105,6 +1108,83 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Content Niche Analysis */}
+                                    {report_part_2.content_niche_analysis && (
+                                        <div className={styles.card} style={{ marginTop: "1rem" }}>
+                                            <h4 className={styles.cardTitle}>
+                                                {lang.analysis.contentNicheAnalysis.title}
+                                            </h4>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                                <div>
+                                                    <span className={styles.statLabel}>
+                                                        {lang.analysis.contentNicheAnalysis.primaryNiche}
+                                                    </span>
+                                                    <span style={{ marginLeft: "0.5rem", fontWeight: "600", color: "#e53935" }}>
+                                                        {report_part_2.content_niche_analysis.primary_niche}
+                                                    </span>
+                                                </div>
+                                                {report_part_2.content_niche_analysis.sub_niches?.length > 0 && (
+                                                    <div>
+                                                        <span className={styles.statLabel}>
+                                                            {lang.analysis.contentNicheAnalysis.subNiches}
+                                                        </span>
+                                                        <div className={styles.adAngles} style={{ marginTop: "0.5rem" }}>
+                                                            {report_part_2.content_niche_analysis.sub_niches.map((niche, i) => (
+                                                                <span key={i} className={styles.angleTag}>
+                                                                    {niche}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {report_part_2.content_niche_analysis.content_categories?.length > 0 && (
+                                                    <div>
+                                                        <span className={styles.statLabel}>
+                                                            {lang.analysis.contentNicheAnalysis.contentCategories}
+                                                        </span>
+                                                        <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                                            {report_part_2.content_niche_analysis.content_categories.map((cat, i) => (
+                                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                                                    <div style={{
+                                                                        width: "60px",
+                                                                        height: "8px",
+                                                                        background: "#f0f0f0",
+                                                                        borderRadius: "4px",
+                                                                        overflow: "hidden"
+                                                                    }}>
+                                                                        <div style={{
+                                                                            width: `${cat.percentage}%`,
+                                                                            height: "100%",
+                                                                            background: i === 0 ? "#e53935" : i === 1 ? "#ff7043" : "#ffab91",
+                                                                            borderRadius: "4px"
+                                                                        }}></div>
+                                                                    </div>
+                                                                    <span style={{ fontSize: "11px", fontWeight: "600", minWidth: "35px" }}>
+                                                                        {cat.percentage}%
+                                                                    </span>
+                                                                    <span style={{ fontSize: "12px", color: "#333" }}>
+                                                                        {cat.category}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div style={{ borderTop: "1px solid #eee", paddingTop: "0.75rem" }}>
+                                                    <p className={`${styles.analysisText} ${styles.mutedText}`} style={{ marginBottom: "0.5rem" }}>
+                                                        <strong>{lang.analysis.contentNicheAnalysis.nichePositioning}</strong> {report_part_2.content_niche_analysis.niche_positioning}
+                                                    </p>
+                                                    <p className={`${styles.analysisText} ${styles.mutedText}`} style={{ marginBottom: "0.5rem" }}>
+                                                        <strong>{lang.analysis.contentNicheAnalysis.competitorLandscape}</strong> {report_part_2.content_niche_analysis.competitor_landscape}
+                                                    </p>
+                                                    <p className={`${styles.analysisText} ${styles.mutedText}`}>
+                                                        <strong>{lang.analysis.contentNicheAnalysis.contentUniqueness}</strong> {report_part_2.content_niche_analysis.content_uniqueness}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{ marginTop: "1rem" }}>
                                     <div className={styles.card}>
@@ -1380,112 +1460,152 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 </div>
                             </section>
 
-                            {/* Audience Personas - New Section */}
+                            {/* Audience Analysis - Demographics & Behavior */}
+                            {report_part_2.audience_analysis && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {lang.analysis.audienceAnalysis.title}
+                                    </h3>
+                                    <div className={styles.grid2}>
+                                        {/* Demographics */}
+                                        <div className={styles.card}>
+                                            <h4 className={styles.cardTitle}>
+                                                {lang.analysis.audienceAnalysis.demographicsTitle}
+                                            </h4>
+                                            <div style={{ fontSize: "11px", lineHeight: "1.8" }}>
+                                                {/* Age Distribution */}
+                                                {report_part_2.audience_analysis.demographics?.age_distribution && (
+                                                    <div style={{ marginBottom: "1rem" }}>
+                                                        <strong>{lang.analysis.audienceAnalysis.ageDistribution}</strong>
+                                                        <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                                            {report_part_2.audience_analysis.demographics.age_distribution.map((age, i) => (
+                                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                    <span style={{ minWidth: "50px", fontSize: "10px" }}>{age.range}</span>
+                                                                    <div style={{ flex: 1, height: "6px", background: "#f0f0f0", borderRadius: "3px", overflow: "hidden" }}>
+                                                                        <div style={{ width: `${age.percentage}%`, height: "100%", background: "#e53935", borderRadius: "3px" }}></div>
+                                                                    </div>
+                                                                    <span style={{ minWidth: "30px", fontSize: "10px", textAlign: "right" }}>{age.percentage}%</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* Gender Split */}
+                                                {report_part_2.audience_analysis.demographics?.gender_split && (
+                                                    <div style={{ marginBottom: "1rem" }}>
+                                                        <strong>{lang.analysis.audienceAnalysis.genderSplit}</strong>
+                                                        <div style={{ marginTop: "0.5rem", display: "flex", gap: "1rem" }}>
+                                                            <span style={{ color: "#3b82f6" }}>{lang.analysis.audienceAnalysis.male}: {report_part_2.audience_analysis.demographics.gender_split.male}%</span>
+                                                            <span style={{ color: "#ec4899" }}>{lang.analysis.audienceAnalysis.female}: {report_part_2.audience_analysis.demographics.gender_split.female}%</span>
+                                                            {report_part_2.audience_analysis.demographics.gender_split.other > 0 && (
+                                                                <span style={{ color: "#8b5cf6" }}>{lang.analysis.audienceAnalysis.other}: {report_part_2.audience_analysis.demographics.gender_split.other}%</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* Top Countries */}
+                                                {report_part_2.audience_analysis.demographics?.top_countries && (
+                                                    <div style={{ marginBottom: "1rem" }}>
+                                                        <strong>{lang.analysis.audienceAnalysis.topCountries}</strong>
+                                                        <div style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                            {report_part_2.audience_analysis.demographics.top_countries.map((country, i) => (
+                                                                <span key={i} className={styles.angleTag}>
+                                                                    {country.country} ({country.percentage}%)
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <p><strong>{lang.analysis.audienceAnalysis.primaryLanguages}</strong> {report_part_2.audience_analysis.demographics?.primary_languages?.join(", ")}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.incomeLevel}</strong> {report_part_2.audience_analysis.demographics?.income_level}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.educationLevel}</strong> {report_part_2.audience_analysis.demographics?.education_level}</p>
+                                            </div>
+                                        </div>
+                                        {/* Behavior */}
+                                        <div className={styles.card}>
+                                            <h4 className={styles.cardTitle}>
+                                                {lang.analysis.audienceAnalysis.behaviorTitle}
+                                            </h4>
+                                            <div style={{ fontSize: "11px", lineHeight: "1.8" }}>
+                                                <p><strong>{lang.analysis.audienceAnalysis.estimatedWatchTime}</strong> {report_part_2.audience_analysis.behavior?.estimated_watch_time}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.returningVsNew}</strong> {report_part_2.audience_analysis.behavior?.returning_vs_new_ratio}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.subscriberGrowth}</strong> {report_part_2.audience_analysis.behavior?.subscriber_growth_trend}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.peakViewingDays}</strong> {report_part_2.audience_analysis.behavior?.peak_viewing_days?.join(", ")}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.peakViewingHours}</strong> {report_part_2.audience_analysis.behavior?.peak_viewing_hours?.join(", ")}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.engagementPatterns}</strong> {report_part_2.audience_analysis.behavior?.engagement_patterns}</p>
+                                                <p><strong>{lang.analysis.audienceAnalysis.devicePreferences}</strong> {report_part_2.audience_analysis.behavior?.device_preferences}</p>
+                                                {/* Psychographics */}
+                                                {report_part_2.audience_analysis.psychographics && (
+                                                    <div style={{ marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "0.75rem" }}>
+                                                        <strong>{lang.analysis.audienceAnalysis.psychographicsTitle}</strong>
+                                                        <p style={{ marginTop: "0.5rem" }}><strong>{lang.analysis.audienceAnalysis.values}</strong> {report_part_2.audience_analysis.psychographics.values?.join(", ")}</p>
+                                                        <p><strong>{lang.analysis.audienceAnalysis.lifestyle}</strong> {report_part_2.audience_analysis.psychographics.lifestyle}</p>
+                                                        <p><strong>{lang.analysis.audienceAnalysis.purchaseBehavior}</strong> {report_part_2.audience_analysis.psychographics.purchase_behavior}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Audience Personas - Enhanced Section */}
                             {report_part_2.audience_personas &&
                                 report_part_2.audience_personas.length > 0 && (
                                     <section>
                                         <h3 className={styles.sectionTitle}>
-                                            {
-                                                lang.analysis.audiencePersonas
-                                                    .title
-                                            }
+                                            {lang.analysis.audiencePersonas.title}
                                         </h3>
                                         <div className={styles.grid2}>
                                             {report_part_2.audience_personas.map(
                                                 (persona, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className={styles.card}
-                                                    >
-                                                        <h4
-                                                            className={
-                                                                styles.cardTitle
-                                                            }
-                                                            style={{
-                                                                color: "#6366f1",
-                                                            }}
-                                                        >
+                                                    <div key={idx} className={styles.card}>
+                                                        <h4 className={styles.cardTitle} style={{ color: "#6366f1" }}>
                                                             {persona.name}
                                                         </h4>
-                                                        <div
-                                                            style={{
-                                                                fontSize:
-                                                                    "11px",
-                                                                lineHeight:
-                                                                    "1.6",
-                                                            }}
-                                                        >
-                                                            <p
-                                                                style={{
-                                                                    marginBottom:
-                                                                        "0.5rem",
-                                                                }}
-                                                            >
-                                                                <strong>
-                                                                    {
-                                                                        lang
-                                                                            .analysis
-                                                                            .audiencePersonas
-                                                                            .demographics
-                                                                    }
-                                                                </strong>{" "}
-                                                                {
-                                                                    persona.demographics
-                                                                }
+                                                        {persona.avatar_description && (
+                                                            <p style={{ fontSize: "11px", color: "#666", marginBottom: "0.75rem", fontStyle: "italic" }}>
+                                                                {persona.avatar_description}
                                                             </p>
-                                                            <p
-                                                                style={{
-                                                                    marginBottom:
-                                                                        "0.5rem",
-                                                                }}
-                                                            >
-                                                                <strong>
-                                                                    {
-                                                                        lang
-                                                                            .analysis
-                                                                            .audiencePersonas
-                                                                            .interests
-                                                                    }
-                                                                </strong>{" "}
-                                                                {persona.interests.join(
-                                                                    ", "
-                                                                )}
+                                                        )}
+                                                        <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
+                                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.25rem 1rem", marginBottom: "0.75rem" }}>
+                                                                {persona.age_range && <p><strong>{lang.analysis.audiencePersonas.ageRange}</strong> {persona.age_range}</p>}
+                                                                {persona.gender && <p><strong>{lang.analysis.audiencePersonas.gender}</strong> {persona.gender}</p>}
+                                                                {persona.location && <p><strong>{lang.analysis.audiencePersonas.location}</strong> {persona.location}</p>}
+                                                                {persona.occupation && <p><strong>{lang.analysis.audiencePersonas.occupation}</strong> {persona.occupation}</p>}
+                                                                {persona.income_level && <p><strong>{lang.analysis.audiencePersonas.incomeLevel}</strong> {persona.income_level}</p>}
+                                                                {persona.viewing_frequency && <p><strong>{lang.analysis.audiencePersonas.viewingFrequency}</strong> {persona.viewing_frequency}</p>}
+                                                            </div>
+                                                            <p style={{ marginBottom: "0.5rem" }}>
+                                                                <strong>{lang.analysis.audiencePersonas.interests}</strong> {persona.interests?.join(", ")}
                                                             </p>
-                                                            <p
-                                                                style={{
-                                                                    marginBottom:
-                                                                        "0.5rem",
-                                                                }}
-                                                            >
-                                                                <strong>
-                                                                    {
-                                                                        lang
-                                                                            .analysis
-                                                                            .audiencePersonas
-                                                                            .painPoints
-                                                                    }
-                                                                </strong>{" "}
-                                                                {persona.pain_points.join(
-                                                                    ", "
-                                                                )}
+                                                            <p style={{ marginBottom: "0.5rem" }}>
+                                                                <strong>{lang.analysis.audiencePersonas.painPoints}</strong> {persona.pain_points?.join(", ")}
                                                             </p>
-                                                            <p
-                                                                style={{
-                                                                    marginBottom: 0,
-                                                                }}
-                                                            >
-                                                                <strong>
-                                                                    {
-                                                                        lang
-                                                                            .analysis
-                                                                            .audiencePersonas
-                                                                            .contentPreferences
-                                                                    }
-                                                                </strong>{" "}
-                                                                {
-                                                                    persona.content_preferences
-                                                                }
+                                                            {persona.goals && persona.goals.length > 0 && (
+                                                                <p style={{ marginBottom: "0.5rem" }}>
+                                                                    <strong>{lang.analysis.audiencePersonas.goals}</strong> {persona.goals.join(", ")}
+                                                                </p>
+                                                            )}
+                                                            <p style={{ marginBottom: "0.5rem" }}>
+                                                                <strong>{lang.analysis.audiencePersonas.contentPreferences}</strong> {persona.content_preferences}
                                                             </p>
+                                                            {persona.preferred_video_length && (
+                                                                <p style={{ marginBottom: "0.5rem" }}>
+                                                                    <strong>{lang.analysis.audiencePersonas.preferredVideoLength}</strong> {persona.preferred_video_length}
+                                                                </p>
+                                                            )}
+                                                            {persona.social_platforms && persona.social_platforms.length > 0 && (
+                                                                <p style={{ marginBottom: "0.5rem" }}>
+                                                                    <strong>{lang.analysis.audiencePersonas.socialPlatforms}</strong> {persona.social_platforms.join(", ")}
+                                                                </p>
+                                                            )}
+                                                            {persona.buying_triggers && persona.buying_triggers.length > 0 && (
+                                                                <p style={{ marginBottom: 0 }}>
+                                                                    <strong>{lang.analysis.audiencePersonas.buyingTriggers}</strong> {persona.buying_triggers.join(", ")}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )
@@ -1761,6 +1881,341 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                         </div>
                                     </section>
                                 )}
+
+                            {/* SEO Analysis - New Section */}
+                            {report_part_2.seo_analysis && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {lang.analysis.seoAnalysis.title}
+                                    </h3>
+
+                                    {/* Keyword Strategy */}
+                                    <div
+                                        className={styles.card}
+                                        style={{ marginBottom: "1rem" }}
+                                    >
+                                        <h4
+                                            className={styles.cardTitle}
+                                            style={{
+                                                color: "#6366f1",
+                                                marginBottom: "0.75rem",
+                                            }}
+                                        >
+                                            {
+                                                lang.analysis.seoAnalysis
+                                                    .keywordStrategy
+                                            }
+                                        </h4>
+                                        <div
+                                            style={{
+                                                fontSize: "11px",
+                                                lineHeight: "1.6",
+                                            }}
+                                        >
+                                            <p
+                                                style={{
+                                                    marginBottom: "0.5rem",
+                                                }}
+                                            >
+                                                <strong>
+                                                    {
+                                                        lang.analysis
+                                                            .seoAnalysis
+                                                            .topKeywords
+                                                    }
+                                                </strong>{" "}
+                                                {report_part_2.seo_analysis.keyword_strategy.top_keywords.join(
+                                                    ", "
+                                                )}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    marginBottom: "0.5rem",
+                                                }}
+                                            >
+                                                <strong>
+                                                    {
+                                                        lang.analysis
+                                                            .seoAnalysis
+                                                            .keywordDensity
+                                                    }
+                                                </strong>{" "}
+                                                {
+                                                    report_part_2.seo_analysis
+                                                        .keyword_strategy
+                                                        .keyword_density
+                                                }
+                                            </p>
+                                            {report_part_2.seo_analysis
+                                                .keyword_strategy
+                                                .missing_keywords.length >
+                                                0 && (
+                                                <p style={{ marginBottom: 0 }}>
+                                                    <strong>
+                                                        {
+                                                            lang.analysis
+                                                                .seoAnalysis
+                                                                .missingKeywords
+                                                        }
+                                                    </strong>{" "}
+                                                    {report_part_2.seo_analysis.keyword_strategy.missing_keywords.join(
+                                                        ", "
+                                                    )}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Tag Analysis - Enhanced */}
+                                    <div
+                                        className={styles.card}
+                                        style={{ marginBottom: "1rem" }}
+                                    >
+                                        <h4
+                                            className={styles.cardTitle}
+                                            style={{
+                                                color: "#10b981",
+                                                marginBottom: "0.75rem",
+                                            }}
+                                        >
+                                            {lang.analysis.seoAnalysis.tagAnalysis}
+                                        </h4>
+                                        <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
+                                            <p style={{ marginBottom: "0.5rem" }}>
+                                                <strong>{lang.analysis.seoAnalysis.tagCoverage}</strong>{" "}
+                                                {report_part_2.seo_analysis.tag_analysis.tag_coverage}
+                                            </p>
+                                            <p style={{ marginBottom: "0.5rem" }}>
+                                                <strong>{lang.analysis.seoAnalysis.tagConsistency}</strong>{" "}
+                                                {report_part_2.seo_analysis.tag_analysis.tag_consistency}
+                                            </p>
+                                            {report_part_2.seo_analysis.tag_analysis.tag_optimization_score && (
+                                                <p style={{ marginBottom: "0.75rem" }}>
+                                                    <strong>{lang.analysis.seoAnalysis.tagOptimizationScore}</strong>{" "}
+                                                    <span style={{ color: "#10b981", fontWeight: "600" }}>
+                                                        {report_part_2.seo_analysis.tag_analysis.tag_optimization_score}
+                                                    </span>
+                                                </p>
+                                            )}
+
+                                            {/* Most Used Tags */}
+                                            {report_part_2.seo_analysis.tag_analysis.most_used_tags &&
+                                             report_part_2.seo_analysis.tag_analysis.most_used_tags.length > 0 && (
+                                                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "6px" }}>
+                                                    <strong style={{ display: "block", marginBottom: "0.5rem" }}>
+                                                        {lang.analysis.seoAnalysis.mostUsedTags}
+                                                    </strong>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                                        {report_part_2.seo_analysis.tag_analysis.most_used_tags.map((tag, i) => (
+                                                            <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                                                                <span className={styles.angleTag} style={{ background: "#e0f2fe", color: "#0369a1" }}>
+                                                                    {tag.tag}
+                                                                </span>
+                                                                <span style={{ fontSize: "10px", color: "#666" }}>
+                                                                    {lang.analysis.seoAnalysis.tagFrequency} {tag.frequency}x
+                                                                </span>
+                                                                <span style={{ fontSize: "10px", color: "#059669" }}>
+                                                                    {tag.performance_impact}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Tag Categories */}
+                                            {report_part_2.seo_analysis.tag_analysis.tag_categories &&
+                                             report_part_2.seo_analysis.tag_analysis.tag_categories.length > 0 && (
+                                                <div style={{ marginBottom: "1rem" }}>
+                                                    <strong style={{ display: "block", marginBottom: "0.5rem" }}>
+                                                        {lang.analysis.seoAnalysis.tagCategories}
+                                                    </strong>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                                        {report_part_2.seo_analysis.tag_analysis.tag_categories.map((cat, i) => (
+                                                            <div key={i} style={{ padding: "0.5rem", background: i % 2 === 0 ? "#fef3c7" : "#dbeafe", borderRadius: "4px" }}>
+                                                                <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>{cat.category}</div>
+                                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", marginBottom: "0.25rem" }}>
+                                                                    {cat.tags.map((t, j) => (
+                                                                        <span key={j} style={{ fontSize: "10px", padding: "2px 6px", background: "rgba(255,255,255,0.7)", borderRadius: "3px" }}>
+                                                                            {t}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                                <div style={{ fontSize: "10px", color: "#666" }}>
+                                                                    {lang.analysis.seoAnalysis.categoryEffectiveness} {cat.effectiveness}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <p style={{ marginBottom: "0.5rem" }}>
+                                                <strong>{lang.analysis.seoAnalysis.recommendedTags}</strong>{" "}
+                                                {report_part_2.seo_analysis.tag_analysis.recommended_tags.join(", ")}
+                                            </p>
+
+                                            {/* Competitor Tags */}
+                                            {report_part_2.seo_analysis.tag_analysis.competitor_tags &&
+                                             report_part_2.seo_analysis.tag_analysis.competitor_tags.length > 0 && (
+                                                <p style={{ marginBottom: "0.5rem" }}>
+                                                    <strong>{lang.analysis.seoAnalysis.competitorTags}</strong>{" "}
+                                                    <span style={{ color: "#dc2626" }}>
+                                                        {report_part_2.seo_analysis.tag_analysis.competitor_tags.join(", ")}
+                                                    </span>
+                                                </p>
+                                            )}
+
+                                            {/* Long-tail Opportunities */}
+                                            {report_part_2.seo_analysis.tag_analysis.long_tail_opportunities &&
+                                             report_part_2.seo_analysis.tag_analysis.long_tail_opportunities.length > 0 && (
+                                                <p style={{ marginBottom: 0 }}>
+                                                    <strong>{lang.analysis.seoAnalysis.longTailOpportunities}</strong>{" "}
+                                                    <span style={{ color: "#7c3aed" }}>
+                                                        {report_part_2.seo_analysis.tag_analysis.long_tail_opportunities.join(", ")}
+                                                    </span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Optimization Opportunities */}
+                                    {report_part_2.seo_analysis
+                                        .optimization_opportunities.length >
+                                        0 && (
+                                        <div>
+                                            <h4
+                                                className={styles.cardTitle}
+                                                style={{
+                                                    marginBottom: "0.75rem",
+                                                }}
+                                            >
+                                                {
+                                                    lang.analysis.seoAnalysis
+                                                        .optimizationOpportunities
+                                                }
+                                            </h4>
+                                            <div
+                                                style={{
+                                                    display: "grid",
+                                                    gap: "0.75rem",
+                                                }}
+                                            >
+                                                {report_part_2.seo_analysis.optimization_opportunities.map(
+                                                    (opp, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className={
+                                                                styles.card
+                                                            }
+                                                            style={{
+                                                                borderLeft: `3px solid ${
+                                                                    opp.priority ===
+                                                                    "high"
+                                                                        ? "#ef4444"
+                                                                        : opp.priority ===
+                                                                          "medium"
+                                                                        ? "#f59e0b"
+                                                                        : "#10b981"
+                                                                }`,
+                                                            }}
+                                                        >
+                                                            <div
+                                                                style={{
+                                                                    display:
+                                                                        "flex",
+                                                                    alignItems:
+                                                                        "center",
+                                                                    gap: "0.5rem",
+                                                                    marginBottom:
+                                                                        "0.5rem",
+                                                                }}
+                                                            >
+                                                                <span
+                                                                    style={{
+                                                                        fontSize:
+                                                                            "9px",
+                                                                        fontWeight:
+                                                                            "700",
+                                                                        padding:
+                                                                            "0.125rem 0.375rem",
+                                                                        borderRadius:
+                                                                            "0.25rem",
+                                                                        textTransform:
+                                                                            "uppercase",
+                                                                        background:
+                                                                            opp.priority ===
+                                                                            "high"
+                                                                                ? "#fef2f2"
+                                                                                : opp.priority ===
+                                                                                  "medium"
+                                                                                ? "#fffbeb"
+                                                                                : "#f0fdf4",
+                                                                        color:
+                                                                            opp.priority ===
+                                                                            "high"
+                                                                                ? "#ef4444"
+                                                                                : opp.priority ===
+                                                                                  "medium"
+                                                                                ? "#f59e0b"
+                                                                                : "#10b981",
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        opp.priority
+                                                                    }
+                                                                </span>
+                                                                <h5
+                                                                    style={{
+                                                                        fontSize:
+                                                                            "12px",
+                                                                        fontWeight:
+                                                                            "600",
+                                                                        margin: 0,
+                                                                    }}
+                                                                >
+                                                                    {opp.area}
+                                                                </h5>
+                                                            </div>
+                                                            <p
+                                                                style={{
+                                                                    fontSize:
+                                                                        "11px",
+                                                                    color: "#666",
+                                                                    marginBottom:
+                                                                        "0.25rem",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    Issue:
+                                                                </strong>{" "}
+                                                                {opp.issue}
+                                                            </p>
+                                                            <p
+                                                                style={{
+                                                                    fontSize:
+                                                                        "11px",
+                                                                    color: "#10b981",
+                                                                    fontWeight:
+                                                                        "500",
+                                                                    marginBottom: 0,
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    Recommendation:
+                                                                </strong>{" "}
+                                                                {
+                                                                    opp.recommendation
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </section>
+                            )}
                         </div>
                     )}
 
@@ -1958,6 +2413,253 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                     )}
                                 </div>
                             </section>
+
+                            {/* Action Plan - New Section */}
+                            {report_part_3.action_plan && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {lang.evaluation.actionPlan.title}
+                                    </h3>
+
+                                    {/* Tab Navigation */}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            gap: "0.5rem",
+                                            marginBottom: "1rem",
+                                        }}
+                                    >
+                                        {(["30", "60", "90"] as const).map(
+                                            (phase) => (
+                                                <button
+                                                    key={phase}
+                                                    onClick={() =>
+                                                        setActionPlanPhase(
+                                                            phase
+                                                        )
+                                                    }
+                                                    style={{
+                                                        padding: "0.5rem 1rem",
+                                                        fontSize: "11px",
+                                                        fontWeight: "600",
+                                                        border: "none",
+                                                        borderRadius:
+                                                            "0.375rem",
+                                                        cursor: "pointer",
+                                                        background:
+                                                            actionPlanPhase ===
+                                                            phase
+                                                                ? "#3b82f6"
+                                                                : "#f3f4f6",
+                                                        color:
+                                                            actionPlanPhase ===
+                                                            phase
+                                                                ? "white"
+                                                                : "#666",
+                                                        transition: "all 0.2s",
+                                                    }}
+                                                >
+                                                    {phase === "30"
+                                                        ? lang.evaluation
+                                                              .actionPlan
+                                                              .phase30
+                                                        : phase === "60"
+                                                        ? lang.evaluation
+                                                              .actionPlan
+                                                              .phase60
+                                                        : lang.evaluation
+                                                              .actionPlan
+                                                              .phase90}
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* Action Plan Content */}
+                                    <div
+                                        style={{
+                                            display: "grid",
+                                            gap: "0.75rem",
+                                        }}
+                                    >
+                                        {(actionPlanPhase === "30"
+                                            ? report_part_3.action_plan
+                                                  .phase_30_days
+                                            : actionPlanPhase === "60"
+                                            ? report_part_3.action_plan
+                                                  .phase_60_days
+                                            : report_part_3.action_plan
+                                                  .phase_90_days
+                                        ).map((task, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={styles.card}
+                                                style={{
+                                                    borderLeft: `4px solid ${
+                                                        task.priority === "high"
+                                                            ? "#ef4444"
+                                                            : task.priority ===
+                                                              "medium"
+                                                            ? "#f59e0b"
+                                                            : "#10b981"
+                                                    }`,
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems:
+                                                            "flex-start",
+                                                        gap: "0.75rem",
+                                                    }}
+                                                >
+                                                    <div
+                                                        style={{
+                                                            minWidth: "24px",
+                                                            height: "24px",
+                                                            borderRadius: "50%",
+                                                            background:
+                                                                task.priority ===
+                                                                "high"
+                                                                    ? "#fef2f2"
+                                                                    : task.priority ===
+                                                                      "medium"
+                                                                    ? "#fffbeb"
+                                                                    : "#f0fdf4",
+                                                            color:
+                                                                task.priority ===
+                                                                "high"
+                                                                    ? "#ef4444"
+                                                                    : task.priority ===
+                                                                      "medium"
+                                                                    ? "#f59e0b"
+                                                                    : "#10b981",
+                                                            display: "flex",
+                                                            alignItems:
+                                                                "center",
+                                                            justifyContent:
+                                                                "center",
+                                                            fontSize: "11px",
+                                                            fontWeight: "700",
+                                                        }}
+                                                    >
+                                                        {idx + 1}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <h5
+                                                            style={{
+                                                                fontSize:
+                                                                    "12px",
+                                                                fontWeight:
+                                                                    "600",
+                                                                marginBottom:
+                                                                    "0.5rem",
+                                                                color: "#333",
+                                                            }}
+                                                        >
+                                                            {task.action}
+                                                        </h5>
+                                                        <div
+                                                            style={{
+                                                                fontSize:
+                                                                    "10px",
+                                                                lineHeight:
+                                                                    "1.6",
+                                                            }}
+                                                        >
+                                                            <p
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "0.25rem",
+                                                                    color: "#666",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .evaluation
+                                                                            .actionPlan
+                                                                            .priority
+                                                                    }
+                                                                </strong>{" "}
+                                                                <span
+                                                                    style={{
+                                                                        padding:
+                                                                            "0.125rem 0.375rem",
+                                                                        borderRadius:
+                                                                            "0.25rem",
+                                                                        background:
+                                                                            task.priority ===
+                                                                            "high"
+                                                                                ? "#fef2f2"
+                                                                                : task.priority ===
+                                                                                  "medium"
+                                                                                ? "#fffbeb"
+                                                                                : "#f0fdf4",
+                                                                        color:
+                                                                            task.priority ===
+                                                                            "high"
+                                                                                ? "#ef4444"
+                                                                                : task.priority ===
+                                                                                  "medium"
+                                                                                ? "#f59e0b"
+                                                                                : "#10b981",
+                                                                        fontWeight:
+                                                                            "600",
+                                                                        textTransform:
+                                                                            "uppercase",
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        task.priority
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                            <p
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "0.25rem",
+                                                                    color: "#666",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .evaluation
+                                                                            .actionPlan
+                                                                            .expectedImpact
+                                                                    }
+                                                                </strong>{" "}
+                                                                {
+                                                                    task.expected_impact
+                                                                }
+                                                            </p>
+                                                            <p
+                                                                style={{
+                                                                    marginBottom: 0,
+                                                                    color: "#666",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .evaluation
+                                                                            .actionPlan
+                                                                            .resourcesNeeded
+                                                                    }
+                                                                </strong>{" "}
+                                                                {
+                                                                    task.resources_needed
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
                         </div>
                     )}
                 </div>

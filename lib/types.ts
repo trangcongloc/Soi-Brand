@@ -136,6 +136,58 @@ export interface ContentFocus {
     topics: string[];
 }
 
+export interface ContentNicheAnalysis {
+    primary_niche: string;
+    sub_niches: string[];
+    content_categories: {
+        category: string;
+        percentage: number;
+        description: string;
+    }[];
+    niche_positioning: string;
+    competitor_landscape: string;
+    content_uniqueness: string;
+}
+
+export interface AudienceDemographics {
+    age_distribution: {
+        range: string;
+        percentage: number;
+    }[];
+    gender_split: {
+        male: number;
+        female: number;
+        other: number;
+    };
+    top_countries: {
+        country: string;
+        percentage: number;
+    }[];
+    primary_languages: string[];
+    income_level: string;
+    education_level: string;
+}
+
+export interface AudienceBehavior {
+    estimated_watch_time: string;
+    returning_vs_new_ratio: string;
+    subscriber_growth_trend: string;
+    peak_viewing_days: string[];
+    peak_viewing_hours: string[];
+    engagement_patterns: string;
+    device_preferences: string;
+}
+
+export interface AudienceAnalysis {
+    demographics: AudienceDemographics;
+    behavior: AudienceBehavior;
+    psychographics: {
+        values: string[];
+        lifestyle: string;
+        purchase_behavior: string;
+    };
+}
+
 export interface StrategyAnalysis {
     brand_identity: BrandIdentity;
     content_pillars: ContentPillar[];
@@ -183,10 +235,21 @@ export interface VideoIdea {
 
 export interface AudiencePersona {
     name: string;
+    avatar_description: string;
     demographics: string;
+    age_range: string;
+    gender: string;
+    location: string;
+    occupation: string;
+    income_level: string;
     interests: string[];
     pain_points: string[];
+    goals: string[];
     content_preferences: string;
+    preferred_video_length: string;
+    viewing_frequency: string;
+    social_platforms: string[];
+    buying_triggers: string[];
 }
 
 export interface ContentCalendar {
@@ -206,10 +269,61 @@ export interface GrowthOpportunity {
     expected_impact: string;
 }
 
+export interface KeywordStrategy {
+    top_keywords: string[];
+    keyword_density: string;
+    missing_keywords: string[];
+}
+
+export interface TagAnalysis {
+    tag_coverage: string;
+    recommended_tags: string[];
+    tag_consistency: string;
+    most_used_tags: {
+        tag: string;
+        frequency: number;
+        performance_impact: string;
+    }[];
+    tag_categories: {
+        category: string;
+        tags: string[];
+        effectiveness: string;
+    }[];
+    competitor_tags: string[];
+    long_tail_opportunities: string[];
+    tag_optimization_score: string;
+}
+
+export interface OptimizationOpportunity {
+    area: string;
+    issue: string;
+    recommendation: string;
+    priority: "high" | "medium" | "low";
+}
+
+export interface SEOAnalysis {
+    keyword_strategy: KeywordStrategy;
+    tag_analysis: TagAnalysis;
+    optimization_opportunities: OptimizationOpportunity[];
+}
+
 export interface ActionableInsights {
     learn_from: string;
     avoid: string;
     video_ideas: VideoIdea[];
+}
+
+export interface ActionPlanTask {
+    action: string;
+    priority: "high" | "medium" | "low";
+    expected_impact: string;
+    resources_needed: string;
+}
+
+export interface ActionPlan {
+    phase_30_days: ActionPlanTask[];
+    phase_60_days: ActionPlanTask[];
+    phase_90_days: ActionPlanTask[];
 }
 
 export interface MarketingReport {
@@ -226,15 +340,19 @@ export interface MarketingReport {
         strategy_analysis: StrategyAnalysis;
         quantitative_synthesis: QuantitativeSynthesis;
         // New enhanced fields (optional for backward compatibility)
+        content_niche_analysis?: ContentNicheAnalysis;
+        audience_analysis?: AudienceAnalysis;
         audience_personas?: AudiencePersona[];
         content_calendar?: ContentCalendar;
         growth_opportunities?: GrowthOpportunity[];
+        seo_analysis?: SEOAnalysis;
     };
     report_part_3: {
         strengths: string[];
         executive_summary: string;
         actionable_insights: ActionableInsights;
         weaknesses_opportunities: string[];
+        action_plan?: ActionPlan;
     };
     created_at: string;
 }
@@ -251,9 +369,24 @@ export interface AnalyzeResponse {
         | "MODEL_OVERLOAD"
         | "RATE_LIMIT"
         | "YOUTUBE_QUOTA"
+        | "GEMINI_QUOTA"
         | "API_CONFIG"
+        | "YOUTUBE_API_ERROR"
+        | "GEMINI_API_ERROR"
         | "NETWORK_ERROR"
         | "AI_PARSE_ERROR"
         | "CHANNEL_NOT_FOUND"
         | "UNKNOWN";
+}
+
+// Custom error class for API errors with type information
+export class APIError extends Error {
+    constructor(
+        message: string,
+        public errorType: AnalyzeResponse["errorType"],
+        public statusCode?: number
+    ) {
+        super(message);
+        this.name = "APIError";
+    }
 }

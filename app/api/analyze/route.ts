@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFullChannelData } from "@/lib/youtube";
 import { generateMarketingReport } from "@/lib/gemini";
 import { isValidYouTubeUrl } from "@/lib/utils";
-import { AnalyzeRequest, AnalyzeResponse } from "@/lib/types";
+import { AnalyzeRequest, AnalyzeResponse, APIError } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
     try {
@@ -92,7 +92,33 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
         console.error("Error in analyze API:", error);
 
-        // Parse error message and status code
+        // Handle typed APIError from youtube.ts and gemini.ts
+        if (error instanceof APIError) {
+            const errorMessages: Record<string, string> = {
+                YOUTUBE_QUOTA: "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
+                GEMINI_QUOTA: "Đã hết hạn mức Gemini API. Vui lòng thử lại sau vài phút.",
+                MODEL_OVERLOAD: "Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
+                RATE_LIMIT: "Đã vượt quá giới hạn số lần truy cập. Vui lòng thử lại sau.",
+                API_CONFIG: "Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
+                YOUTUBE_API_ERROR: "Lỗi từ YouTube API. Vui lòng thử lại sau.",
+                GEMINI_API_ERROR: "Lỗi từ Gemini AI. Vui lòng thử lại sau.",
+                NETWORK_ERROR: "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
+                AI_PARSE_ERROR: "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
+                CHANNEL_NOT_FOUND: "Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
+                UNKNOWN: "Có lỗi không xác định. Vui lòng thử lại sau.",
+            };
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: errorMessages[error.errorType || "UNKNOWN"] || error.message,
+                    errorType: error.errorType,
+                } as AnalyzeResponse,
+                { status: error.statusCode || 500 }
+            );
+        }
+
+        // Fallback for non-APIError exceptions
         const errorMessage = error.message || "";
         const errorCode = error.code || "";
         const statusCode = error.status || error.response?.status || 500;
@@ -114,18 +140,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Rate limit errors
+        // Gemini API quota errors (check before generic rate limit)
         if (
-            errorMessage.includes("RATE_LIMIT_EXCEEDED") ||
-            errorMessage.includes("429") ||
-            errorMessage.includes("Too Many Requests") ||
-            statusCode === 429
+            errorMessage.includes("Gemini") &&
+            (errorMessage.includes("quota") || errorMessage.includes("429"))
         ) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Đã vượt quá giới hạn số lần phân tích. Vui lòng thử lại sau 1 giờ.",
-                    errorType: "RATE_LIMIT",
+                    error: "Đã hết hạn mức Gemini API. Vui lòng thử lại sau vài phút.",
+                    errorType: "GEMINI_QUOTA",
                 } as AnalyzeResponse,
                 { status: 429 }
             );
@@ -133,15 +157,32 @@ export async function POST(request: NextRequest) {
 
         // YouTube API quota errors
         if (
-            errorMessage.includes("quota") ||
-            errorMessage.includes("quotaExceeded") ||
-            errorMessage.includes("dailyLimitExceeded")
+            errorMessage.includes("YouTube") &&
+            (errorMessage.includes("quota") ||
+                errorMessage.includes("quotaExceeded") ||
+                errorMessage.includes("dailyLimitExceeded"))
         ) {
             return NextResponse.json(
                 {
                     success: false,
                     error: "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
                     errorType: "YOUTUBE_QUOTA",
+                } as AnalyzeResponse,
+                { status: 429 }
+            );
+        }
+
+        // Generic rate limit errors
+        if (
+            errorMessage.includes("RATE_LIMIT_EXCEEDED") ||
+            errorMessage.includes("Too Many Requests") ||
+            statusCode === 429
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Đã vượt quá giới hạn số lần truy cập. Vui lòng thử lại sau.",
+                    errorType: "RATE_LIMIT",
                 } as AnalyzeResponse,
                 { status: 429 }
             );
@@ -216,9 +257,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error:
-                    errorMessage ||
-                    "❌ Có lỗi không xác định. Vui lòng thử lại sau.",
+                error: errorMessage || "Có lỗi không xác định. Vui lòng thử lại sau.",
                 errorType: "UNKNOWN",
             } as AnalyzeResponse,
             { status: 500 }

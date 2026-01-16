@@ -1,9 +1,91 @@
 // YouTube Data API Service
 import axios from "axios";
-import { YouTubeChannel, YouTubeVideo } from "./types";
+import { YouTubeChannel, YouTubeVideo, APIError } from "./types";
 import { extractChannelId, extractUsername } from "./utils";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
+
+/**
+ * Parse YouTube API error and throw appropriate APIError
+ */
+function handleYouTubeError(error: any, context: string): never {
+    const statusCode = error?.response?.status || error?.status;
+    const errorData = error?.response?.data?.error;
+    const errorMessage = errorData?.message || error?.message || "Unknown YouTube API error";
+    const errorReason = errorData?.errors?.[0]?.reason || "";
+
+    console.error(`YouTube API Error (${context}):`, {
+        status: statusCode,
+        message: errorMessage,
+        reason: errorReason,
+    });
+
+    // Quota exceeded
+    if (
+        errorReason === "quotaExceeded" ||
+        errorReason === "dailyLimitExceeded" ||
+        errorMessage.includes("quota") ||
+        errorMessage.includes("Quota exceeded")
+    ) {
+        throw new APIError(
+            "YouTube API quota exceeded for today. Please try again tomorrow.",
+            "YOUTUBE_QUOTA",
+            429
+        );
+    }
+
+    // Rate limit
+    if (statusCode === 429 || errorReason === "rateLimitExceeded") {
+        throw new APIError(
+            "YouTube API rate limit exceeded. Please wait a moment and try again.",
+            "RATE_LIMIT",
+            429
+        );
+    }
+
+    // Invalid API key
+    if (
+        statusCode === 400 ||
+        statusCode === 401 ||
+        errorReason === "keyInvalid" ||
+        errorMessage.includes("API key")
+    ) {
+        throw new APIError(
+            "Invalid YouTube API key configuration.",
+            "API_CONFIG",
+            statusCode || 401
+        );
+    }
+
+    // Channel not found
+    if (statusCode === 404 || errorReason === "channelNotFound") {
+        throw new APIError(
+            "YouTube channel not found.",
+            "CHANNEL_NOT_FOUND",
+            404
+        );
+    }
+
+    // Network errors
+    if (
+        error?.code === "ECONNREFUSED" ||
+        error?.code === "ETIMEDOUT" ||
+        error?.code === "ENOTFOUND"
+    ) {
+        throw new APIError(
+            "Network error while connecting to YouTube API.",
+            "NETWORK_ERROR",
+            503
+        );
+    }
+
+    // Generic YouTube API error
+    throw new APIError(
+        `YouTube API error: ${errorMessage}`,
+        "YOUTUBE_API_ERROR",
+        statusCode || 500
+    );
+}
 
 /**
  * Get channel ID from username or custom URL
@@ -43,7 +125,26 @@ export async function resolveChannelId(url: string): Promise<string | null> {
         }
 
         return null;
-    } catch (error) {
+    } catch (error: any) {
+        // For channel resolution, we can return null for some errors
+        // but should propagate quota/auth errors
+        if (error instanceof APIError) {
+            throw error;
+        }
+        const statusCode = error?.response?.status;
+        const errorReason = error?.response?.data?.error?.errors?.[0]?.reason;
+
+        // Propagate critical errors
+        if (
+            errorReason === "quotaExceeded" ||
+            errorReason === "dailyLimitExceeded" ||
+            errorReason === "keyInvalid" ||
+            statusCode === 401 ||
+            statusCode === 429
+        ) {
+            handleYouTubeError(error, "resolveChannelId");
+        }
+
         console.error("Error resolving channel ID:", error);
         return null;
     }
@@ -87,9 +188,11 @@ export async function getChannelInfo(
                 videoCount: channel.statistics.videoCount || "0",
             },
         };
-    } catch (error) {
-        console.error("Error fetching channel info:", error);
-        return null;
+    } catch (error: any) {
+        if (error instanceof APIError) {
+            throw error;
+        }
+        handleYouTubeError(error, "getChannelInfo");
     }
 }
 
@@ -180,9 +283,11 @@ export async function getChannelVideos(
                 duration: video.contentDetails.duration,
             },
         }));
-    } catch (error) {
-        console.error("Error fetching channel videos:", error);
-        return [];
+    } catch (error: any) {
+        if (error instanceof APIError) {
+            throw error;
+        }
+        handleYouTubeError(error, "getChannelVideos");
     }
 }
 
