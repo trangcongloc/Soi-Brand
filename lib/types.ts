@@ -241,7 +241,6 @@ export interface AudiencePersona {
     gender: string;
     location: string;
     occupation: string;
-    income_level: string;
     interests: string[];
     pain_points: string[];
     goals: string[];
@@ -257,8 +256,10 @@ export interface ContentCalendar {
     best_posting_times: string[];
     recommended_frequency: string;
     content_mix: {
-        pillar: string;
+        content_type: string;
+        specific_topics: string[];
         percentage: number;
+        example_videos?: string[];
     }[];
 }
 
@@ -277,6 +278,7 @@ export interface KeywordStrategy {
 
 export interface TagAnalysis {
     tag_coverage: string;
+    all_channel_tags: string[];
     recommended_tags: string[];
     tag_consistency: string;
     most_used_tags: {

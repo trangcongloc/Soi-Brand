@@ -1574,7 +1574,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                                 {persona.gender && <p><strong>{lang.analysis.audiencePersonas.gender}</strong> {persona.gender}</p>}
                                                                 {persona.location && <p><strong>{lang.analysis.audiencePersonas.location}</strong> {persona.location}</p>}
                                                                 {persona.occupation && <p><strong>{lang.analysis.audiencePersonas.occupation}</strong> {persona.occupation}</p>}
-                                                                {persona.income_level && <p><strong>{lang.analysis.audiencePersonas.incomeLevel}</strong> {persona.income_level}</p>}
                                                                 {persona.viewing_frequency && <p><strong>{lang.analysis.audiencePersonas.viewingFrequency}</strong> {persona.viewing_frequency}</p>}
                                                             </div>
                                                             <p style={{ marginBottom: "0.5rem" }}>
@@ -1688,69 +1687,88 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                             fontSize: "11px",
                                                             fontWeight: "600",
                                                             marginBottom:
-                                                                "0.5rem",
+                                                                "0.75rem",
                                                         }}
                                                     >
-                                                        Content Mix:
+                                                        {lang.analysis.contentCalendar.contentMix}:
                                                     </p>
                                                     {report_part_2.content_calendar.content_mix.map(
                                                         (mix, idx) => (
                                                             <div
                                                                 key={idx}
                                                                 style={{
-                                                                    marginBottom:
-                                                                        "0.25rem",
+                                                                    marginBottom: "1rem",
+                                                                    padding: "0.75rem",
+                                                                    background: "#f9fafb",
+                                                                    borderRadius: "6px",
+                                                                    borderLeft: `3px solid ${idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6"}`,
                                                                 }}
                                                             >
                                                                 <div
                                                                     style={{
-                                                                        display:
-                                                                            "flex",
-                                                                        justifyContent:
-                                                                            "space-between",
-                                                                        fontSize:
-                                                                            "10px",
+                                                                        display: "flex",
+                                                                        justifyContent: "space-between",
+                                                                        alignItems: "center",
+                                                                        marginBottom: "0.5rem",
                                                                     }}
                                                                 >
-                                                                    <span>
-                                                                        {
-                                                                            mix.pillar
-                                                                        }
+                                                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#333" }}>
+                                                                        {mix.content_type || (mix as any).pillar}
                                                                     </span>
                                                                     <span
                                                                         style={{
-                                                                            fontWeight:
-                                                                                "600",
+                                                                            fontSize: "11px",
+                                                                            fontWeight: "700",
+                                                                            color: idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6",
                                                                         }}
                                                                     >
-                                                                        {
-                                                                            mix.percentage
-                                                                        }
-                                                                        %
+                                                                        {mix.percentage}%
                                                                     </span>
                                                                 </div>
                                                                 <div
                                                                     style={{
                                                                         height: "4px",
-                                                                        background:
-                                                                            "#e5e7eb",
-                                                                        borderRadius:
-                                                                            "2px",
-                                                                        overflow:
-                                                                            "hidden",
+                                                                        background: "#e5e7eb",
+                                                                        borderRadius: "2px",
+                                                                        overflow: "hidden",
+                                                                        marginBottom: "0.5rem",
                                                                     }}
                                                                 >
                                                                     <div
                                                                         style={{
                                                                             width: `${mix.percentage}%`,
                                                                             height: "100%",
-                                                                            background:
-                                                                                "#3b82f6",
-                                                                            borderRadius:
-                                                                                "2px",
+                                                                            background: idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6",
+                                                                            borderRadius: "2px",
                                                                         }}
                                                                     ></div>
                                                                 </div>
+                                                                {mix.specific_topics && mix.specific_topics.length > 0 && (
+                                                                    <div style={{ marginTop: "0.5rem" }}>
+                                                                        <span style={{ fontSize: "10px", color: "#666" }}>
+                                                                            {lang.analysis.contentCalendar.specificTopics}
+                                                                        </span>
+                                                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.25rem" }}>
+                                                                            {mix.specific_topics.map((topic, i) => (
+                                                                                <span key={i} style={{
+                                                                                    fontSize: "10px",
+                                                                                    padding: "2px 8px",
+                                                                                    background: "#fff",
+                                                                                    border: "1px solid #e5e7eb",
+                                                                                    borderRadius: "4px",
+                                                                                    color: "#333"
+                                                                                }}>
+                                                                                    {topic}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {mix.example_videos && mix.example_videos.length > 0 && (
+                                                                    <div style={{ marginTop: "0.5rem", fontSize: "10px", color: "#888" }}>
+                                                                        {lang.analysis.contentCalendar.exampleVideos} {mix.example_videos.join(", ")}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )
                                                     )}
@@ -1996,6 +2014,30 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                         {report_part_2.seo_analysis.tag_analysis.tag_optimization_score}
                                                     </span>
                                                 </p>
+                                            )}
+
+                                            {/* All Channel Tags */}
+                                            {report_part_2.seo_analysis.tag_analysis.all_channel_tags &&
+                                             report_part_2.seo_analysis.tag_analysis.all_channel_tags.length > 0 && (
+                                                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "#f0fdf4", borderRadius: "6px", border: "1px solid #bbf7d0" }}>
+                                                    <strong style={{ display: "block", marginBottom: "0.5rem", color: "#166534" }}>
+                                                        {lang.analysis.seoAnalysis.allChannelTags}
+                                                    </strong>
+                                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                                                        {report_part_2.seo_analysis.tag_analysis.all_channel_tags.map((tag, i) => (
+                                                            <span key={i} style={{
+                                                                fontSize: "10px",
+                                                                padding: "3px 8px",
+                                                                background: "#dcfce7",
+                                                                color: "#166534",
+                                                                borderRadius: "4px",
+                                                                border: "1px solid #bbf7d0"
+                                                            }}>
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             )}
 
                                             {/* Most Used Tags */}

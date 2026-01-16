@@ -204,13 +204,13 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
           "other": 2
         },
         "top_countries": [
-          {"country": "Việt Nam", "percentage": 70},
-          {"country": "Hoa Kỳ", "percentage": 15},
-          {"country": "Khác", "percentage": 15}
+          {"country": "Quốc gia 1 (ước tính dựa trên ngôn ngữ nội dung)", "percentage": 70},
+          {"country": "Quốc gia 2", "percentage": 20},
+          {"country": "Khác", "percentage": 10}
         ],
-        "primary_languages": ["Tiếng Việt", "Tiếng Anh"],
-        "income_level": "Ước tính mức thu nhập của khán giả (VD: 'Trung bình', 'Trung bình-Cao')",
-        "education_level": "Ước tính trình độ học vấn (VD: 'Đại học', 'THPT')"
+        "primary_languages": ["Ngôn ngữ chính của kênh", "Ngôn ngữ phụ nếu có"],
+        "income_level": "Ước tính mức thu nhập chung (VD: 'Low', 'Medium', 'Medium-High', 'High')",
+        "education_level": "Ước tính trình độ học vấn (VD: 'High School', 'College', 'University')"
       },
       "behavior": {
         "estimated_watch_time": "Ước tính thời gian xem trung bình (VD: '5-8 phút/video')",
@@ -229,20 +229,19 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
     },
     "audience_personas": [
       {
-        "name": "Tên NHÓM khán giả (VD: 'Nhóm sinh viên/người trẻ', 'Nhóm phụ huynh', 'Nhóm chuyên gia')",
+        "name": "Tên NHÓM khán giả (VD: 'Young Enthusiasts', 'Parents', 'Professionals')",
         "avatar_description": "Mô tả tổng quan về nhóm khán giả này - họ là ai, chiếm bao nhiêu % khán giả của kênh",
         "demographics": "Đặc điểm nhân khẩu học CHUNG của nhóm",
-        "age_range": "Khoảng tuổi của nhóm (VD: '18-30 tuổi')",
-        "gender": "Giới tính chủ yếu của nhóm (VD: 'Chủ yếu nam ~70%' hoặc 'Cân bằng nam nữ')",
-        "location": "Vị trí địa lý phổ biến của nhóm (VD: 'Thành phố lớn tại Việt Nam')",
-        "occupation": "Các nghề nghiệp phổ biến trong nhóm (VD: 'Sinh viên, Nhân viên văn phòng, Freelancer')",
-        "income_level": "Mức thu nhập phổ biến của nhóm (VD: '5-15 triệu/tháng')",
+        "age_range": "Khoảng tuổi của nhóm (VD: '18-30')",
+        "gender": "Giới tính chủ yếu của nhóm (VD: 'Mostly male ~70%' hoặc 'Balanced')",
+        "location": "Vị trí địa lý phổ biến - dựa trên ngôn ngữ nội dung (VD: 'Urban areas', 'Global')",
+        "occupation": "Các nghề nghiệp phổ biến trong nhóm (VD: 'Students, Office workers, Freelancers')",
         "interests": ["Sở thích chung của nhóm 1", "Sở thích 2", "Sở thích 3"],
         "pain_points": ["Vấn đề/nỗi đau chung của nhóm 1", "Vấn đề 2"],
         "goals": ["Mục tiêu chung nhóm muốn đạt được 1", "Mục tiêu 2"],
         "content_preferences": "Loại nội dung nhóm này thích xem nhất",
-        "preferred_video_length": "Độ dài video phù hợp với nhóm (VD: '8-15 phút')",
-        "viewing_frequency": "Tần suất xem của nhóm (VD: '3-5 lần/tuần')",
+        "preferred_video_length": "Độ dài video phù hợp với nhóm (VD: '8-15 minutes')",
+        "viewing_frequency": "Tần suất xem của nhóm (VD: '3-5 times/week')",
         "social_platforms": ["Các nền tảng nhóm hay sử dụng"],
         "buying_triggers": ["Yếu tố thúc đẩy mua hàng của nhóm 1", "Yếu tố 2"]
       },
@@ -250,18 +249,17 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
         "name": "Nhóm khán giả thứ 2 (phân khúc khác)",
         "avatar_description": "Mô tả tổng quan về nhóm khán giả phụ này",
         "demographics": "Đặc điểm nhân khẩu học của nhóm phụ",
-        "age_range": "VD: '30-45 tuổi'",
-        "gender": "VD: 'Chủ yếu nữ ~60%'",
-        "location": "VD: 'Tỉnh thành trên cả nước'",
-        "occupation": "VD: 'Chủ doanh nghiệp nhỏ, Quản lý, Nội trợ'",
-        "income_level": "VD: '15-40 triệu/tháng'",
+        "age_range": "VD: '30-45'",
+        "gender": "VD: 'Mostly female ~60%'",
+        "location": "VD: 'Suburban/Rural areas'",
+        "occupation": "VD: 'Small business owners, Managers, Homemakers'",
         "interests": ["Sở thích của nhóm 1", "Sở thích 2"],
         "pain_points": ["Vấn đề của nhóm 1", "Vấn đề 2"],
         "goals": ["Mục tiêu 1", "Mục tiêu 2"],
         "content_preferences": "Loại nội dung nhóm này yêu thích",
-        "preferred_video_length": "VD: '5-10 phút'",
-        "viewing_frequency": "VD: '1-3 lần/tuần'",
-        "social_platforms": ["YouTube", "Facebook", "Zalo"],
+        "preferred_video_length": "VD: '5-10 minutes'",
+        "viewing_frequency": "VD: '1-3 times/week'",
+        "social_platforms": ["YouTube", "Facebook", "Instagram"],
         "buying_triggers": ["Yếu tố 1", "Yếu tố 2"]
       }
     ],
@@ -270,9 +268,24 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
       "best_posting_times": ["Giờ tốt nhất 1", "Giờ tốt nhất 2"],
       "recommended_frequency": "Tần suất đăng đề xuất (VD: '3-4 video/tuần')",
       "content_mix": [
-        {"pillar": "Loại nội dung 1", "percentage": 40},
-        {"pillar": "Loại nội dung 2", "percentage": 30},
-        {"pillar": "Loại nội dung 3", "percentage": 30}
+        {
+          "content_type": "Loại nội dung chính (VD: 'Cake Decorating', 'Factory Tours', 'Tech Reviews')",
+          "specific_topics": ["Chủ đề CỤ THỂ 1 mà kênh làm (VD: 'Rainbow Cake', 'Car Manufacturing', 'iPhone Reviews')", "Chủ đề cụ thể 2", "Chủ đề cụ thể 3"],
+          "percentage": 50,
+          "example_videos": ["Tên video ví dụ từ kênh"]
+        },
+        {
+          "content_type": "Loại nội dung phụ 1",
+          "specific_topics": ["Chủ đề cụ thể 1", "Chủ đề cụ thể 2"],
+          "percentage": 30,
+          "example_videos": ["Tên video ví dụ"]
+        },
+        {
+          "content_type": "Loại nội dung phụ 2",
+          "specific_topics": ["Chủ đề cụ thể 1"],
+          "percentage": 20,
+          "example_videos": ["Tên video ví dụ"]
+        }
       ]
     },
     "growth_opportunities": [
@@ -291,7 +304,8 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
       },
       "tag_analysis": {
         "tag_coverage": "Đánh giá độ bao phủ của tags (Tốt/Trung bình/Kém). Phân tích xem kênh có sử dụng tags đầy đủ và hiệu quả không.",
-        "recommended_tags": ["Tag đề xuất 1", "Tag đề xuất 2", "Tag đề xuất 3"],
+        "all_channel_tags": ["LIỆT KÊ TẤT CẢ các tags mà kênh đang sử dụng trong các video - lấy từ dữ liệu video thực tế đã cung cấp", "tag 2", "tag 3", "tag 4", "...tất cả tags"],
+        "recommended_tags": ["Tag đề xuất MỚI mà kênh chưa dùng 1", "Tag đề xuất 2", "Tag đề xuất 3"],
         "tag_consistency": "Đánh giá tính nhất quán của tags giữa các video. Có chiến lược tags rõ ràng không?",
         "most_used_tags": [
           {
@@ -472,13 +486,17 @@ QUAN TRỌNG:
 - Sử dụng tiếng Việt
 - Đảm bảo tất cả các trường đều có giá trị hợp lệ
 - content_niche_analysis: Phân tích CHÍNH XÁC niche dựa trên nội dung video, xác định thể loại và tỷ lệ phần trăm
-- audience_analysis: ƯỚC TÍNH demographics dựa trên nội dung, ngôn ngữ, chủ đề của kênh (đây là ước tính, không phải data thực)
-- Tạo ÍT NHẤT 2 audience personas khác nhau với ĐẦY ĐỦ thông tin chi tiết
+- audience_analysis: ƯỚC TÍNH demographics dựa trên nội dung, ngôn ngữ, chủ đề của kênh (global, không giới hạn quốc gia cụ thể)
+- Tạo ÍT NHẤT 2 audience segments (NHÓM khán giả, không phải cá nhân) với ĐẦY ĐỦ thông tin
 - Tạo ÍT NHẤT 3 growth opportunities với priority khác nhau (high, medium, low)
 - Video ideas phải CỤ THỂ cho kênh này, không chung chung
-- Content calendar phải dựa trên phân tích thời gian đăng thực tế đã cung cấp
-- SEO analysis phải phân tích từ khóa và tags THỰC TẾ từ dữ liệu video
+- content_mix trong content_calendar phải RẤT CỤ THỂ:
+  * Ví dụ kênh bánh: "Rainbow Cake", "KitKat Cake", "Chocolate Cake" - KHÔNG phải "Baking tutorials"
+  * Ví dụ kênh factory: "Car Manufacturing", "Papaya Processing", "Chocolate Factory" - KHÔNG phải "Industrial videos"
+  * Liệt kê specific_topics là những CHỦ ĐỀ THỰC SỰ kênh đang làm từ video data
+- all_channel_tags: LIỆT KÊ TẤT CẢ tags THỰC TẾ từ video data đã cung cấp (không bỏ sót)
 - tag_analysis: Phân tích THỰC SỰ các tags từ video data, liệt kê most_used_tags với frequency THỰC TẾ
+- SEO analysis phải phân tích từ khóa và tags THỰC TẾ từ dữ liệu video
 - Optimization opportunities phải CỤ THỂ và THỰC TIỄN, không chung chung
 - Action plan phải có ÍT NHẤT 2 hành động cho mỗi giai đoạn (30/60/90 ngày)
 - Mỗi hành động trong action plan phải cụ thể, có thể thực hiện được
