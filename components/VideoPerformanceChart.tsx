@@ -1,6 +1,14 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+    Legend,
+} from "recharts";
 import { Post } from "@/lib/types";
 import { useLang } from "@/lib/lang";
 
@@ -8,6 +16,30 @@ interface VideoPerformanceChartProps {
     posts: Post[];
     maxItems?: number;
 }
+
+// Format relative time (e.g., "1 day ago", "3 hours ago")
+const formatRelativeTime = (publishedAt: string): string => {
+    const now = new Date();
+    const published = new Date(publishedAt);
+    const diffMs = now.getTime() - published.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffYears > 0)
+        return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
+    if (diffMonths > 0)
+        return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    if (diffHours > 0)
+        return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffMinutes > 0)
+        return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+    return `${diffSeconds} second${diffSeconds > 1 ? "s" : ""} ago`;
+};
 
 export default function VideoPerformanceChart({
     posts,
@@ -20,13 +52,16 @@ export default function VideoPerformanceChart({
         .sort((a, b) => b.statistics.play_count - a.statistics.play_count)
         .slice(0, maxItems)
         .map((post, index) => ({
-            name: `V${index + 1}`,
-            fullTitle: post.title.length > 40 ? post.title.substring(0, 40) + "..." : post.title,
+            name: `#${index + 1}`,
+            rank: index + 1,
+            fullTitle: post.title,
             views: post.statistics.play_count,
             likes: post.statistics.digg_count,
+            comments: post.statistics.comment_count,
+            thumbnail: post.thumbnail,
+            publishedAt: post.published_at,
+            relativeTime: formatRelativeTime(post.published_at),
         }));
-
-    const maxViews = Math.max(...chartData.map((d) => d.views));
 
     const formatNumber = (num: number) => {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -34,24 +69,17 @@ export default function VideoPerformanceChart({
         return num.toString();
     };
 
-    const getBarColor = (views: number) => {
-        const ratio = views / maxViews;
-        if (ratio > 0.8) return "#22c55e"; // green for top performers
-        if (ratio > 0.5) return "#3b82f6"; // blue for good
-        if (ratio > 0.3) return "#f59e0b"; // amber for average
-        return "#94a3b8"; // gray for low
-    };
-
     return (
-        <div style={{ width: "100%", height: 200 }}>
+        <div style={{ width: "100%", height: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 5, bottom: 5 }}>
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatNumber} />
+                <LineChart
+                    data={chartData}
+                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                >
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis
-                        dataKey="name"
-                        type="category"
                         tick={{ fontSize: 10 }}
-                        width={25}
+                        tickFormatter={formatNumber}
                     />
                     <Tooltip
                         content={({ active, payload }) => {
@@ -62,33 +90,168 @@ export default function VideoPerformanceChart({
                                         style={{
                                             background: "white",
                                             border: "1px solid #e5e7eb",
-                                            borderRadius: "6px",
-                                            padding: "8px 12px",
-                                            fontSize: "11px",
-                                            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                                            borderRadius: "8px",
+                                            padding: "0",
+                                            fontSize: "12px",
+                                            boxShadow:
+                                                "0 4px 12px rgba(0,0,0,0.15)",
+                                            maxWidth: "380px",
+                                            display: "flex",
+                                            overflow: "hidden",
                                         }}
                                     >
-                                        <p style={{ fontWeight: 600, marginBottom: "4px" }}>
-                                            {data.fullTitle}
-                                        </p>
-                                        <p style={{ color: "#666" }}>
-                                            {lang.posts.viewCount} {data.views.toLocaleString()}
-                                        </p>
-                                        <p style={{ color: "#666" }}>
-                                            {lang.posts.likeCount} {data.likes.toLocaleString()}
-                                        </p>
+                                        {/* Thumbnail on the left - matches full height */}
+                                        <img
+                                            src={data.thumbnail}
+                                            alt={data.fullTitle}
+                                            style={{
+                                                width: "120px",
+                                                objectFit: "cover",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+
+                                        {/* Content on the right */}
+                                        <div
+                                            style={{
+                                                flex: 1,
+                                                minWidth: 0,
+                                                padding: "12px",
+                                            }}
+                                        >
+                                            <p
+                                                style={{
+                                                    fontWeight: 600,
+                                                    marginBottom: "8px",
+                                                    lineHeight: "1.4",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    display: "-webkit-box",
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: "vertical",
+                                                }}
+                                            >
+                                                {data.fullTitle}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    marginBottom: "4px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        display: "inline-block",
+                                                        width: "8px",
+                                                        height: "8px",
+                                                        borderRadius: "50%",
+                                                        background: "#3b82f6",
+                                                    }}
+                                                ></span>
+                                                {lang.posts.viewCount}{" "}
+                                                {data.views.toLocaleString()}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    marginBottom: "4px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        display: "inline-block",
+                                                        width: "8px",
+                                                        height: "8px",
+                                                        borderRadius: "50%",
+                                                        background: "#22c55e",
+                                                    }}
+                                                ></span>
+                                                {lang.posts.likeCount}{" "}
+                                                {data.likes.toLocaleString()}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    marginBottom: "4px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        display: "inline-block",
+                                                        width: "8px",
+                                                        height: "8px",
+                                                        borderRadius: "50%",
+                                                        background: "#f59e0b",
+                                                    }}
+                                                ></span>
+                                                {lang.posts.commentCount}{" "}
+                                                {data.comments.toLocaleString()}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    color: "#999",
+                                                    fontSize: "11px",
+                                                    marginTop: "8px",
+                                                }}
+                                            >
+                                                {data.relativeTime}
+                                            </p>
+                                        </div>
                                     </div>
                                 );
                             }
                             return null;
                         }}
                     />
-                    <Bar dataKey="views" radius={[0, 4, 4, 0]}>
-                        {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={getBarColor(entry.views)} />
-                        ))}
-                    </Bar>
-                </BarChart>
+                    <Legend
+                        wrapperStyle={{ fontSize: "11px" }}
+                        formatter={(value) => {
+                            if (value === "views")
+                                return lang.posts.viewCount
+                                    .replace(":", "")
+                                    .trim();
+                            if (value === "likes")
+                                return lang.posts.likeCount
+                                    .replace(":", "")
+                                    .trim();
+                            if (value === "comments")
+                                return lang.posts.commentCount
+                                    .replace(":", "")
+                                    .trim();
+                            return value;
+                        }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="views"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        dot={{ fill: "#3b82f6", r: 3 }}
+                        activeDot={{ r: 5 }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="likes"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        dot={{ fill: "#22c55e", r: 3 }}
+                        activeDot={{ r: 5 }}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="comments"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        dot={{ fill: "#f59e0b", r: 3 }}
+                        activeDot={{ r: 5 }}
+                    />
+                </LineChart>
             </ResponsiveContainer>
         </div>
     );

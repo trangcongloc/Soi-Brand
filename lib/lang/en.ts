@@ -87,6 +87,7 @@ export const en = {
         postNumber: "Post {number}",
         viewCount: "Views:",
         likeCount: "Likes:",
+        commentCount: "Comments:",
         publishDate: "Published:",
         seoTags: "SEO Tags",
         copyTags: "Copy Tags",

@@ -53,7 +53,10 @@ export const truncateText = (text: string, limit: number): string => {
 /**
  * Format a date string to locale format
  */
-export const formatDate = (dateString: string, locale: string = "vi-VN"): string => {
+export const formatDate = (
+    dateString: string,
+    locale: string = "vi-VN"
+): string => {
     if (!dateString) return "";
     try {
         return new Date(dateString).toLocaleDateString(locale);
@@ -84,7 +87,9 @@ export const formatCompactNumber = (num: number | string): string => {
 /**
  * Get priority color class based on priority level
  */
-export const getPriorityColor = (priority: "high" | "medium" | "low"): string => {
+export const getPriorityColor = (
+    priority: "high" | "medium" | "low"
+): string => {
     switch (priority) {
         case "high":
             return "#ef4444"; // red

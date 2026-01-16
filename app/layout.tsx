@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { defaultLanguage } from "@/lib/lang/data";
 import LanguageProvider from "@/components/LanguageProvider";
+import SettingsButton from "@/components/SettingsButton";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
@@ -23,7 +24,10 @@ export default function RootLayout({
                 <a href="#main-content" className="skip-link">
                     Skip to content
                 </a>
-                <LanguageProvider>{children}</LanguageProvider>
+                <LanguageProvider>
+                    {children}
+                    <SettingsButton />
+                </LanguageProvider>
             </body>
         </html>
     );

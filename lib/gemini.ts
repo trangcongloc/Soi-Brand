@@ -46,7 +46,15 @@ export async function generateMarketingReport(
     // Analyze posting patterns for content calendar insights
     const postingDays: { [key: string]: number } = {};
     const postingHours: { [key: string]: number } = {};
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayNames = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+    ];
 
     videosData.forEach((v) => {
         const date = new Date(v.publishedAt);
@@ -67,7 +75,9 @@ export async function generateMarketingReport(
         .map(([hour]) => `${hour}:00`);
 
     // Calculate average engagement for video idea estimates
-    const avgViews = Math.round(videosData.reduce((sum, v) => sum + v.views, 0) / videosData.length);
+    const avgViews = Math.round(
+        videosData.reduce((sum, v) => sum + v.views, 0) / videosData.length
+    );
     const topVideoViews = Math.max(...videosData.map((v) => v.views));
 
     // Create comprehensive prompt for Gemini
@@ -95,7 +105,9 @@ ${i + 1}. ${v.title}
    - Lượt xem: ${v.views.toLocaleString()}
    - Lượt thích: ${v.likes.toLocaleString()}
    - Bình luận: ${v.comments.toLocaleString()}
-   - Ngày đăng: ${new Date(v.publishedAt).toLocaleDateString("vi-VN")} lúc ${new Date(v.publishedAt).getHours()}:00
+   - Ngày đăng: ${new Date(v.publishedAt).toLocaleDateString(
+       "vi-VN"
+   )} lúc ${new Date(v.publishedAt).getHours()}:00
    - Tags: ${v.tags.slice(0, 5).join(", ") || "Không có"}
    - Mô tả: ${v.description.substring(0, 200)}...
 `
@@ -223,13 +235,21 @@ Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trú
         {
           "title": "Tiêu đề video hấp dẫn, cụ thể cho kênh này",
           "concept": "Mô tả chi tiết concept, cách triển khai",
-          "estimated_views": "Ước tính lượt xem dựa trên hiệu suất kênh (VD: '${Math.round(avgViews * 0.8).toLocaleString()} - ${Math.round(avgViews * 1.5).toLocaleString()}')",
+          "estimated_views": "Ước tính lượt xem dựa trên hiệu suất kênh (VD: '${Math.round(
+              avgViews * 0.8
+          ).toLocaleString()} - ${Math.round(
+        avgViews * 1.5
+    ).toLocaleString()}')",
           "content_type": "Loại nội dung (hướng dẫn/review/vlog/giải trí...)"
         },
         {
           "title": "Tiêu đề video 2 - viral potential",
           "concept": "Mô tả concept có tiềm năng viral dựa trên video hiệu suất cao nhất của kênh",
-          "estimated_views": "Ước tính lượt xem (VD: '${Math.round(topVideoViews * 0.5).toLocaleString()} - ${Math.round(topVideoViews * 0.8).toLocaleString()}')",
+          "estimated_views": "Ước tính lượt xem (VD: '${Math.round(
+              topVideoViews * 0.5
+          ).toLocaleString()} - ${Math.round(
+        topVideoViews * 0.8
+    ).toLocaleString()}')",
           "content_type": "Loại nội dung"
         },
         {

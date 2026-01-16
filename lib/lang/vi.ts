@@ -87,6 +87,7 @@ export const vi = {
         postNumber: "Bài đăng {number}",
         viewCount: "Lượt xem:",
         likeCount: "Lượt thích:",
+        commentCount: "Bình luận:",
         publishDate: "Ngày đăng:",
         seoTags: "SEO Tags",
         copyTags: "Copy Tags",

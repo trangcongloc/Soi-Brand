@@ -3,13 +3,25 @@ import dynamic from "next/dynamic";
 import { MarketingReport, Post } from "@/lib/types";
 import styles from "./ReportDisplay.module.css";
 import { downloadJSON } from "@/lib/utils";
-import { useLang, formatString } from "@/lib/lang";
+import { useLang, useLanguage, formatString } from "@/lib/lang";
 
 // Dynamically import chart to avoid SSR issues
-const VideoPerformanceChart = dynamic(
-    () => import("./VideoPerformanceChart"),
-    { ssr: false, loading: () => <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>Loading chart...</div> }
-);
+const VideoPerformanceChart = dynamic(() => import("./VideoPerformanceChart"), {
+    ssr: false,
+    loading: () => (
+        <div
+            style={{
+                height: 200,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#999",
+            }}
+        >
+            Loading chart...
+        </div>
+    ),
+});
 
 interface ReportDisplayProps {
     report: MarketingReport;
@@ -185,6 +197,7 @@ const UploadHeatmap: React.FC<{ posts: Post[] }> = ({ posts }) => {
 
 const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const lang = useLang();
+    const { langCode } = useLanguage();
     const [activeTab, setActiveTab] = useState<
         "data" | "analysis" | "evaluation"
     >("data");
@@ -215,21 +228,18 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
         }
     };
 
-    // Time-based Ranking Algorithm (no longer uses likes/comments)
-    const calculateHackerNewsScore = (
-        likes: number,
-        comments: number,
-        publishedAt: string
-    ) => {
-        const points = 1; // Constant base score, no longer using likes + comments
+    // Time-based Ranking Algorithm (Hacker News style)
+    // Only uses views and published time - likes/comments excluded due to market manipulation
+    const calculateHackerNewsScore = (views: number, publishedAt: string) => {
+        const points = views + 1; // Views as points
         const now = new Date();
         const published = new Date(publishedAt);
         const hours = Math.max(
-            0,
+            1,
             (now.getTime() - published.getTime()) / (1000 * 60 * 60)
         );
         const gravity = 1.8;
-        const score = (points - 1) / Math.pow(hours + 2, gravity);
+        const score = points / Math.pow(hours + 2, gravity);
         return score.toFixed(2);
     };
 
@@ -238,8 +248,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
         index,
         score: parseFloat(
             calculateHackerNewsScore(
-                post.statistics.digg_count,
-                post.statistics.comment_count,
+                post.statistics.play_count,
                 post.published_at
             )
         ),
@@ -277,8 +286,14 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                         <nav className={styles.nav}>
                             {[
                                 { id: "data", label: lang.sidebar.tabs.data },
-                                { id: "analysis", label: lang.sidebar.tabs.analysis },
-                                { id: "evaluation", label: lang.sidebar.tabs.evaluation },
+                                {
+                                    id: "analysis",
+                                    label: lang.sidebar.tabs.analysis,
+                                },
+                                {
+                                    id: "evaluation",
+                                    label: lang.sidebar.tabs.evaluation,
+                                },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
@@ -601,9 +616,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                         >
                                                             {calculateHackerNewsScore(
                                                                 post.statistics
-                                                                    .digg_count,
-                                                                post.statistics
-                                                                    .comment_count,
+                                                                    .play_count,
                                                                 post.published_at
                                                             )}
                                                             {topIndices.has(
@@ -1301,328 +1314,25 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 </div>
                             </section>
 
-                            {/* Quantitative Synthesis */}
-                            <section>
-                                <h3 className={styles.sectionTitle}>
-                                    {lang.analysis.quantitativeSynthesis.title}
-                                </h3>
-                                <div style={{ marginTop: "1rem" }}>
-                                    <div className={styles.grid2}>
-                                        {/* Summary Stats */}
-                                        <div className={styles.card}>
-                                            <h5
-                                                style={{
-                                                    fontSize: "13px",
-                                                    fontWeight: "700",
-                                                    marginBottom: "0.75rem",
-                                                }}
-                                            >
-                                                {
-                                                    lang.analysis
-                                                        .quantitativeSynthesis
-                                                        .summaryStats.title
-                                                }
-                                            </h5>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: "0.5rem",
-                                                }}
-                                            >
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>
-                                                        {
-                                                            lang.analysis
-                                                                .quantitativeSynthesis
-                                                                .summaryStats
-                                                                .totalViews
-                                                        }
-                                                    </strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.summary_stats.total_views.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>
-                                                        {
-                                                            lang.analysis
-                                                                .quantitativeSynthesis
-                                                                .summaryStats
-                                                                .totalLikes
-                                                        }
-                                                    </strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.summary_stats.total_likes.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>
-                                                        {
-                                                            lang.analysis
-                                                                .quantitativeSynthesis
-                                                                .summaryStats
-                                                                .totalVideos
-                                                        }
-                                                    </strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.summary_stats.total_videos.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Channel Health */}
-                                        <div className={styles.card}>
-                                            <h5
-                                                style={{
-                                                    fontSize: "13px",
-                                                    fontWeight: "700",
-                                                    marginBottom: "0.75rem",
-                                                }}
-                                            >
-                                                {
-                                                    lang.analysis
-                                                        .quantitativeSynthesis
-                                                        .channelHealth.title
-                                                }
-                                            </h5>
-                                            <div
-                                                style={{
-                                                    fontSize: "11px",
-                                                    lineHeight: "1.6",
-                                                }}
-                                            >
-                                                <p
-                                                    style={{
-                                                        marginBottom: "0.5rem",
-                                                    }}
-                                                >
-                                                    <strong>
-                                                        {
-                                                            lang.analysis
-                                                                .quantitativeSynthesis
-                                                                .channelHealth
-                                                                .followerCount
-                                                        }
-                                                    </strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .channel_health
-                                                            .follower_count
-                                                    }
-                                                </p>
-                                                <p
-                                                    style={{
-                                                        marginBottom: "0.5rem",
-                                                    }}
-                                                >
-                                                    <strong>
-                                                        Tần suất đăng:
-                                                    </strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .channel_health
-                                                            .posting_frequency
-                                                    }
-                                                </p>
-                                                <p style={{ marginBottom: 0 }}>
-                                                    <strong>
-                                                        Tỷ lệ tương tác (ER):
-                                                        <span
-                                                            className={
-                                                                styles.infoIcon
-                                                            }
-                                                        >
-                                                            ℹ
-                                                            <span
-                                                                className={
-                                                                    styles.tooltip
-                                                                }
-                                                            >
-                                                                (Tổng Like +
-                                                                Tổng Bình luận)
-                                                                / Tổng Lượt xem
-                                                                × 100%
-                                                            </span>
-                                                        </span>
-                                                    </strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .channel_health
-                                                            .er_rate
-                                                    }
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Channel Metrics */}
-                                        <div className={styles.card}>
-                                            <h5
-                                                style={{
-                                                    fontSize: "13px",
-                                                    fontWeight: "700",
-                                                    marginBottom: "0.75rem",
-                                                }}
-                                            >
-                                                Chỉ Số Kênh
-                                            </h5>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: "0.5rem",
-                                                }}
-                                            >
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>Số video:</strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.channel_metrics.video_count.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>
-                                                        Người theo dõi:
-                                                    </strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.channel_metrics.follower_count.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>
-                                                        Đang theo dõi:
-                                                    </strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.channel_metrics.following_count.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                                <div
-                                                    style={{ fontSize: "11px" }}
-                                                >
-                                                    <strong>Lượt thích:</strong>{" "}
-                                                    {report_part_2.quantitative_synthesis.channel_metrics.heart_count.toLocaleString(
-                                                        "vi-VN"
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Content Performance */}
-                                        <div className={styles.card}>
-                                            <h5
-                                                style={{
-                                                    fontSize: "13px",
-                                                    fontWeight: "700",
-                                                    marginBottom: "0.75rem",
-                                                }}
-                                            >
-                                                Hiệu Suất Nội Dung
-                                            </h5>
-                                            <div
-                                                style={{
-                                                    fontSize: "11px",
-                                                    lineHeight: "1.6",
-                                                }}
-                                            >
-                                                <p
-                                                    style={{
-                                                        marginBottom: "0.5rem",
-                                                    }}
-                                                >
-                                                    <strong>
-                                                        Lượt xem TB:
-                                                        <span
-                                                            className={
-                                                                styles.infoIcon
-                                                            }
-                                                        >
-                                                            ℹ
-                                                            <span
-                                                                className={
-                                                                    styles.tooltip
-                                                                }
-                                                            >
-                                                                Tổng lượt xem /
-                                                                Số lượng video
-                                                            </span>
-                                                        </span>
-                                                    </strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .content_performance
-                                                            .avg_view
-                                                    }
-                                                </p>
-                                                <p
-                                                    style={{
-                                                        marginBottom: "0.5rem",
-                                                    }}
-                                                >
-                                                    <strong>Điểm Viral:</strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .content_performance
-                                                            .viral_score
-                                                    }
-                                                </p>
-                                                <p
-                                                    style={{
-                                                        marginBottom: "0.5rem",
-                                                    }}
-                                                >
-                                                    <strong>
-                                                        Điểm Giá Trị:
-                                                    </strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .content_performance
-                                                            .value_score
-                                                    }
-                                                </p>
-                                                <p style={{ marginBottom: 0 }}>
-                                                    <strong>
-                                                        Tỷ lệ Quảng Cáo:
-                                                    </strong>{" "}
-                                                    {
-                                                        report_part_2
-                                                            .quantitative_synthesis
-                                                            .content_performance
-                                                            .ad_ratio
-                                                    }
-                                                </p>
-                                            </div>
-                                        </div>
+                            {/* Video Performance Chart */}
+                            {posts.length > 0 && (
+                                <section>
+                                    <h3 className={styles.sectionTitle}>
+                                        {langCode === "vi"
+                                            ? "Hiệu suất Video"
+                                            : "Video Performance"}
+                                    </h3>
+                                    <div
+                                        className={styles.card}
+                                        style={{ marginTop: "1rem" }}
+                                    >
+                                        <VideoPerformanceChart
+                                            posts={posts}
+                                            maxItems={50}
+                                        />
                                     </div>
-
-                                    {/* Video Performance Chart */}
-                                    {posts.length > 0 && (
-                                        <div className={styles.card} style={{ marginTop: '1rem' }}>
-                                            <h5 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '0.75rem' }}>
-                                                Top Video Performance
-                                            </h5>
-                                            <VideoPerformanceChart posts={posts} maxItems={8} />
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
+                                </section>
+                            )}
 
                             <section>
                                 <h3 className={styles.sectionTitle}>
@@ -1671,40 +1381,118 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                             </section>
 
                             {/* Audience Personas - New Section */}
-                            {report_part_2.audience_personas && report_part_2.audience_personas.length > 0 && (
-                                <section>
-                                    <h3 className={styles.sectionTitle}>
-                                        {lang.analysis.audiencePersonas.title}
-                                    </h3>
-                                    <div className={styles.grid2}>
-                                        {report_part_2.audience_personas.map((persona, idx) => (
-                                            <div key={idx} className={styles.card}>
-                                                <h4 className={styles.cardTitle} style={{ color: '#6366f1' }}>
-                                                    {persona.name}
-                                                </h4>
-                                                <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
-                                                    <p style={{ marginBottom: '0.5rem' }}>
-                                                        <strong>{lang.analysis.audiencePersonas.demographics}</strong>{' '}
-                                                        {persona.demographics}
-                                                    </p>
-                                                    <p style={{ marginBottom: '0.5rem' }}>
-                                                        <strong>{lang.analysis.audiencePersonas.interests}</strong>{' '}
-                                                        {persona.interests.join(', ')}
-                                                    </p>
-                                                    <p style={{ marginBottom: '0.5rem' }}>
-                                                        <strong>{lang.analysis.audiencePersonas.painPoints}</strong>{' '}
-                                                        {persona.pain_points.join(', ')}
-                                                    </p>
-                                                    <p style={{ marginBottom: 0 }}>
-                                                        <strong>{lang.analysis.audiencePersonas.contentPreferences}</strong>{' '}
-                                                        {persona.content_preferences}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
+                            {report_part_2.audience_personas &&
+                                report_part_2.audience_personas.length > 0 && (
+                                    <section>
+                                        <h3 className={styles.sectionTitle}>
+                                            {
+                                                lang.analysis.audiencePersonas
+                                                    .title
+                                            }
+                                        </h3>
+                                        <div className={styles.grid2}>
+                                            {report_part_2.audience_personas.map(
+                                                (persona, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={styles.card}
+                                                    >
+                                                        <h4
+                                                            className={
+                                                                styles.cardTitle
+                                                            }
+                                                            style={{
+                                                                color: "#6366f1",
+                                                            }}
+                                                        >
+                                                            {persona.name}
+                                                        </h4>
+                                                        <div
+                                                            style={{
+                                                                fontSize:
+                                                                    "11px",
+                                                                lineHeight:
+                                                                    "1.6",
+                                                            }}
+                                                        >
+                                                            <p
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "0.5rem",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .analysis
+                                                                            .audiencePersonas
+                                                                            .demographics
+                                                                    }
+                                                                </strong>{" "}
+                                                                {
+                                                                    persona.demographics
+                                                                }
+                                                            </p>
+                                                            <p
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "0.5rem",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .analysis
+                                                                            .audiencePersonas
+                                                                            .interests
+                                                                    }
+                                                                </strong>{" "}
+                                                                {persona.interests.join(
+                                                                    ", "
+                                                                )}
+                                                            </p>
+                                                            <p
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "0.5rem",
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .analysis
+                                                                            .audiencePersonas
+                                                                            .painPoints
+                                                                    }
+                                                                </strong>{" "}
+                                                                {persona.pain_points.join(
+                                                                    ", "
+                                                                )}
+                                                            </p>
+                                                            <p
+                                                                style={{
+                                                                    marginBottom: 0,
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    {
+                                                                        lang
+                                                                            .analysis
+                                                                            .audiencePersonas
+                                                                            .contentPreferences
+                                                                    }
+                                                                </strong>{" "}
+                                                                {
+                                                                    persona.content_preferences
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </section>
+                                )}
 
                             {/* Content Calendar - New Section */}
                             {report_part_2.content_calendar && (
@@ -1713,37 +1501,139 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                         {lang.analysis.contentCalendar.title}
                                     </h3>
                                     <div className={styles.card}>
-                                        <div className={styles.grid2} style={{ gap: '1rem' }}>
+                                        <div
+                                            className={styles.grid2}
+                                            style={{ gap: "1rem" }}
+                                        >
                                             <div>
-                                                <p style={{ fontSize: '11px', marginBottom: '0.5rem' }}>
-                                                    <strong>{lang.analysis.contentCalendar.bestDays}</strong>{' '}
-                                                    {report_part_2.content_calendar.best_posting_days.join(', ')}
+                                                <p
+                                                    style={{
+                                                        fontSize: "11px",
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        {
+                                                            lang.analysis
+                                                                .contentCalendar
+                                                                .bestDays
+                                                        }
+                                                    </strong>{" "}
+                                                    {report_part_2.content_calendar.best_posting_days.join(
+                                                        ", "
+                                                    )}
                                                 </p>
-                                                <p style={{ fontSize: '11px', marginBottom: '0.5rem' }}>
-                                                    <strong>{lang.analysis.contentCalendar.bestTimes}</strong>{' '}
-                                                    {report_part_2.content_calendar.best_posting_times.join(', ')}
+                                                <p
+                                                    style={{
+                                                        fontSize: "11px",
+                                                        marginBottom: "0.5rem",
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        {
+                                                            lang.analysis
+                                                                .contentCalendar
+                                                                .bestTimes
+                                                        }
+                                                    </strong>{" "}
+                                                    {report_part_2.content_calendar.best_posting_times.join(
+                                                        ", "
+                                                    )}
                                                 </p>
-                                                <p style={{ fontSize: '11px', marginBottom: 0 }}>
-                                                    <strong>{lang.analysis.contentCalendar.recommendedFrequency}</strong>{' '}
-                                                    {report_part_2.content_calendar.recommended_frequency}
+                                                <p
+                                                    style={{
+                                                        fontSize: "11px",
+                                                        marginBottom: 0,
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        {
+                                                            lang.analysis
+                                                                .contentCalendar
+                                                                .recommendedFrequency
+                                                        }
+                                                    </strong>{" "}
+                                                    {
+                                                        report_part_2
+                                                            .content_calendar
+                                                            .recommended_frequency
+                                                    }
                                                 </p>
                                             </div>
-                                            {report_part_2.content_calendar.content_mix && (
+                                            {report_part_2.content_calendar
+                                                .content_mix && (
                                                 <div>
-                                                    <p style={{ fontSize: '11px', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                                    <p
+                                                        style={{
+                                                            fontSize: "11px",
+                                                            fontWeight: "600",
+                                                            marginBottom:
+                                                                "0.5rem",
+                                                        }}
+                                                    >
                                                         Content Mix:
                                                     </p>
-                                                    {report_part_2.content_calendar.content_mix.map((mix, idx) => (
-                                                        <div key={idx} style={{ marginBottom: '0.25rem' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                                                                <span>{mix.pillar}</span>
-                                                                <span style={{ fontWeight: '600' }}>{mix.percentage}%</span>
+                                                    {report_part_2.content_calendar.content_mix.map(
+                                                        (mix, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                style={{
+                                                                    marginBottom:
+                                                                        "0.25rem",
+                                                                }}
+                                                            >
+                                                                <div
+                                                                    style={{
+                                                                        display:
+                                                                            "flex",
+                                                                        justifyContent:
+                                                                            "space-between",
+                                                                        fontSize:
+                                                                            "10px",
+                                                                    }}
+                                                                >
+                                                                    <span>
+                                                                        {
+                                                                            mix.pillar
+                                                                        }
+                                                                    </span>
+                                                                    <span
+                                                                        style={{
+                                                                            fontWeight:
+                                                                                "600",
+                                                                        }}
+                                                                    >
+                                                                        {
+                                                                            mix.percentage
+                                                                        }
+                                                                        %
+                                                                    </span>
+                                                                </div>
+                                                                <div
+                                                                    style={{
+                                                                        height: "4px",
+                                                                        background:
+                                                                            "#e5e7eb",
+                                                                        borderRadius:
+                                                                            "2px",
+                                                                        overflow:
+                                                                            "hidden",
+                                                                    }}
+                                                                >
+                                                                    <div
+                                                                        style={{
+                                                                            width: `${mix.percentage}%`,
+                                                                            height: "100%",
+                                                                            background:
+                                                                                "#3b82f6",
+                                                                            borderRadius:
+                                                                                "2px",
+                                                                        }}
+                                                                    ></div>
+                                                                </div>
                                                             </div>
-                                                            <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
-                                                                <div style={{ width: `${mix.percentage}%`, height: '100%', background: '#3b82f6', borderRadius: '2px' }}></div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        )
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -1752,41 +1642,125 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                             )}
 
                             {/* Growth Opportunities - New Section */}
-                            {report_part_2.growth_opportunities && report_part_2.growth_opportunities.length > 0 && (
-                                <section>
-                                    <h3 className={styles.sectionTitle}>
-                                        {lang.analysis.growthOpportunities.title}
-                                    </h3>
-                                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                                        {report_part_2.growth_opportunities.map((opp, idx) => (
-                                            <div key={idx} className={styles.card} style={{ borderLeft: `3px solid ${opp.priority === 'high' ? '#ef4444' : opp.priority === 'medium' ? '#f59e0b' : '#10b981'}` }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                    <span style={{
-                                                        fontSize: '9px',
-                                                        fontWeight: '700',
-                                                        padding: '0.125rem 0.375rem',
-                                                        borderRadius: '0.25rem',
-                                                        textTransform: 'uppercase',
-                                                        background: opp.priority === 'high' ? '#fef2f2' : opp.priority === 'medium' ? '#fffbeb' : '#f0fdf4',
-                                                        color: opp.priority === 'high' ? '#ef4444' : opp.priority === 'medium' ? '#f59e0b' : '#10b981',
-                                                    }}>
-                                                        {opp.priority}
-                                                    </span>
-                                                    <h4 style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
-                                                        {opp.opportunity}
-                                                    </h4>
-                                                </div>
-                                                <p style={{ fontSize: '11px', color: '#666', marginBottom: '0.5rem' }}>
-                                                    {opp.description}
-                                                </p>
-                                                <p style={{ fontSize: '10px', color: '#10b981', fontWeight: '500' }}>
-                                                    {opp.expected_impact}
-                                                </p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
+                            {report_part_2.growth_opportunities &&
+                                report_part_2.growth_opportunities.length >
+                                    0 && (
+                                    <section>
+                                        <h3 className={styles.sectionTitle}>
+                                            {
+                                                lang.analysis
+                                                    .growthOpportunities.title
+                                            }
+                                        </h3>
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gap: "0.75rem",
+                                            }}
+                                        >
+                                            {report_part_2.growth_opportunities.map(
+                                                (opp, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={styles.card}
+                                                        style={{
+                                                            borderLeft: `3px solid ${
+                                                                opp.priority ===
+                                                                "high"
+                                                                    ? "#ef4444"
+                                                                    : opp.priority ===
+                                                                      "medium"
+                                                                    ? "#f59e0b"
+                                                                    : "#10b981"
+                                                            }`,
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                alignItems:
+                                                                    "center",
+                                                                gap: "0.5rem",
+                                                                marginBottom:
+                                                                    "0.5rem",
+                                                            }}
+                                                        >
+                                                            <span
+                                                                style={{
+                                                                    fontSize:
+                                                                        "9px",
+                                                                    fontWeight:
+                                                                        "700",
+                                                                    padding:
+                                                                        "0.125rem 0.375rem",
+                                                                    borderRadius:
+                                                                        "0.25rem",
+                                                                    textTransform:
+                                                                        "uppercase",
+                                                                    background:
+                                                                        opp.priority ===
+                                                                        "high"
+                                                                            ? "#fef2f2"
+                                                                            : opp.priority ===
+                                                                              "medium"
+                                                                            ? "#fffbeb"
+                                                                            : "#f0fdf4",
+                                                                    color:
+                                                                        opp.priority ===
+                                                                        "high"
+                                                                            ? "#ef4444"
+                                                                            : opp.priority ===
+                                                                              "medium"
+                                                                            ? "#f59e0b"
+                                                                            : "#10b981",
+                                                                }}
+                                                            >
+                                                                {opp.priority}
+                                                            </span>
+                                                            <h4
+                                                                style={{
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    fontWeight:
+                                                                        "600",
+                                                                    margin: 0,
+                                                                }}
+                                                            >
+                                                                {
+                                                                    opp.opportunity
+                                                                }
+                                                            </h4>
+                                                        </div>
+                                                        <p
+                                                            style={{
+                                                                fontSize:
+                                                                    "11px",
+                                                                color: "#666",
+                                                                marginBottom:
+                                                                    "0.5rem",
+                                                            }}
+                                                        >
+                                                            {opp.description}
+                                                        </p>
+                                                        <p
+                                                            style={{
+                                                                fontSize:
+                                                                    "10px",
+                                                                color: "#10b981",
+                                                                fontWeight:
+                                                                    "500",
+                                                            }}
+                                                        >
+                                                            {
+                                                                opp.expected_impact
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </section>
+                                )}
                         </div>
                     )}
 
@@ -1932,16 +1906,48 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                                     >
                                                         {idea.concept}
                                                     </p>
-                                                    {(idea.estimated_views || idea.content_type) && (
-                                                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '10px' }}>
+                                                    {(idea.estimated_views ||
+                                                        idea.content_type) && (
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                gap: "1rem",
+                                                                marginTop:
+                                                                    "0.5rem",
+                                                                fontSize:
+                                                                    "10px",
+                                                            }}
+                                                        >
                                                             {idea.content_type && (
-                                                                <span style={{ color: '#6366f1', fontWeight: '500' }}>
-                                                                    {idea.content_type}
+                                                                <span
+                                                                    style={{
+                                                                        color: "#6366f1",
+                                                                        fontWeight:
+                                                                            "500",
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        idea.content_type
+                                                                    }
                                                                 </span>
                                                             )}
                                                             {idea.estimated_views && (
-                                                                <span style={{ color: '#10b981', fontWeight: '500' }}>
-                                                                    {lang.evaluation.videoIdeas.estimatedPerformance} {idea.estimated_views}
+                                                                <span
+                                                                    style={{
+                                                                        color: "#10b981",
+                                                                        fontWeight:
+                                                                            "500",
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        lang
+                                                                            .evaluation
+                                                                            .videoIdeas
+                                                                            .estimatedPerformance
+                                                                    }{" "}
+                                                                    {
+                                                                        idea.estimated_views
+                                                                    }
                                                                 </span>
                                                             )}
                                                         </div>

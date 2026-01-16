@@ -5,7 +5,6 @@ import axios from "axios";
 import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
-import LanguageSelector from "@/components/LanguageSelector";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
 
@@ -26,28 +25,21 @@ export default function Home() {
             });
 
             if (response.data.success && response.data.data) {
-                const reportData = response.data.data;
-                setReport(reportData);
+                setReport(response.data.data);
             } else {
                 setError(response.data.error || lang.form.errors.analysisError);
             }
         } catch (err: any) {
             console.error("Analysis error:", err);
 
-            // Try to get error from response
             const errorData = err.response?.data;
             const errorMessage = errorData?.error;
-            const errorType = errorData?.errorType;
 
-            // Display error message
             let displayError = errorMessage;
 
-            // Fallback for network errors without response
             if (!err.response) {
                 displayError = lang.form.errors.networkError;
-            }
-            // Fallback for unknown errors
-            else if (!displayError) {
+            } else if (!displayError) {
                 displayError = lang.form.errors.unknownError;
             }
 
@@ -64,16 +56,8 @@ export default function Home() {
 
     return (
         <main id="main-content" className="min-h-screen flex flex-col">
-            {/* Header with Language Selector */}
-            <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--bg-main)] border-b border-[var(--border)]" role="banner">
-                <div className="container flex items-center justify-end h-[40px]">
-                    <LanguageSelector />
-                </div>
-            </header>
-
-            {/* Main Content */}
             <div
-                className={`pt-[50px] flex-1 ${!report ? "center-screen" : ""}`}
+                className={`flex-1 ${!report ? "center-screen" : ""}`}
                 role="main"
             >
                 {!report && !isLoading && (
@@ -122,7 +106,6 @@ export default function Home() {
                     </div>
                 </div>
             )}
-            <footer className="py-4"></footer>
         </main>
     );
 }
