@@ -15,7 +15,6 @@ const STEPS = [
 export default function LoadingState() {
     const lang = useLang();
     const [currentStep, setCurrentStep] = useState(0);
-    const [progress, setProgress] = useState(0);
 
     useEffect(() => {
         // Step progression
@@ -25,18 +24,8 @@ export default function LoadingState() {
             }, STEPS.slice(0, index).reduce((acc, s) => acc + s.duration, 0));
         });
 
-        // Progress bar animation
-        const totalDuration = STEPS.reduce((acc, s) => acc + s.duration, 0);
-        const progressInterval = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 95) return 95; // Cap at 95% until complete
-                return prev + 1;
-            });
-        }, totalDuration / 100);
-
         return () => {
             stepTimers.forEach((t) => clearTimeout(t));
-            clearInterval(progressInterval);
         };
     }, []);
 
@@ -67,17 +56,6 @@ export default function LoadingState() {
             </div>
 
             <h3 className={styles.title}>{lang.loading.title}</h3>
-
-            {/* Progress Bar */}
-            <div className={styles.progressContainer}>
-                <div className={styles.progressBar}>
-                    <div
-                        className={styles.progressFill}
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
-                <span className={styles.progressText}>{Math.round(progress)}%</span>
-            </div>
 
             <div className={styles.steps}>
                 {STEPS.map((step, index) => (

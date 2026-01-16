@@ -1,0 +1,165 @@
+YouTube Channel Marketing Analysis Report
+
+[Channel Name]
+
+1. Executive Summary
+
+Reporting Period: [Start Date – End Date]
+
+Primary Objective: [Brand Awareness / Lead Generation / Sales / Community Growth]
+
+Key Takeaways:
+
+Overall channel performance summary
+
+Major wins and challenges
+
+Strategic recommendations (high level)
+
+2. Channel Overview
+Metric	Value
+Channel Name	
+Niche / Category	
+Total Subscribers	
+Total Videos	
+Channel Age	
+Upload Frequency	
+Primary Audience Region	
+Monetization Status	
+3. Audience Analysis
+3.1 Demographics
+
+Age Distribution:
+
+Gender Split:
+
+Top Countries:
+
+Languages:
+
+3.2 Audience Behavior
+
+Average Watch Time
+
+Returning vs New Viewers
+
+Subscriber Growth Rate
+
+Peak Viewing Times (Day & Hour)
+
+4. Performance Metrics (KPIs)
+4.1 Channel-Level Metrics
+KPI	Current Period	Previous Period	% Change
+Views			
+Watch Time (Hours)			
+Subscribers Gained			
+Impressions			
+CTR (%)			
+4.2 Video-Level Metrics
+
+Top 5 Videos by Views
+
+Top 5 Videos by Watch Time
+
+Underperforming Content
+
+5. Content Analysis
+5.1 Content Categories
+Content Type	% of Uploads	Avg Views	Avg Watch Time
+Tutorials			
+Shorts			
+Reviews			
+Vlogs			
+5.2 Format Performance
+
+Long-form vs Shorts
+
+Video Length vs Retention
+
+Hook Effectiveness (First 30 Seconds)
+
+6. Engagement Analysis
+Metric	Average
+Likes per Video	
+Comments per Video	
+Shares	
+Engagement Rate (%)	
+
+Insights:
+
+Comment sentiment (positive / neutral / negative)
+
+Community interaction patterns
+
+7. SEO & Discoverability
+7.1 Traffic Sources
+
+YouTube Search
+
+Suggested Videos
+
+Browse Features
+
+External Sources
+
+7.2 Keyword Performance
+
+Top Ranking Keywords
+
+Titles & Description Optimization
+
+Tag Usage Effectiveness
+
+Hashtag Strategy
+
+8. Competitive Benchmarking
+Competitor Channel	Subscribers	Avg Views	Upload Frequency
+			
+
+Competitive Insights:
+
+Content gaps
+
+Differentiation opportunities
+
+Best-performing formats in the niche
+
+9. Monetization & ROI (If Applicable)
+
+Ad Revenue
+
+Sponsorships
+
+Affiliate Performance
+
+CPM / RPM Trends
+
+10. Strengths, Weaknesses, Opportunities, Threats (SWOT)
+
+Strengths:
+Weaknesses:
+Opportunities:
+Threats:
+
+11. Strategic Recommendations
+
+Content Strategy Improvements
+
+Posting Schedule Optimization
+
+Thumbnail & Title Enhancements
+
+Audience Growth Tactics
+
+Monetization Opportunities
+
+12. Action Plan (Next 30–90 Days)
+Action	Owner	Deadline	Expected Impact
+			
+13. Appendix
+
+Detailed analytics screenshots
+
+Data sources (YouTube Studio, third-party tools)
+
+Methodology notes

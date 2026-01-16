@@ -47,13 +47,14 @@ export default function VideoPerformanceChart({
 }: VideoPerformanceChartProps) {
     const lang = useLang();
 
-    // Sort by views and take top items
-    const chartData = [...posts]
-        .sort((a, b) => b.statistics.play_count - a.statistics.play_count)
-        .slice(0, maxItems)
-        .map((post, index) => ({
-            name: `#${index + 1}`,
-            rank: index + 1,
+    // Sort by date: oldest on left, latest on right, preserve original index
+    const chartData = posts
+        .map((post, originalIndex) => ({ post, originalIndex }))
+        .sort((a, b) => new Date(a.post.published_at).getTime() - new Date(b.post.published_at).getTime())
+        .slice(-maxItems)
+        .map(({ post, originalIndex }) => ({
+            name: `#${originalIndex + 1}`,
+            rank: originalIndex + 1,
             fullTitle: post.title,
             views: post.statistics.play_count,
             likes: post.statistics.digg_count,
