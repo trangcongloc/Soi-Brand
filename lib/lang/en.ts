@@ -193,8 +193,8 @@ export const en = {
             title: "Content Pillars",
         },
         audiencePersonas: {
-            title: "Audience Personas",
-            avatarDescription: "Description:",
+            title: "Audience Segments",
+            avatarDescription: "Overview:",
             demographics: "Demographics:",
             ageRange: "Age Range:",
             gender: "Gender:",
@@ -207,7 +207,7 @@ export const en = {
             contentPreferences: "Content Preferences:",
             preferredVideoLength: "Preferred Video Length:",
             viewingFrequency: "Viewing Frequency:",
-            socialPlatforms: "Social Platforms:",
+            socialPlatforms: "Platforms Used:",
             buyingTriggers: "Buying Triggers:",
         },
         contentCalendar: {
