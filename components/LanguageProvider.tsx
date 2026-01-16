@@ -5,7 +5,6 @@ import {
     LanguageContext,
     LanguageCode,
     getLanguage,
-    detectBrowserLanguage,
     getStoredLanguage,
     storeLanguage,
     defaultLanguageCode,
@@ -20,10 +19,12 @@ export default function LanguageProvider({ children }: LanguageProviderProps) {
     const [isInitialized, setIsInitialized] = useState(false);
 
     useEffect(() => {
-        // Check stored preference first, then browser language
+        // Check stored preference first, otherwise use default (Vietnamese)
         const stored = getStoredLanguage();
-        const detected = stored || detectBrowserLanguage();
-        setLangCode(detected);
+        if (stored) {
+            setLangCode(stored);
+        }
+        // If no stored preference, keep defaultLanguageCode (vi)
         setIsInitialized(true);
     }, []);
 
