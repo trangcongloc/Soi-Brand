@@ -6,7 +6,6 @@ import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
 import AnalysisHistory from "@/components/AnalysisHistory";
-import CachePromptDialog from "@/components/CachePromptDialog";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
 import { getUserSettings } from "@/lib/userSettings";
@@ -14,24 +13,16 @@ import { extractChannelId, extractUsername } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import {
     getCachedReportsForChannel,
-    getCachedReportByTimestamp,
     setCachedReport,
     clearExpiredReports,
     resolveChannelId,
 } from "@/lib/cache";
 
-interface CachedReportOption {
-    timestamp: number;
-    createdAt: string;
-}
-
-interface CachePromptState {
-    show: boolean;
+interface FilterState {
+    channelId: string;
+    channelName: string;
     channelUrl: string;
     urlExtractedId: string;
-    actualChannelId: string;
-    channelName: string;
-    cachedReports: CachedReportOption[];
 }
 
 export default function Home() {
@@ -39,14 +30,7 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(false);
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [cachePrompt, setCachePrompt] = useState<CachePromptState>({
-        show: false,
-        channelUrl: "",
-        urlExtractedId: "",
-        actualChannelId: "",
-        channelName: "",
-        cachedReports: [],
-    });
+    const [filter, setFilter] = useState<FilterState | null>(null);
 
     // Clear expired cache on mount
     useEffect(() => {
@@ -56,8 +40,15 @@ export default function Home() {
     const handleAnalyze = async (channelUrl: string) => {
         setError(null);
 
+        // If already filtered for this channel, do re-analyze
+        if (filter) {
+            await performAnalysis(filter.channelUrl, filter.urlExtractedId);
+            return;
+        }
+
         // Extract URL ID and try to resolve to actual channel ID
-        const urlExtractedId = extractChannelId(channelUrl) || extractUsername(channelUrl);
+        const urlExtractedId =
+            extractChannelId(channelUrl) || extractUsername(channelUrl);
         if (urlExtractedId) {
             // Try to resolve URL ID to actual channel ID
             const actualChannelId =
@@ -67,17 +58,12 @@ export default function Home() {
             const cachedReports = getCachedReportsForChannel(actualChannelId);
 
             if (cachedReports.length > 0) {
-                // Show prompt dialog with all cached reports
-                setCachePrompt({
-                    show: true,
+                // Set filter to show only this channel's reports
+                setFilter({
+                    channelId: actualChannelId,
+                    channelName: cachedReports[0].brandName,
                     channelUrl,
                     urlExtractedId,
-                    actualChannelId,
-                    channelName: cachedReports[0].brandName,
-                    cachedReports: cachedReports.map((r) => ({
-                        timestamp: r.timestamp,
-                        createdAt: r.createdAt,
-                    })),
                 });
                 return;
             }
@@ -94,6 +80,7 @@ export default function Home() {
         setIsLoading(true);
         setError(null);
         setReport(null);
+        setFilter(null);
 
         try {
             // Get user settings for API keys
@@ -143,52 +130,14 @@ export default function Home() {
         }
     };
 
-    const handleSelectReport = (timestamp: number) => {
-        const report = getCachedReportByTimestamp(
-            cachePrompt.actualChannelId,
-            timestamp
-        );
-        if (report) {
-            setReport(report);
-        }
-        setCachePrompt({
-            show: false,
-            channelUrl: "",
-            urlExtractedId: "",
-            actualChannelId: "",
-            channelName: "",
-            cachedReports: [],
-        });
-    };
-
-    const handleReanalyze = async () => {
-        const { channelUrl, urlExtractedId } = cachePrompt;
-        setCachePrompt({
-            show: false,
-            channelUrl: "",
-            urlExtractedId: "",
-            actualChannelId: "",
-            channelName: "",
-            cachedReports: [],
-        });
-
-        await performAnalysis(channelUrl, urlExtractedId);
-    };
-
-    const handleCancelPrompt = () => {
-        setCachePrompt({
-            show: false,
-            channelUrl: "",
-            urlExtractedId: "",
-            actualChannelId: "",
-            channelName: "",
-            cachedReports: [],
-        });
+    const handleClearFilter = () => {
+        setFilter(null);
     };
 
     const handleUpload = (uploadedReport: MarketingReport) => {
         setReport(uploadedReport);
         setError(null);
+        setFilter(null);
     };
 
     return (
@@ -217,7 +166,11 @@ export default function Home() {
                                 onLoadReport={(loadedReport) => {
                                     setReport(loadedReport);
                                     setError(null);
+                                    setFilter(null);
                                 }}
+                                filteredChannelId={filter?.channelId}
+                                filteredChannelName={filter?.channelName}
+                                onClearFilter={handleClearFilter}
                             />
                         </div>
                     </>
@@ -260,17 +213,6 @@ export default function Home() {
                         </button>
                     </div>
                 </div>
-            )}
-
-            {/* Cache Prompt Dialog */}
-            {cachePrompt.show && cachePrompt.cachedReports.length > 0 && (
-                <CachePromptDialog
-                    channelName={cachePrompt.channelName}
-                    cachedReports={cachePrompt.cachedReports}
-                    onSelectReport={handleSelectReport}
-                    onReanalyze={handleReanalyze}
-                    onCancel={handleCancelPrompt}
-                />
             )}
         </main>
     );
