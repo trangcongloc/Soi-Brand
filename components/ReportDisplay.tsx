@@ -97,7 +97,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                 const date = new Date(report.created_at);
                                 const dateStr = date.toLocaleDateString("vi-VN");
                                 const timeStr = date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-                                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
                                 const tzAbbr = date.toLocaleTimeString("en-US", { timeZoneName: "short" }).split(" ").pop();
                                 return `${dateStr} ${timeStr} (${tzAbbr})`;
                             })(),

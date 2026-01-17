@@ -6,6 +6,7 @@ import { isValidYouTubeUrl } from "@/lib/utils";
 import { AnalyzeRequest, AnalyzeResponse, APIError } from "@/lib/types";
 import { isOriginAllowed, validateEnv } from "@/lib/config";
 import { withRetry } from "@/lib/retry";
+import { logger } from "@/lib/logger";
 
 // CORS headers helper
 function getCorsHeaders(origin: string | null): HeadersInit {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
         try {
             validateEnv();
         } catch (envError) {
-            console.error("Environment validation failed:", envError);
+            logger.error("Environment validation failed:", envError);
             return NextResponse.json(
                 {
                     success: false,
@@ -70,14 +71,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch YouTube data with retry
-        console.log("Fetching YouTube data for:", channelUrl);
+        logger.log("Fetching YouTube data for:", channelUrl);
         const { channelInfo, videos } = await withRetry(
             () => getFullChannelData(channelUrl, youtubeApiKey),
             {
                 maxAttempts: 2,
                 initialDelayMs: 1000,
                 onRetry: (attempt, error) => {
-                    console.log(`YouTube API retry ${attempt}: ${error.message}`);
+                    logger.log(`YouTube API retry ${attempt}: ${error.message}`);
                 },
             }
         );
@@ -103,14 +104,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate marketing report using Gemini AI with retry
-        console.log("Generating marketing report with Gemini AI...");
+        logger.log("Generating marketing report with Gemini AI...");
         const report = await withRetry(
             () => generateMarketingReport(channelInfo, videos, geminiApiKey),
             {
                 maxAttempts: 2,
                 initialDelayMs: 2000,
                 onRetry: (attempt, error) => {
-                    console.log(`Gemini API retry ${attempt}: ${error.message}`);
+                    logger.log(`Gemini API retry ${attempt}: ${error.message}`);
                 },
             }
         );
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
             { status: 200, headers: corsHeaders }
         );
     } catch (error: any) {
-        console.error("Error in analyze API:", error);
+        logger.error("Error in analyze API:", error);
 
         // Handle typed APIError from youtube.ts and gemini.ts
         if (error instanceof APIError) {

@@ -1,5 +1,7 @@
 // Retry logic with exponential backoff
 
+import { logger } from "./logger";
+
 export interface RetryOptions {
     maxAttempts?: number;
     initialDelayMs?: number;
@@ -115,7 +117,7 @@ export async function withRetry<T>(
                 onRetry(attempt, lastError, delayMs);
             }
 
-            console.log(
+            logger.log(
                 `Retry attempt ${attempt}/${maxAttempts} after ${delayMs}ms due to: ${lastError.message}`
             );
 

@@ -1,6 +1,8 @@
 // Client-side caching for reports using localStorage
 
 import { MarketingReport } from "./types";
+import { isBrowser } from "./utils";
+import { logger } from "./logger";
 
 const CACHE_PREFIX = "ourtube_report_";
 const ALIAS_PREFIX = "ourtube_alias_";
@@ -20,13 +22,6 @@ interface CachedReportInfo {
     timestamp: number;
     createdAt: string;
     channelAvatar?: string;
-}
-
-/**
- * Check if we're in a browser environment
- */
-function isBrowser(): boolean {
-    return typeof window !== "undefined" && typeof localStorage !== "undefined";
 }
 
 /**
@@ -132,7 +127,7 @@ export function getCachedReportByTimestamp(
 
         return data.report;
     } catch (error) {
-        console.error("Error reading from cache:", error);
+        logger.error("Error reading from cache:", error);
         return null;
     }
 }
@@ -203,7 +198,7 @@ export function setCachedReport(
         const key = getCacheKey(channelId, timestamp);
         localStorage.setItem(key, JSON.stringify(cacheData));
     } catch (error) {
-        console.error("Error writing to cache:", error);
+        logger.error("Error writing to cache:", error);
         if (error instanceof Error && error.name === "QuotaExceededError") {
             clearOldReports();
         }

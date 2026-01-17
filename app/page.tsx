@@ -10,6 +10,8 @@ import CachePromptDialog from "@/components/CachePromptDialog";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
 import { getUserSettings } from "@/lib/userSettings";
+import { extractChannelId, extractUsername } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import {
     getCachedReportsForChannel,
     getCachedReportByTimestamp,
@@ -51,27 +53,11 @@ export default function Home() {
         clearExpiredReports();
     }, []);
 
-    // Extract channel ID from URL for caching
-    const extractChannelIdFromUrl = (url: string): string | null => {
-        const patterns = [
-            /youtube\.com\/channel\/([a-zA-Z0-9_-]+)/,
-            /youtube\.com\/@([a-zA-Z0-9_-]+)/,
-            /youtube\.com\/c\/([a-zA-Z0-9_-]+)/,
-            /youtube\.com\/user\/([a-zA-Z0-9_-]+)/,
-        ];
-
-        for (const pattern of patterns) {
-            const match = url.match(pattern);
-            if (match) return match[1];
-        }
-        return null;
-    };
-
     const handleAnalyze = async (channelUrl: string) => {
         setError(null);
 
         // Extract URL ID and try to resolve to actual channel ID
-        const urlExtractedId = extractChannelIdFromUrl(channelUrl);
+        const urlExtractedId = extractChannelId(channelUrl) || extractUsername(channelUrl);
         if (urlExtractedId) {
             // Try to resolve URL ID to actual channel ID
             const actualChannelId =
@@ -132,13 +118,13 @@ export default function Home() {
                         newReport,
                         urlExtractedId || undefined
                     );
-                    console.log("Report cached for:", actualChannelId);
+                    logger.log("Report cached for:", actualChannelId);
                 }
             } else {
                 setError(response.data.error || lang.form.errors.analysisError);
             }
         } catch (err: any) {
-            console.error("Analysis error:", err);
+            logger.error("Analysis error:", err);
 
             const errorData = err.response?.data;
             const errorMessage = errorData?.error;

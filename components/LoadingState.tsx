@@ -18,7 +18,7 @@ export default function LoadingState() {
 
     useEffect(() => {
         // Step progression
-        const stepTimers = STEPS.map((step, index) => {
+        const stepTimers = STEPS.map((_, index) => {
             return setTimeout(() => {
                 setCurrentStep(index);
             }, STEPS.slice(0, index).reduce((acc, s) => acc + s.duration, 0));

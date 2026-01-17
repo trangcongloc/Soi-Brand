@@ -1,6 +1,13 @@
 // Utility functions
 
 /**
+ * Check if code is running in browser environment
+ */
+export function isBrowser(): boolean {
+    return typeof window !== "undefined" && typeof localStorage !== "undefined";
+}
+
+/**
  * Extract YouTube channel ID from various URL formats
  */
 export function extractChannelId(url: string): string | null {
@@ -98,33 +105,6 @@ export function isValidYouTubeUrl(url: string): boolean {
     }
 }
 
-/**
- * Format large numbers (e.g., 1000000 -> "1M")
- */
-export function formatNumber(num: number): string {
-    if (num >= 1000000000) {
-        return (num / 1000000000).toFixed(1) + "B";
-    }
-    if (num >= 1000000) {
-        return (num / 1000000).toFixed(1) + "M";
-    }
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1) + "K";
-    }
-    return num.toString();
-}
-
-/**
- * Format date to readable string
- */
-export function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
-}
 
 /**
  * Generate UUID v4
@@ -140,48 +120,6 @@ export function generateUUID(): string {
     );
 }
 
-/**
- * Parse ISO 8601 duration to seconds
- */
-export function parseDuration(duration: string): number {
-    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-    if (!match) return 0;
-
-    const hours = parseInt(match[1]) || 0;
-    const minutes = parseInt(match[2]) || 0;
-    const seconds = parseInt(match[3]) || 0;
-
-    return hours * 3600 + minutes * 60 + seconds;
-}
-
-/**
- * Format duration in seconds to readable string
- */
-export function formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
-            .toString()
-            .padStart(2, "0")}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, "0")}`;
-}
-
-/**
- * Calculate engagement rate
- */
-export function calculateEngagementRate(
-    likes: number,
-    comments: number,
-    views: number
-): string {
-    if (views === 0) return "0%";
-    const rate = ((likes + comments) / views) * 100;
-    return rate.toFixed(2) + "%";
-}
 
 /**
  * Download JSON file

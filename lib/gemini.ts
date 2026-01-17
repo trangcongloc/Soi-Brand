@@ -8,6 +8,121 @@ import {
 } from "./types";
 import { generateUUID } from "./utils";
 import { buildMarketingReportPrompt } from "./prompts/marketing-report";
+import { logger } from "./logger";
+
+/**
+ * Validate that the AI response has the required structure
+ */
+function validateAIResponse(data: any): void {
+    if (!data || typeof data !== "object") {
+        throw new Error("AI response is not an object");
+    }
+
+    if (!data.report_part_2 || typeof data.report_part_2 !== "object") {
+        throw new Error("Missing or invalid report_part_2 in AI response");
+    }
+
+    if (!data.report_part_3 || typeof data.report_part_3 !== "object") {
+        throw new Error("Missing or invalid report_part_3 in AI response");
+    }
+
+    // Check for required sections in report_part_2
+    const requiredPart2Sections = [
+        "ad_strategy",
+        "funnel_analysis",
+        "strategy_analysis",
+        "quantitative_synthesis",
+    ];
+
+    for (const section of requiredPart2Sections) {
+        if (!data.report_part_2[section]) {
+            logger.log(
+                `Warning: Missing section '${section}' in report_part_2`
+            );
+        }
+    }
+
+    // Check for required sections in report_part_3
+    const requiredPart3Sections = ["strengths", "actionable_insights"];
+
+    for (const section of requiredPart3Sections) {
+        if (!data.report_part_3[section]) {
+            logger.log(
+                `Warning: Missing section '${section}' in report_part_3`
+            );
+        }
+    }
+}
+
+/**
+ * Extract and parse JSON from AI response
+ * Handles markdown code blocks and attempts to repair common JSON issues
+ */
+function extractAndParseJSON(text: string): any {
+    let jsonText = text.trim();
+
+    // Remove markdown code block markers if present
+    if (jsonText.startsWith("```json")) {
+        jsonText = jsonText.replace(/^```json\s*\n?/, "").replace(/\n?```\s*$/, "");
+    } else if (jsonText.startsWith("```")) {
+        jsonText = jsonText.replace(/^```\s*\n?/, "").replace(/\n?```\s*$/, "");
+    }
+
+    // Try parsing as-is first
+    try {
+        return JSON.parse(jsonText);
+    } catch (firstError) {
+        logger.log("Initial JSON parse failed, attempting repairs...");
+
+        // Common repair attempts
+        const repairs = [
+            // Fix trailing commas in arrays and objects
+            (text: string) => text.replace(/,(\s*[}\]])/g, "$1"),
+
+            // Fix missing commas between array elements
+            (text: string) => text.replace(/\}\s*\{/g, "},{"),
+
+            // Fix missing commas between object properties
+            (text: string) => text.replace(/"\s*\n\s*"/g, '",\n"'),
+
+            // Fix single quotes to double quotes
+            (text: string) => text.replace(/'/g, '"'),
+
+            // Remove comments (single-line)
+            (text: string) => text.replace(/\/\/.*$/gm, ""),
+
+            // Remove comments (multi-line)
+            (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, ""),
+        ];
+
+        let repairedText = jsonText;
+        for (const repair of repairs) {
+            try {
+                repairedText = repair(repairedText);
+                return JSON.parse(repairedText);
+            } catch {
+                // Continue to next repair attempt
+            }
+        }
+
+        // If all repairs failed, try to extract just the JSON object
+        const jsonMatch = repairedText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch {
+                // Fall through to error
+            }
+        }
+
+        // All attempts failed
+        throw new Error(
+            `Failed to parse JSON from AI response. Original error: ${
+                (firstError as Error).message
+            }. Response preview: ${jsonText.substring(0, 500)}...`
+        );
+    }
+}
 
 /**
  * Initialize Gemini AI
@@ -117,8 +232,11 @@ export async function generateMarketingReport(
         const response = await result.response;
         const text = response.text();
 
-        // With JSON mode, the AI is forced to return a valid JSON object.
-        const aiAnalysis = JSON.parse(text);
+        // Parse JSON with automatic repair attempts
+        const aiAnalysis = extractAndParseJSON(text);
+
+        // Validate response structure
+        validateAIResponse(aiAnalysis);
 
         // Construct full report
         const report: MarketingReport = {
@@ -184,11 +302,43 @@ export async function generateMarketingReport(
 
         return report;
     } catch (error: any) {
-        console.error("Error generating marketing report:", error);
+        logger.error("Error generating marketing report:", error);
 
         // Extract error details
         const errorMessage = error?.message || "";
         const errorStatus = error?.status || error?.response?.status;
+
+        // Check for JSON parsing errors specifically
+        if (
+            errorMessage.includes("Failed to parse JSON") ||
+            errorMessage.includes("JSON") ||
+            errorMessage.includes("Unexpected token") ||
+            errorMessage.includes("Expected")
+        ) {
+            const parseError: APIError = {
+                name: "JSONParseError",
+                message:
+                    "The AI generated an invalid response format. This is usually temporary. Please try again. Details: " +
+                    errorMessage.substring(0, 200),
+                errorType: "AI_PARSE_ERROR",
+            };
+            throw parseError;
+        }
+
+        // Check for validation errors
+        if (
+            errorMessage.includes("Missing or invalid") ||
+            errorMessage.includes("AI response is not")
+        ) {
+            const validationError: APIError = {
+                name: "ValidationError",
+                message:
+                    "The AI response is missing required information. Please try again. Details: " +
+                    errorMessage.substring(0, 200),
+                errorType: "AI_PARSE_ERROR",
+            };
+            throw validationError;
+        }
 
         // Error mapping based on official Gemini API documentation
         // Reference: https://ai.google.dev/gemini-api/docs/troubleshooting

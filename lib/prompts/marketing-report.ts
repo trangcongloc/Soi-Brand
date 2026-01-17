@@ -36,7 +36,6 @@ export function buildMarketingReportPrompt(data: PromptData): string {
     } = data;
 
     const totalLikes = videosData.reduce((sum, v) => sum + v.likes, 0);
-    const totalComments = videosData.reduce((sum, v) => sum + v.comments, 0);
     const totalVideoViews = videosData.reduce((sum, v) => sum + v.views, 0);
 
     return `

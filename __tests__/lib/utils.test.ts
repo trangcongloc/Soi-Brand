@@ -2,10 +2,6 @@ import {
     extractChannelId,
     extractUsername,
     isValidYouTubeUrl,
-    formatNumber,
-    formatDuration,
-    parseDuration,
-    calculateEngagementRate,
     generateUUID,
 } from "@/lib/utils";
 
@@ -101,77 +97,6 @@ describe("isValidYouTubeUrl", () => {
 
     it("should return false for invalid URLs", () => {
         expect(isValidYouTubeUrl("not-a-url")).toBe(false);
-    });
-});
-
-describe("formatNumber", () => {
-    it("should format numbers less than 1000", () => {
-        expect(formatNumber(500)).toBe("500");
-        expect(formatNumber(0)).toBe("0");
-    });
-
-    it("should format thousands with K suffix", () => {
-        expect(formatNumber(1000)).toBe("1.0K");
-        expect(formatNumber(1500)).toBe("1.5K");
-        expect(formatNumber(999999)).toBe("1000.0K");
-    });
-
-    it("should format millions with M suffix", () => {
-        expect(formatNumber(1000000)).toBe("1.0M");
-        expect(formatNumber(2500000)).toBe("2.5M");
-    });
-
-    it("should format billions with B suffix", () => {
-        expect(formatNumber(1000000000)).toBe("1.0B");
-        expect(formatNumber(1500000000)).toBe("1.5B");
-    });
-});
-
-describe("parseDuration", () => {
-    it("should parse ISO 8601 duration with hours, minutes, seconds", () => {
-        expect(parseDuration("PT1H30M45S")).toBe(5445);
-    });
-
-    it("should parse duration with only minutes and seconds", () => {
-        expect(parseDuration("PT10M30S")).toBe(630);
-    });
-
-    it("should parse duration with only seconds", () => {
-        expect(parseDuration("PT45S")).toBe(45);
-    });
-
-    it("should return 0 for invalid duration", () => {
-        expect(parseDuration("invalid")).toBe(0);
-    });
-});
-
-describe("formatDuration", () => {
-    it("should format seconds less than an hour", () => {
-        expect(formatDuration(65)).toBe("1:05");
-        expect(formatDuration(0)).toBe("0:00");
-    });
-
-    it("should format seconds with hours", () => {
-        expect(formatDuration(3665)).toBe("1:01:05");
-    });
-
-    it("should pad minutes and seconds with zeros", () => {
-        expect(formatDuration(61)).toBe("1:01");
-        expect(formatDuration(3601)).toBe("1:00:01");
-    });
-});
-
-describe("calculateEngagementRate", () => {
-    it("should calculate engagement rate correctly", () => {
-        expect(calculateEngagementRate(100, 50, 1000)).toBe("15.00%");
-    });
-
-    it("should return 0% for zero views", () => {
-        expect(calculateEngagementRate(100, 50, 0)).toBe("0%");
-    });
-
-    it("should handle small engagement rates", () => {
-        expect(calculateEngagementRate(1, 0, 10000)).toBe("0.01%");
     });
 });
 

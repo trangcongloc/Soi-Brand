@@ -2,6 +2,7 @@
 import axios from "axios";
 import { YouTubeChannel, YouTubeVideo, APIError } from "./types";
 import { extractChannelId, extractUsername } from "./utils";
+import { logger } from "./logger";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -16,7 +17,7 @@ function handleYouTubeError(error: any, context: string): never {
         errorData?.message || error?.message || "Unknown YouTube API error";
     const errorReason = errorData?.errors?.[0]?.reason || "";
 
-    console.error(`YouTube API Error (${context}):`, {
+    logger.error(`YouTube API Error (${context}):`, {
         status: statusCode,
         message: errorMessage,
         reason: errorReason,
@@ -187,7 +188,7 @@ export async function resolveChannelId(
             handleYouTubeError(error, "resolveChannelId");
         }
 
-        console.error("Error resolving channel ID:", error);
+        logger.error("Error resolving channel ID:", error);
         return null;
     }
 }

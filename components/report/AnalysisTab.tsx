@@ -469,96 +469,9 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 <section>
                     <h3 className={styles.sectionTitle}>
                         {langCode === "vi"
-                            ? "📅 Lịch đăng nội dung"
-                            : "📅 Content Calendar Insights"}
+                            ? "Lịch đăng nội dung"
+                            : "Content Calendar Insights"}
                     </h3>
-
-                    {/* Frequency Comparison */}
-                    {currentStats && report_part_2.content_calendar && (
-                        <div
-                            className={styles.card}
-                            style={{
-                                marginBottom: "1rem",
-                                padding: "1.25rem",
-                                background: "#fffbeb",
-                                border: "2px solid #fbbf24",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    flexWrap: "wrap",
-                                    gap: "1rem",
-                                }}
-                            >
-                                <div style={{ flex: "1 1 200px" }}>
-                                    <p
-                                        style={{
-                                            fontSize: "10px",
-                                            color: "#92400e",
-                                            marginBottom: "0.25rem",
-                                            fontWeight: "600",
-                                            textTransform: "uppercase",
-                                            letterSpacing: "0.5px",
-                                        }}
-                                    >
-                                        {langCode === "vi"
-                                            ? "⏱️ Hiện tại"
-                                            : "⏱️ Current"}
-                                    </p>
-                                    <p
-                                        style={{
-                                            fontSize: "16px",
-                                            fontWeight: "700",
-                                            color: "#b45309",
-                                            margin: 0,
-                                        }}
-                                    >
-                                        {currentStats.frequency}
-                                    </p>
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: "20px",
-                                        color: "#d97706",
-                                    }}
-                                >
-                                    →
-                                </div>
-                                <div style={{ flex: "1 1 200px" }}>
-                                    <p
-                                        style={{
-                                            fontSize: "10px",
-                                            color: "#166534",
-                                            marginBottom: "0.25rem",
-                                            fontWeight: "600",
-                                            textTransform: "uppercase",
-                                            letterSpacing: "0.5px",
-                                        }}
-                                    >
-                                        {langCode === "vi"
-                                            ? "✓ Đề xuất"
-                                            : "✓ Recommended"}
-                                    </p>
-                                    <p
-                                        style={{
-                                            fontSize: "16px",
-                                            fontWeight: "700",
-                                            color: "#15803d",
-                                            margin: 0,
-                                        }}
-                                    >
-                                        {
-                                            report_part_2.content_calendar
-                                                .recommended_frequency
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     <div className={styles.grid2} style={{ gap: "1rem" }}>
                         {/* Current Posting Stats */}
@@ -689,8 +602,8 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                             }}
                                         >
                                             {langCode === "vi"
-                                                ? `📊 ${currentStats.totalPosts} video trong ${currentStats.analyzedPeriod} ngày`
-                                                : `📊 ${currentStats.totalPosts} videos over ${currentStats.analyzedPeriod} days`}
+                                                ? `${currentStats.totalPosts} video trong ${currentStats.analyzedPeriod} ngày`
+                                                : `${currentStats.totalPosts} videos over ${currentStats.analyzedPeriod} days`}
                                         </p>
                                     </div>
                                 </div>

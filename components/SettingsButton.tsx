@@ -10,7 +10,7 @@ export default function SettingsButton() {
     const [geminiKey, setGeminiKey] = useState("");
     const [youtubeKey, setYoutubeKey] = useState("");
     const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-    const { langCode, setLanguage, lang } = useLanguage();
+    const { langCode, setLanguage } = useLanguage();
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 

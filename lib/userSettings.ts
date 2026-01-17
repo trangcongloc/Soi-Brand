@@ -1,18 +1,14 @@
 // User settings management using localStorage
 
+import { isBrowser } from "./utils";
+import { logger } from "./logger";
+
 export interface UserSettings {
     youtubeApiKey?: string;
     geminiApiKey?: string;
 }
 
 const SETTINGS_KEY = "ourtube_user_settings";
-
-/**
- * Check if we're in a browser environment
- */
-function isBrowser(): boolean {
-    return typeof window !== "undefined" && typeof localStorage !== "undefined";
-}
 
 /**
  * Get user settings from localStorage
@@ -30,7 +26,7 @@ export function getUserSettings(): UserSettings {
         const parsed = JSON.parse(stored) as UserSettings;
         return parsed;
     } catch (error) {
-        console.error("[UserSettings] Error reading user settings:", error);
+        logger.error("[UserSettings] Error reading user settings:", error);
         return {};
     }
 }
@@ -47,7 +43,7 @@ export function saveUserSettings(settings: UserSettings): void {
         const stringified = JSON.stringify(settings);
         localStorage.setItem(SETTINGS_KEY, stringified);
     } catch (error) {
-        console.error("[UserSettings] Error saving user settings:", error);
+        logger.error("[UserSettings] Error saving user settings:", error);
     }
 }
 
