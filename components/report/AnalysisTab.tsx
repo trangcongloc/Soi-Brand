@@ -27,21 +27,23 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
         const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
         const videosPerDay = posts.length / daysDiff;
 
+        // Calculate all frequency formats
+        const perWeek = videosPerDay * 7;
+        const perMonth = videosPerDay * 30;
+
         let frequency: string;
         if (videosPerDay >= 1) {
             frequency = langCode === "vi"
                 ? `${videosPerDay.toFixed(1)} video/ngày`
                 : `${videosPerDay.toFixed(1)} videos/day`;
         } else if (videosPerDay >= 1/7) {
-            const perWeek = videosPerDay * 7;
             frequency = langCode === "vi"
-                ? `${perWeek.toFixed(1)} video/tuần`
-                : `${perWeek.toFixed(1)} videos/week`;
+                ? `${perWeek.toFixed(1)} video/tuần (${videosPerDay.toFixed(2)}/ngày)`
+                : `${perWeek.toFixed(1)} videos/week (${videosPerDay.toFixed(2)}/day)`;
         } else {
-            const perMonth = videosPerDay * 30;
             frequency = langCode === "vi"
-                ? `${perMonth.toFixed(1)} video/tháng`
-                : `${perMonth.toFixed(1)} videos/month`;
+                ? `${perMonth.toFixed(1)} video/tháng (${perWeek.toFixed(2)}/tuần)`
+                : `${perMonth.toFixed(1)} videos/month (${perWeek.toFixed(2)}/week)`;
         }
 
         // Calculate best posting days from actual data
@@ -365,67 +367,117 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {(currentStats || report_part_2.content_calendar) && (
                 <section>
                     <h3 className={styles.sectionTitle}>
-                        {langCode === "vi" ? "Lịch đăng nội dung" : "Content Calendar Insights"}
+                        {langCode === "vi" ? "📅 Lịch đăng nội dung" : "📅 Content Calendar Insights"}
                     </h3>
-                    <div className={styles.card}>
-                        <div className={styles.grid2} style={{ gap: "1.5rem" }}>
-                            {/* Current Posting Stats */}
-                            {currentStats && (
-                                <div>
-                                    <h4 style={{ fontSize: "12px", fontWeight: "700", color: "#e53935", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {langCode === "vi" ? "Hiện tại của kênh" : "Current Channel Stats"}
-                                    </h4>
-                                    <div style={{ background: "#fef2f2", padding: "1rem", borderRadius: "8px", border: "1px solid #fecaca" }}>
-                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
-                                            <strong>{langCode === "vi" ? "Tần suất đăng:" : "Posting Frequency:"}</strong>{" "}
-                                            <span style={{ color: "#e53935", fontWeight: "600" }}>{currentStats.frequency}</span>
-                                        </p>
-                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
-                                            <strong>{langCode === "vi" ? "Ngày hay đăng:" : "Most Active Days:"}</strong>{" "}
-                                            <span style={{ color: "#333" }}>{currentStats.bestDays.join(", ") || "N/A"}</span>
-                                        </p>
-                                        <p style={{ fontSize: "11px", marginBottom: "0.5rem" }}>
-                                            <strong>{langCode === "vi" ? "Giờ hay đăng:" : "Most Active Times:"}</strong>{" "}
-                                            <span style={{ color: "#333" }}>{currentStats.bestTimes.join(", ") || "N/A"}</span>
-                                        </p>
-                                        <p style={{ fontSize: "10px", color: "#666", marginTop: "0.75rem", fontStyle: "italic" }}>
-                                            {langCode === "vi"
-                                                ? `Dựa trên ${currentStats.totalPosts} video trong ${currentStats.analyzedPeriod} ngày`
-                                                : `Based on ${currentStats.totalPosts} videos over ${currentStats.analyzedPeriod} days`}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Recommended Posting Schedule */}
-                            {report_part_2.content_calendar && (
-                                <div>
-                                    <h4 style={{ fontSize: "12px", fontWeight: "700", color: "#10b981", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {langCode === "vi" ? "Đề xuất tối ưu" : "Recommended Schedule"}
-                                    </h4>
-                                    <div style={{ background: "#f0fdf4", padding: "1rem", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
-                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
-                                            <strong>{lang.analysis.contentCalendar.recommendedFrequency}</strong>{" "}
-                                            <span style={{ color: "#10b981", fontWeight: "600" }}>{report_part_2.content_calendar.recommended_frequency}</span>
+                    {/* Frequency Comparison */}
+                    {currentStats && report_part_2.content_calendar && (
+                        <div className={styles.card} style={{ marginBottom: "1rem", padding: "1.25rem", background: "#fffbeb", border: "2px solid #fbbf24" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+                                <div style={{ flex: "1 1 200px" }}>
+                                    <p style={{ fontSize: "10px", color: "#92400e", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                        {langCode === "vi" ? "⏱️ Hiện tại" : "⏱️ Current"}
+                                    </p>
+                                    <p style={{ fontSize: "16px", fontWeight: "700", color: "#b45309", margin: 0 }}>
+                                        {currentStats.frequency}
+                                    </p>
+                                </div>
+                                <div style={{ fontSize: "20px", color: "#d97706" }}>→</div>
+                                <div style={{ flex: "1 1 200px" }}>
+                                    <p style={{ fontSize: "10px", color: "#166534", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                        {langCode === "vi" ? "✓ Đề xuất" : "✓ Recommended"}
+                                    </p>
+                                    <p style={{ fontSize: "16px", fontWeight: "700", color: "#15803d", margin: 0 }}>
+                                        {report_part_2.content_calendar.recommended_frequency}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={styles.grid2} style={{ gap: "1rem" }}>
+                        {/* Current Posting Stats */}
+                        {currentStats && (
+                            <div className={styles.card}>
+                                <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#e53935", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem", borderBottom: "2px solid #fecaca", paddingBottom: "0.5rem" }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    {langCode === "vi" ? "Hiện trạng kênh" : "Current Channel Stats"}
+                                </h4>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600" }}>
+                                            {langCode === "vi" ? "TẦN SUẤT ĐĂNG" : "POSTING FREQUENCY"}
                                         </p>
-                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
-                                            <strong>{lang.analysis.contentCalendar.bestDays}</strong>{" "}
-                                            <span style={{ color: "#333" }}>{report_part_2.content_calendar.best_posting_days.join(", ")}</span>
+                                        <p style={{ fontSize: "13px", fontWeight: "600", color: "#e53935", margin: 0 }}>
+                                            {currentStats.frequency}
                                         </p>
-                                        <p style={{ fontSize: "11px", marginBottom: 0 }}>
-                                            <strong>{lang.analysis.contentCalendar.bestTimes}</strong>{" "}
-                                            <span style={{ color: "#333" }}>{report_part_2.content_calendar.best_posting_times.join(", ")}</span>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600" }}>
+                                            {langCode === "vi" ? "NGÀY HAY ĐĂNG NHẤT" : "MOST ACTIVE DAYS"}
+                                        </p>
+                                        <p style={{ fontSize: "12px", fontWeight: "500", color: "#1f2937", margin: 0 }}>
+                                            {currentStats.bestDays.join(", ") || "N/A"}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600" }}>
+                                            {langCode === "vi" ? "GIỜ HAY ĐĂNG NHẤT" : "MOST ACTIVE TIMES"}
+                                        </p>
+                                        <p style={{ fontSize: "12px", fontWeight: "500", color: "#1f2937", margin: 0 }}>
+                                            {currentStats.bestTimes.join(", ") || "N/A"}
+                                        </p>
+                                    </div>
+                                    <div style={{ marginTop: "0.5rem", paddingTop: "0.75rem", borderTop: "1px dashed #e5e7eb" }}>
+                                        <p style={{ fontSize: "10px", color: "#9ca3af", fontStyle: "italic", margin: 0 }}>
+                                            {langCode === "vi"
+                                                ? `📊 ${currentStats.totalPosts} video trong ${currentStats.analyzedPeriod} ngày`
+                                                : `📊 ${currentStats.totalPosts} videos over ${currentStats.analyzedPeriod} days`}
                                         </p>
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
+
+                        {/* Recommended Posting Schedule */}
+                        {report_part_2.content_calendar && (
+                            <div className={styles.card}>
+                                <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#10b981", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem", borderBottom: "2px solid #bbf7d0", paddingBottom: "0.5rem" }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                    </svg>
+                                    {langCode === "vi" ? "Lịch đề xuất" : "Recommended Schedule"}
+                                </h4>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600" }}>
+                                            {langCode === "vi" ? "TẦN SUẤT TỐI ƯU" : "OPTIMAL FREQUENCY"}
+                                        </p>
+                                        <p style={{ fontSize: "13px", fontWeight: "600", color: "#10b981", margin: 0 }}>
+                                            {report_part_2.content_calendar.recommended_frequency}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600" }}>
+                                            {langCode === "vi" ? "NGÀY TỐT NHẤT" : "BEST DAYS TO POST"}
+                                        </p>
+                                        <p style={{ fontSize: "12px", fontWeight: "500", color: "#1f2937", margin: 0 }}>
+                                            {report_part_2.content_calendar.best_posting_days.join(", ")}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600" }}>
+                                            {langCode === "vi" ? "KHUNG GIỜ VÀNG" : "BEST TIMES TO POST"}
+                                        </p>
+                                        <p style={{ fontSize: "12px", fontWeight: "500", color: "#1f2937", margin: 0 }}>
+                                            {report_part_2.content_calendar.best_posting_times.join(", ")}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </section>
             )}

@@ -90,7 +90,7 @@ QUAN TRỌNG:
   * Ví dụ kênh factory: "Car Manufacturing", "Papaya Processing", "Chocolate Factory" - KHÔNG phải "Industrial videos"
   * Liệt kê specific_topics là những CHỦ ĐỀ THỰC SỰ kênh đang làm từ video data
 - all_channel_tags: LIỆT KÊ TẤT CẢ tags THỰC TẾ từ video data đã cung cấp (không bỏ sót)
-- tag_categories: PHẢI sử dụng tags từ all_channel_tags để phân loại - KHÔNG được tự nghĩ ra tags mới
+- tag_categories: PHẢI phân loại tags từ all_channel_tags vào 7 nhóm (Core, Sub-Niche, Branded, Topic, SEO/Discovery, Trending, Long-tail) - KHÔNG được tự nghĩ ra tags mới
 - tag_analysis: Phân tích THỰC SỰ các tags từ video data, liệt kê most_used_tags với frequency THỰC TẾ
 - SEO analysis phải phân tích từ khóa và tags THỰC TẾ từ dữ liệu video
 - Optimization opportunities phải CỤ THỂ và THỰC TIỄN, không chung chung
@@ -317,19 +317,39 @@ function JSON_STRUCTURE_TEMPLATE(
         ],
         "tag_categories": [
           {
-            "category": "Branded tags",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags ở trên - tag thương hiệu 1", "tag thương hiệu 2"],
-            "effectiveness": "Hiệu quả của nhóm tag này (VD: 'Tốt - giúp tăng nhận diện')"
+            "category": "Core Tags (Tags cốt lõi)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags chính định nghĩa niche kênh, dùng cho hầu hết video", "core tag 2", "core tag 3"],
+            "effectiveness": "Hiệu quả của nhóm tag này (VD: 'Cao - là foundation của kênh')"
           },
           {
-            "category": "Topic tags",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tag chủ đề 1", "tag chủ đề 2"],
-            "effectiveness": "Hiệu quả"
+            "category": "Sub-Niche Tags (Tags niche phụ)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags cho các chủ đề phụ trong kênh", "sub tag 2"],
+            "effectiveness": "Hiệu quả (VD: 'Tốt - giúp phân loại nội dung chi tiết hơn')"
           },
           {
-            "category": "Trending/Viral tags",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tag trending"],
-            "effectiveness": "Hiệu quả"
+            "category": "Branded Tags (Tags thương hiệu)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags có tên kênh, thương hiệu", "branded tag 2"],
+            "effectiveness": "Hiệu quả (VD: 'Trung bình - tốt cho branding dài hạn')"
+          },
+          {
+            "category": "Topic Tags (Tags chủ đề)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags mô tả topic cụ thể của video", "topic tag 2", "topic tag 3"],
+            "effectiveness": "Hiệu quả (VD: 'Cao - giúp tìm kiếm chính xác')"
+          },
+          {
+            "category": "SEO/Discovery Tags (Tags tìm kiếm)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags dùng để SEO và giúp khám phá", "seo tag 2"],
+            "effectiveness": "Hiệu quả (VD: 'Cao - tăng reach organically')"
+          },
+          {
+            "category": "Trending/Viral Tags (Tags xu hướng)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags về xu hướng hiện tại nếu có"],
+            "effectiveness": "Hiệu quả (VD: 'Cao khi có, không thường xuyên')"
+          },
+          {
+            "category": "Long-tail Tags (Tags dài)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags dạng cụm từ dài, specific hơn"],
+            "effectiveness": "Hiệu quả (VD: 'Tốt - ít cạnh tranh, targeted traffic')"
           }
         ],
         "competitor_tags": ["Tag mà đối thủ sử dụng nhưng kênh này chưa dùng 1", "Competitor tag 2", "Competitor tag 3"],

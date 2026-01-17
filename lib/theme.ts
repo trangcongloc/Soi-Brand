@@ -49,9 +49,9 @@ export const colors = {
     errorDark: "#dc2626",
     errorBorder: "#fecaca",
 
-    info: "#3b82f6",
+    info: "#1a1a1a",
     infoLight: "#dbeafe",
-    infoDark: "#2563eb",
+    infoDark: "#000000",
 
     // Funnel colors (TOFU/MOFU/BOFU)
     funnelTofu: "#3b82f6",
