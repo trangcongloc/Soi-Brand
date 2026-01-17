@@ -33,6 +33,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [isTransitioning, setIsTransitioning] = useState(false);
     const pageSize = 5;
 
     if (history.length === 0) {
@@ -61,7 +62,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
         // Adjust page if necessary
         const newTotalPages = Math.ceil(newHistory.length / pageSize);
         if (currentPage > newTotalPages && newTotalPages > 0) {
-            setCurrentPage(newTotalPages);
+            handlePageChange(newTotalPages);
         }
 
         onHistoryChange?.();
@@ -73,6 +74,16 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
         setConfirmDeleteAll(false);
         setCurrentPage(1);
         onHistoryChange?.();
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage === currentPage) return;
+
+        setIsTransitioning(true);
+        setTimeout(() => {
+            setCurrentPage(newPage);
+            setIsTransitioning(false);
+        }, 150); // Half of transition duration for smooth effect
     };
 
     const formatDate = (createdAt: string, timestamp: number) => {
@@ -105,7 +116,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
     };
 
     return (
-        <div style={{ marginTop: "2rem" }}>
+        <div style={{ marginTop: "2rem", width: "512px" }}>
             <div
                 style={{
                     display: "flex",
@@ -125,7 +136,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                 >
                     <h3
                         style={{
-                            fontSize: "13px",
+                            fontSize: "12px",
                             fontWeight: "600",
                             color: colors.textMain,
                             margin: 0,
@@ -212,6 +223,10 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                     display: "flex",
                     flexDirection: "column",
                     gap: "0.5rem",
+                    minHeight: "220px",
+                    opacity: isTransitioning ? 0.4 : 1,
+                    transform: isTransitioning ? "translateY(-10px)" : "translateY(0)",
+                    transition: "opacity 0.3s ease, transform 0.3s ease",
                 }}
             >
                 {paginatedHistory.map((item) => (
@@ -234,7 +249,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                 alignItems: "center",
                                 gap: "0.5rem",
                                 overflow: "hidden",
-                                flex: 2,
+                                minWidth: 0,
+                                flex: "1 1 auto",
+                                maxWidth: "320px",
                             }}
                         >
                             {/* Channel Avatar */}
@@ -243,8 +260,8 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                     src={item.channelAvatar}
                                     alt={item.brandName}
                                     style={{
-                                        width: "24px",
-                                        height: "24px",
+                                        width: "22px",
+                                        height: "22px",
                                         borderRadius: "50%",
                                         objectFit: "cover",
                                         flexShrink: 0,
@@ -253,8 +270,8 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                             ) : (
                                 <div
                                     style={{
-                                        width: "24px",
-                                        height: "24px",
+                                        width: "22px",
+                                        height: "22px",
                                         borderRadius: "50%",
                                         background: getAvatarColor(
                                             item.brandName
@@ -263,7 +280,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                         alignItems: "center",
                                         justifyContent: "center",
                                         color: "white",
-                                        fontSize: "10px",
+                                        fontSize: "9px",
                                         fontWeight: "700",
                                         flexShrink: 0,
                                     }}
@@ -274,13 +291,15 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
 
                             <p
                                 style={{
-                                    fontSize: "13px",
+                                    fontSize: "12px",
                                     fontWeight: "600",
                                     color: colors.textMain,
                                     margin: 0,
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
+                                    minWidth: 0,
+                                    flex: "1 1 auto",
                                 }}
                             >
                                 {item.brandName}
@@ -294,11 +313,13 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                 alignItems: "center",
                                 gap: "0.5rem",
                                 flexShrink: 0,
+                                minWidth: "160px",
+                                justifyContent: "flex-end",
                             }}
                         >
                             <span
                                 style={{
-                                    fontSize: "10px",
+                                    fontSize: "9px",
                                     color: colors.textSecondary,
                                     whiteSpace: "nowrap",
                                 }}
@@ -458,7 +479,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                 >
                     <button
                         onClick={() =>
-                            setCurrentPage((p) => Math.max(1, p - 1))
+                            handlePageChange(Math.max(1, currentPage - 1))
                         }
                         disabled={currentPage === 1}
                         style={{
@@ -484,7 +505,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                     </span>
                     <button
                         onClick={() =>
-                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                            handlePageChange(Math.min(totalPages, currentPage + 1))
                         }
                         disabled={currentPage === totalPages}
                         style={{

@@ -198,19 +198,21 @@ export default function Home() {
                 role="main"
             >
                 {!report && !isLoading && (
-                    <div className="container max-w-2xl mx-auto text-center fade-in py-16 md:py-24">
-                        <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
-                            {lang.home.title}
-                        </h1>
-                        <div className="max-w-md mx-auto mb-8 px-4">
-                            <AnalysisForm
-                                onSubmit={handleAnalyze}
-                                onUpload={handleUpload}
-                                onError={(msg) => setError(msg)}
-                                isLoading={isLoading}
-                            />
+                    <>
+                        <div className="container max-w-2xl mx-auto text-center fade-in py-16 md:py-24">
+                            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
+                                {lang.home.title}
+                            </h1>
+                            <div className="max-w-md mx-auto mb-8 px-4">
+                                <AnalysisForm
+                                    onSubmit={handleAnalyze}
+                                    onUpload={handleUpload}
+                                    onError={(msg) => setError(msg)}
+                                    isLoading={isLoading}
+                                />
+                            </div>
                         </div>
-                        <div className="max-w-lg mx-auto px-4">
+                        <div className="container max-w-lg mx-auto px-4 pb-16">
                             <AnalysisHistory
                                 onLoadReport={(loadedReport) => {
                                     setReport(loadedReport);
@@ -218,7 +220,7 @@ export default function Home() {
                                 }}
                             />
                         </div>
-                    </div>
+                    </>
                 )}
 
                 {isLoading && (
