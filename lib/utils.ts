@@ -7,6 +7,16 @@ export function extractChannelId(url: string): string | null {
     try {
         const urlObj = new URL(url);
 
+        // Check if it's a YouTube domain
+        const validDomains = [
+            "youtube.com",
+            "www.youtube.com",
+            "m.youtube.com",
+        ];
+        if (!validDomains.includes(urlObj.hostname)) {
+            return null;
+        }
+
         // Format: youtube.com/channel/CHANNEL_ID
         if (urlObj.pathname.startsWith("/channel/")) {
             return urlObj.pathname.split("/channel/")[1].split("/")[0];

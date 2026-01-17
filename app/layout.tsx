@@ -4,6 +4,7 @@ import "./globals.css";
 import { defaultLanguage } from "@/lib/lang/data";
 import LanguageProvider from "@/components/LanguageProvider";
 import SettingsButton from "@/components/SettingsButton";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
@@ -24,10 +25,12 @@ export default function RootLayout({
                 <a href="#main-content" className="skip-link">
                     Skip to content
                 </a>
-                <LanguageProvider>
-                    {children}
-                    <SettingsButton />
-                </LanguageProvider>
+                <ErrorBoundary>
+                    <LanguageProvider>
+                        {children}
+                        <SettingsButton />
+                    </LanguageProvider>
+                </ErrorBoundary>
             </body>
         </html>
     );

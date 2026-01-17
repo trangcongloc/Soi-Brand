@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
+import {
+    getCachedReport,
+    setCachedReport,
+    clearExpiredReports,
+} from "@/lib/cache";
 
 export default function Home() {
     const lang = useLang();
@@ -14,10 +19,43 @@ export default function Home() {
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    // Clear expired cache on mount
+    useEffect(() => {
+        clearExpiredReports();
+    }, []);
+
+    // Extract channel ID from URL for caching
+    const extractChannelIdFromUrl = (url: string): string | null => {
+        const patterns = [
+            /youtube\.com\/channel\/([a-zA-Z0-9_-]+)/,
+            /youtube\.com\/@([a-zA-Z0-9_-]+)/,
+            /youtube\.com\/c\/([a-zA-Z0-9_-]+)/,
+            /youtube\.com\/user\/([a-zA-Z0-9_-]+)/,
+        ];
+
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) return match[1];
+        }
+        return null;
+    };
+
     const handleAnalyze = async (channelUrl: string) => {
         setIsLoading(true);
         setError(null);
         setReport(null);
+
+        // Check cache first
+        const channelId = extractChannelIdFromUrl(channelUrl);
+        if (channelId) {
+            const cachedReport = getCachedReport(channelId);
+            if (cachedReport) {
+                console.log("Using cached report for:", channelId);
+                setReport(cachedReport);
+                setIsLoading(false);
+                return;
+            }
+        }
 
         try {
             const response = await axios.post<AnalyzeResponse>("/api/analyze", {
@@ -25,7 +63,17 @@ export default function Home() {
             });
 
             if (response.data.success && response.data.data) {
-                setReport(response.data.data);
+                const newReport = response.data.data;
+                setReport(newReport);
+
+                // Cache the report
+                const reportChannelId =
+                    newReport.report_part_1?.channel_info?.channelId ||
+                    channelId;
+                if (reportChannelId) {
+                    setCachedReport(reportChannelId, newReport);
+                    console.log("Report cached for:", reportChannelId);
+                }
             } else {
                 setError(response.data.error || lang.form.errors.analysisError);
             }

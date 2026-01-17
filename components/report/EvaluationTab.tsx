@@ -1,0 +1,233 @@
+import React, { useState } from "react";
+import { ReportPart3 } from "@/lib/types";
+import styles from "@/components/ReportDisplay.module.css";
+import { useLang } from "@/lib/lang";
+import { ActionPlanPhase } from "./report-utils";
+
+interface EvaluationTabProps {
+    report_part_3: ReportPart3;
+}
+
+const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
+    const lang = useLang();
+    const [actionPlanPhase, setActionPlanPhase] = useState<ActionPlanPhase>("30");
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+            {/* Overall Evaluation */}
+            <section>
+                <h3 className={styles.sectionTitle}>{lang.evaluation.overallTitle}</h3>
+                <div className={`${styles.card} ${styles.summaryCard}`}>
+                    <h4 className={`${styles.cardTitle} ${styles.textBlue}`}>
+                        {lang.evaluation.executiveSummary}
+                    </h4>
+                    <p className={styles.analysisText} style={{ color: "#333" }}>
+                        {report_part_3.executive_summary}
+                    </p>
+                </div>
+
+                <div className={styles.grid2}>
+                    {/* Strengths */}
+                    <div className={`${styles.card} ${styles.bgGreen}`}>
+                        <h4
+                            className={`${styles.cardTitle} ${styles.textGreen}`}
+                            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+                        >
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }}></span>
+                            {lang.evaluation.strengths.title}
+                        </h4>
+                        <ul className={styles.list}>
+                            {report_part_3.strengths.map((s, i) => (
+                                <li key={i} className={`${styles.listItem} ${styles.listGreen}`}>{s}</li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Weaknesses */}
+                    <div className={`${styles.card} ${styles.bgOrange}`}>
+                        <h4
+                            className={`${styles.cardTitle} ${styles.textOrange}`}
+                            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+                        >
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f97316" }}></span>
+                            {lang.evaluation.weaknesses.title}
+                        </h4>
+                        <ul className={styles.list}>
+                            {report_part_3.weaknesses_opportunities.map((w, i) => (
+                                <li key={i} className={`${styles.listItem} ${styles.listOrange}`}>{w}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            {/* Video Ideas / Insights */}
+            <section>
+                <h3 className={styles.sectionTitle}>{lang.evaluation.insights.title}</h3>
+                <div style={{ display: "grid", gap: "0.75rem" }}>
+                    {report_part_3.actionable_insights.video_ideas.map((idea, idx) => (
+                        <div key={idx} className={styles.ideaCard}>
+                            <div className={styles.ideaIcon}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
+                                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                </svg>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <h4 className={styles.ideaTitle}>{idea.title}</h4>
+                                <p className={styles.ideaDesc}>{idea.concept}</p>
+                                {(idea.estimated_views || idea.content_type) && (
+                                    <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem", fontSize: "10px" }}>
+                                        {idea.content_type && (
+                                            <span style={{ color: "#6366f1", fontWeight: "500" }}>{idea.content_type}</span>
+                                        )}
+                                        {idea.estimated_views && (
+                                            <span style={{ color: "#10b981", fontWeight: "500" }}>
+                                                {lang.evaluation.videoIdeas.estimatedPerformance} {idea.estimated_views}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* Action Plan */}
+            {report_part_3.action_plan && (
+                <section>
+                    <h3 className={styles.sectionTitle}>{lang.evaluation.actionPlan.title}</h3>
+
+                    {/* Tab Navigation */}
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+                        {(["30", "60", "90"] as const).map((phase) => (
+                            <button
+                                key={phase}
+                                onClick={() => setActionPlanPhase(phase)}
+                                style={{
+                                    padding: "0.5rem 1rem",
+                                    fontSize: "11px",
+                                    fontWeight: "600",
+                                    border: "none",
+                                    borderRadius: "0.375rem",
+                                    cursor: "pointer",
+                                    background: actionPlanPhase === phase ? "#3b82f6" : "#f3f4f6",
+                                    color: actionPlanPhase === phase ? "white" : "#666",
+                                    transition: "all 0.2s",
+                                }}
+                            >
+                                {phase === "30"
+                                    ? lang.evaluation.actionPlan.phase30
+                                    : phase === "60"
+                                    ? lang.evaluation.actionPlan.phase60
+                                    : lang.evaluation.actionPlan.phase90}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Action Plan Content */}
+                    <div style={{ display: "grid", gap: "0.75rem" }}>
+                        {(actionPlanPhase === "30"
+                            ? report_part_3.action_plan.phase_30_days
+                            : actionPlanPhase === "60"
+                            ? report_part_3.action_plan.phase_60_days
+                            : report_part_3.action_plan.phase_90_days
+                        ).map((task, idx) => (
+                            <div
+                                key={idx}
+                                className={styles.card}
+                                style={{
+                                    borderLeft: `4px solid ${
+                                        task.priority === "high"
+                                            ? "#ef4444"
+                                            : task.priority === "medium"
+                                            ? "#f59e0b"
+                                            : "#10b981"
+                                    }`,
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+                                    <div
+                                        style={{
+                                            minWidth: "24px",
+                                            height: "24px",
+                                            borderRadius: "50%",
+                                            background:
+                                                task.priority === "high"
+                                                    ? "#fef2f2"
+                                                    : task.priority === "medium"
+                                                    ? "#fffbeb"
+                                                    : "#f0fdf4",
+                                            color:
+                                                task.priority === "high"
+                                                    ? "#ef4444"
+                                                    : task.priority === "medium"
+                                                    ? "#f59e0b"
+                                                    : "#10b981",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            fontSize: "11px",
+                                            fontWeight: "700",
+                                        }}
+                                    >
+                                        {idx + 1}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <h5
+                                            style={{
+                                                fontSize: "12px",
+                                                fontWeight: "600",
+                                                marginBottom: "0.5rem",
+                                                color: "#333",
+                                            }}
+                                        >
+                                            {task.action}
+                                        </h5>
+                                        <div style={{ fontSize: "10px", lineHeight: "1.6" }}>
+                                            <p style={{ marginBottom: "0.25rem", color: "#666" }}>
+                                                <strong>{lang.evaluation.actionPlan.priority}</strong>{" "}
+                                                <span
+                                                    style={{
+                                                        padding: "0.125rem 0.375rem",
+                                                        borderRadius: "0.25rem",
+                                                        background:
+                                                            task.priority === "high"
+                                                                ? "#fef2f2"
+                                                                : task.priority === "medium"
+                                                                ? "#fffbeb"
+                                                                : "#f0fdf4",
+                                                        color:
+                                                            task.priority === "high"
+                                                                ? "#ef4444"
+                                                                : task.priority === "medium"
+                                                                ? "#f59e0b"
+                                                                : "#10b981",
+                                                        fontWeight: "600",
+                                                        textTransform: "uppercase",
+                                                    }}
+                                                >
+                                                    {task.priority}
+                                                </span>
+                                            </p>
+                                            <p style={{ marginBottom: "0.25rem", color: "#666" }}>
+                                                <strong>{lang.evaluation.actionPlan.expectedImpact}</strong>{" "}
+                                                {task.expected_impact}
+                                            </p>
+                                            <p style={{ marginBottom: 0, color: "#666" }}>
+                                                <strong>{lang.evaluation.actionPlan.resourcesNeeded}</strong>{" "}
+                                                {task.resources_needed}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+        </div>
+    );
+};
+
+export default EvaluationTab;

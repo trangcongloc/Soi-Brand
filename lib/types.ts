@@ -328,34 +328,40 @@ export interface ActionPlan {
     phase_90_days: ActionPlanTask[];
 }
 
+export interface ReportPart1 {
+    posts: Post[];
+    channel_info: ChannelInfo;
+}
+
+export interface ReportPart2 {
+    ad_strategy: AdStrategy;
+    funnel_analysis: FunnelAnalysis;
+    strategy_analysis: StrategyAnalysis;
+    quantitative_synthesis: QuantitativeSynthesis;
+    // New enhanced fields (optional for backward compatibility)
+    content_niche_analysis?: ContentNicheAnalysis;
+    audience_analysis?: AudienceAnalysis;
+    audience_personas?: AudiencePersona[];
+    content_calendar?: ContentCalendar;
+    growth_opportunities?: GrowthOpportunity[];
+    seo_analysis?: SEOAnalysis;
+}
+
+export interface ReportPart3 {
+    strengths: string[];
+    executive_summary: string;
+    actionable_insights: ActionableInsights;
+    weaknesses_opportunities: string[];
+    action_plan?: ActionPlan;
+}
+
 export interface MarketingReport {
     report_id: string;
     job_id: string;
     brand_name: string;
-    report_part_1: {
-        posts: Post[];
-        channel_info: ChannelInfo;
-    };
-    report_part_2: {
-        ad_strategy: AdStrategy;
-        funnel_analysis: FunnelAnalysis;
-        strategy_analysis: StrategyAnalysis;
-        quantitative_synthesis: QuantitativeSynthesis;
-        // New enhanced fields (optional for backward compatibility)
-        content_niche_analysis?: ContentNicheAnalysis;
-        audience_analysis?: AudienceAnalysis;
-        audience_personas?: AudiencePersona[];
-        content_calendar?: ContentCalendar;
-        growth_opportunities?: GrowthOpportunity[];
-        seo_analysis?: SEOAnalysis;
-    };
-    report_part_3: {
-        strengths: string[];
-        executive_summary: string;
-        actionable_insights: ActionableInsights;
-        weaknesses_opportunities: string[];
-        action_plan?: ActionPlan;
-    };
+    report_part_1: ReportPart1;
+    report_part_2: ReportPart2;
+    report_part_3: ReportPart3;
     created_at: string;
 }
 

@@ -4,9 +4,46 @@ import { getFullChannelData } from "@/lib/youtube";
 import { generateMarketingReport } from "@/lib/gemini";
 import { isValidYouTubeUrl } from "@/lib/utils";
 import { AnalyzeRequest, AnalyzeResponse, APIError } from "@/lib/types";
+import { isOriginAllowed, validateEnv } from "@/lib/config";
+import { withRetry } from "@/lib/retry";
+
+// CORS headers helper
+function getCorsHeaders(origin: string | null): HeadersInit {
+    const headers: HeadersInit = {
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    };
+
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== "production") {
+        headers["Access-Control-Allow-Origin"] = "*";
+    } else if (origin && isOriginAllowed(origin)) {
+        headers["Access-Control-Allow-Origin"] = origin;
+    }
+
+    return headers;
+}
 
 export async function POST(request: NextRequest) {
+    const origin = request.headers.get("origin");
+    const corsHeaders = getCorsHeaders(origin);
+
     try {
+        // Validate environment configuration
+        try {
+            validateEnv();
+        } catch (envError) {
+            console.error("Environment validation failed:", envError);
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Server configuration error. Please contact administrator.",
+                    errorType: "API_CONFIG",
+                } as AnalyzeResponse,
+                { status: 500, headers: corsHeaders }
+            );
+        }
+
         // Parse request body
         const body: AnalyzeRequest = await request.json();
         const { channelUrl } = body;
@@ -18,7 +55,7 @@ export async function POST(request: NextRequest) {
                     success: false,
                     error: "Channel URL is required",
                 } as AnalyzeResponse,
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -28,34 +65,22 @@ export async function POST(request: NextRequest) {
                     success: false,
                     error: "Invalid YouTube channel URL",
                 } as AnalyzeResponse,
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
-        // Check API keys
-        if (!process.env.YOUTUBE_API_KEY) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "YouTube API key not configured",
-                } as AnalyzeResponse,
-                { status: 500 }
-            );
-        }
-
-        if (!process.env.GEMINI_API_KEY) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Gemini API key not configured",
-                } as AnalyzeResponse,
-                { status: 500 }
-            );
-        }
-
-        // Fetch YouTube data
+        // Fetch YouTube data with retry
         console.log("Fetching YouTube data for:", channelUrl);
-        const { channelInfo, videos } = await getFullChannelData(channelUrl);
+        const { channelInfo, videos } = await withRetry(
+            () => getFullChannelData(channelUrl),
+            {
+                maxAttempts: 2,
+                initialDelayMs: 1000,
+                onRetry: (attempt, error) => {
+                    console.log(`YouTube API retry ${attempt}: ${error.message}`);
+                },
+            }
+        );
 
         if (!channelInfo) {
             return NextResponse.json(
@@ -63,7 +88,7 @@ export async function POST(request: NextRequest) {
                     success: false,
                     error: "Channel not found or could not be accessed",
                 } as AnalyzeResponse,
-                { status: 404 }
+                { status: 404, headers: corsHeaders }
             );
         }
 
@@ -73,13 +98,22 @@ export async function POST(request: NextRequest) {
                     success: false,
                     error: "No videos found on this channel",
                 } as AnalyzeResponse,
-                { status: 404 }
+                { status: 404, headers: corsHeaders }
             );
         }
 
-        // Generate marketing report using Gemini AI
+        // Generate marketing report using Gemini AI with retry
         console.log("Generating marketing report with Gemini AI...");
-        const report = await generateMarketingReport(channelInfo, videos);
+        const report = await withRetry(
+            () => generateMarketingReport(channelInfo, videos),
+            {
+                maxAttempts: 2,
+                initialDelayMs: 2000,
+                onRetry: (attempt, error) => {
+                    console.log(`Gemini API retry ${attempt}: ${error.message}`);
+                },
+            }
+        );
 
         // Return success response
         return NextResponse.json(
@@ -87,7 +121,7 @@ export async function POST(request: NextRequest) {
                 success: true,
                 data: report,
             } as AnalyzeResponse,
-            { status: 200 }
+            { status: 200, headers: corsHeaders }
         );
     } catch (error: any) {
         console.error("Error in analyze API:", error);
@@ -114,7 +148,7 @@ export async function POST(request: NextRequest) {
                     error: errorMessages[error.errorType || "UNKNOWN"] || error.message,
                     errorType: error.errorType,
                 } as AnalyzeResponse,
-                { status: error.statusCode || 500 }
+                { status: error.statusCode || 500, headers: corsHeaders }
             );
         }
 
@@ -136,7 +170,7 @@ export async function POST(request: NextRequest) {
                     error: "Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
                     errorType: "MODEL_OVERLOAD",
                 } as AnalyzeResponse,
-                { status: 503 }
+                { status: 503, headers: corsHeaders }
             );
         }
 
@@ -151,7 +185,7 @@ export async function POST(request: NextRequest) {
                     error: "Đã hết hạn mức Gemini API. Vui lòng thử lại sau vài phút.",
                     errorType: "GEMINI_QUOTA",
                 } as AnalyzeResponse,
-                { status: 429 }
+                { status: 429, headers: corsHeaders }
             );
         }
 
@@ -168,7 +202,7 @@ export async function POST(request: NextRequest) {
                     error: "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
                     errorType: "YOUTUBE_QUOTA",
                 } as AnalyzeResponse,
-                { status: 429 }
+                { status: 429, headers: corsHeaders }
             );
         }
 
@@ -184,7 +218,7 @@ export async function POST(request: NextRequest) {
                     error: "Đã vượt quá giới hạn số lần truy cập. Vui lòng thử lại sau.",
                     errorType: "RATE_LIMIT",
                 } as AnalyzeResponse,
-                { status: 429 }
+                { status: 429, headers: corsHeaders }
             );
         }
 
@@ -201,7 +235,7 @@ export async function POST(request: NextRequest) {
                     error: "Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
                     errorType: "API_CONFIG",
                 } as AnalyzeResponse,
-                { status: 500 }
+                { status: 500, headers: corsHeaders }
             );
         }
 
@@ -220,7 +254,7 @@ export async function POST(request: NextRequest) {
                     error: "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
                     errorType: "NETWORK_ERROR",
                 } as AnalyzeResponse,
-                { status: 503 }
+                { status: 503, headers: corsHeaders }
             );
         }
 
@@ -237,7 +271,7 @@ export async function POST(request: NextRequest) {
                     error: "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
                     errorType: "AI_PARSE_ERROR",
                 } as AnalyzeResponse,
-                { status: 500 }
+                { status: 500, headers: corsHeaders }
             );
         }
 
@@ -249,7 +283,7 @@ export async function POST(request: NextRequest) {
                     error: "Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
                     errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
-                { status: 404 }
+                { status: 404, headers: corsHeaders }
             );
         }
 
@@ -260,22 +294,15 @@ export async function POST(request: NextRequest) {
                 error: errorMessage || "Có lỗi không xác định. Vui lòng thử lại sau.",
                 errorType: "UNKNOWN",
             } as AnalyzeResponse,
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
         );
     }
 }
 
 // Handle OPTIONS for CORS
 export async function OPTIONS(request: NextRequest) {
-    return NextResponse.json(
-        {},
-        {
-            status: 200,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type",
-            },
-        }
-    );
+    const origin = request.headers.get("origin");
+    const corsHeaders = getCorsHeaders(origin);
+
+    return NextResponse.json({}, { status: 200, headers: corsHeaders });
 }

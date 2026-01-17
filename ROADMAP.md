@@ -2,57 +2,135 @@
 
 > YouTube Marketing Analysis Tool powered by AI
 
+---
+
 ## Current State (v2.1)
 
 ### Core Features
 - YouTube channel analysis via Data API v3
-- AI-powered marketing reports using Gemini
+- AI-powered marketing reports using Gemini (gemini-2.5-flash-lite)
 - Content niche & category analysis
 - Audience demographics & behavior (estimated)
 - Audience segment profiling
 - SEO tag analysis with optimization suggestions
 - Marketing funnel analysis (TOFU/MOFU/BOFU)
 - 90-day action plans
-- Video performance visualization
+- Video performance visualization (Recharts)
 - Multi-language support (VI/EN)
 - JSON report export/import
 
+### Tech Stack
+- Next.js 14 (App Router)
+- React 18 + TypeScript
+- Google Gemini AI API
+- YouTube Data API v3
+- Recharts for data visualization
+- CSS Modules + Global CSS
+
 ---
 
-## Phase 1: Enhanced Analytics (v2.2 - v2.5)
+## Optimization Priorities
 
-### v2.2 - Competitor Analysis
+### Critical Issues (Fix Immediately)
+
+| Issue | Impact | Effort |
+|-------|--------|--------|
+| No testing framework | High - bugs go undetected | Medium |
+| No environment validation | Medium - runtime errors | Low |
+| Large monolithic prompt (500+ lines) | Medium - hard to maintain | Low |
+| No error monitoring | High - silent failures | Low |
+| CORS policy too permissive ("*") | Medium - security risk | Low |
+
+### Performance Bottlenecks
+
+| Issue | Impact | Solution |
+|-------|--------|----------|
+| No caching for repeat analyses | High - wasted API calls | Redis/localStorage |
+| No progress streaming | Medium - poor UX | Server-Sent Events |
+| ReportDisplay.tsx too large (1000+ lines) | Medium - slow loads | Code splitting |
+| No retry logic for API failures | Medium - manual retry needed | Exponential backoff |
+
+---
+
+## Immediate Optimizations (v2.2)
+
+### Code Quality
+- [ ] **Add Jest + React Testing Library** - Unit tests for utils, API routes
+- [ ] **Extract prompt to separate file** - Move `lib/gemini.ts` prompt to `lib/prompts/marketing-report.ts`
+- [ ] **Split ReportDisplay.tsx** - Extract sections into smaller components:
+  - `components/report/DataSection.tsx`
+  - `components/report/AnalysisSection.tsx`
+  - `components/report/EvaluationSection.tsx`
+  - `components/report/Sidebar.tsx`
+- [ ] **Add environment validation** - Validate API keys on startup, show clear errors
+- [ ] **Enable TypeScript strict mode** - Catch more bugs at compile time
+
+### Performance
+- [ ] **Add localStorage caching** - Cache reports by channel ID (24h TTL)
+- [ ] **Implement loading progress** - Show current step (Validating → Fetching → Analyzing → Generating)
+- [ ] **Add retry logic** - Auto-retry API failures with exponential backoff (max 3 attempts)
+- [ ] **Lazy load Recharts** - Dynamic import to reduce initial bundle
+
+### Security
+- [ ] **Restrict CORS** - Allow only production domain in `route.ts`
+- [ ] **Add rate limiting** - Use `next-rate-limit` or Vercel's built-in limits
+- [ ] **Sanitize channel URLs** - Prevent injection attacks
+
+### Developer Experience
+- [ ] **Add npm scripts**:
+  ```json
+  "test": "jest",
+  "test:watch": "jest --watch",
+  "test:coverage": "jest --coverage"
+  ```
+- [ ] **Add Husky + lint-staged** - Pre-commit hooks for linting
+- [ ] **Add error boundary** - Graceful error handling in React
+
+---
+
+## Short-Term Improvements (v2.3 - v2.5)
+
+### v2.3 - Enhanced UX
+- [ ] **Analysis history** - Store last 10 analyzed channels in localStorage
+- [ ] **Quick re-analyze** - One-click re-run for previously analyzed channels
+- [ ] **Share report link** - Generate shareable URL with report data
+- [ ] **Print/PDF export** - Browser-native print with CSS print styles
+- [ ] **Dark mode** - System preference detection + toggle
+
+### v2.4 - Competitor Analysis
 - [ ] Compare 2-3 channels side-by-side
 - [ ] Competitive positioning matrix
 - [ ] Content gap analysis between channels
 - [ ] Benchmark metrics comparison
 - [ ] "What they do that you don't" insights
 
-### v2.3 - Advanced Video Analysis
+### v2.5 - Advanced Video Analysis
 - [ ] Individual video deep-dive analysis
 - [ ] Thumbnail effectiveness scoring (AI vision)
-- [ ] Title optimization suggestions
+- [ ] Title optimization suggestions with A/B variants
 - [ ] Description SEO analysis
-- [ ] Optimal video length recommendations per niche
 - [ ] Hook analysis (first 30 seconds pattern)
 
-### v2.4 - Trend Detection
+---
+
+## Phase 1: Enhanced Analytics (v3.0)
+
+### Trend Detection
 - [ ] Trending topics in channel's niche
 - [ ] Seasonal content patterns
 - [ ] Viral video pattern recognition
 - [ ] "Rising keywords" in niche
 - [ ] Content opportunity alerts
 
-### v2.5 - Comment Intelligence
+### Comment Intelligence
 - [ ] Sentiment analysis from top comments
 - [ ] Common questions/requests from audience
 - [ ] Community engagement scoring
 - [ ] Audience feedback themes
-- [ ] Controversy/crisis detection
 
 ---
 
-## Phase 2: Content Creation Suite (v3.0)
+## Phase 2: Content Creation Suite (v3.5)
 
 ### AI Content Tools
 - [ ] Video title generator (with A/B variants)
@@ -67,18 +145,10 @@
 - [ ] Story structure frameworks
 - [ ] CTA placement suggestions
 - [ ] Retention pattern templates
-- [ ] Intro/outro script templates
-
-### Thumbnail Lab
-- [ ] AI thumbnail analysis
-- [ ] Color psychology recommendations
-- [ ] Text overlay suggestions
-- [ ] Face/emotion detection scoring
-- [ ] CTR prediction (based on patterns)
 
 ---
 
-## Phase 3: Multi-Platform Expansion (v3.5)
+## Phase 3: Multi-Platform Expansion (v4.0)
 
 ### Platform Support
 - [ ] TikTok channel analysis
@@ -91,90 +161,95 @@
 - [ ] YouTube → TikTok format suggestions
 - [ ] Long-form → Shorts breakdown
 - [ ] Cross-platform posting schedule
-- [ ] Platform-specific hook adaptations
 
 ---
 
-## Phase 4: Business Intelligence (v4.0)
+## Phase 4: Business Intelligence (v4.5)
 
 ### Dashboard & Tracking
 - [ ] User accounts & authentication
-- [ ] Saved reports history
+- [ ] Saved reports history (cloud)
 - [ ] Channel tracking over time
 - [ ] Growth trajectory visualization
 - [ ] Goal setting & progress tracking
-- [ ] Weekly/monthly summary emails
-
-### Advanced Reports
-- [ ] PDF export with branding
-- [ ] White-label reports for agencies
-- [ ] Custom report templates
-- [ ] Scheduled automated reports
-- [ ] Report sharing via link
 
 ### Team Features
 - [ ] Multi-user workspaces
-- [ ] Role-based permissions
-- [ ] Comment/annotation on reports
-- [ ] Report approval workflow
-- [ ] Client portal for agencies
+- [ ] White-label reports for agencies
+- [ ] Custom report templates
+- [ ] Report sharing via link
 
 ---
 
-## Phase 5: Integrations & API (v4.5)
+## Phase 5: Integrations & API (v5.0)
 
 ### Export Integrations
 - [ ] Google Sheets export
 - [ ] Excel/CSV export
 - [ ] Notion database sync
 - [ ] Trello/Asana task creation
-- [ ] Airtable integration
-
-### Communication
-- [ ] Slack notifications
-- [ ] Discord bot
-- [ ] Email digests
-- [ ] Webhook support
 
 ### Developer API
 - [ ] Public REST API
 - [ ] API key management
 - [ ] Usage analytics
-- [ ] Rate limiting tiers
 - [ ] SDK for popular languages
 
 ---
 
-## Technical Roadmap
+## Technical Debt Backlog
 
-### Performance Improvements
-- [ ] Redis caching for repeat analyses
-- [ ] Background job processing
-- [ ] Incremental report updates
-- [ ] CDN for static assets
-- [ ] Database for report storage (PostgreSQL/Supabase)
+### High Priority
+| Task | File(s) | Effort |
+|------|---------|--------|
+| Extract prompt constants | `lib/gemini.ts` | 2h |
+| Add unit tests for utils | `lib/utils.ts`, `lib/youtube.ts` | 4h |
+| Split ReportDisplay | `components/ReportDisplay.tsx` | 8h |
+| Add E2E tests | New `e2e/` folder | 8h |
+| Implement caching layer | New `lib/cache.ts` | 4h |
 
-### AI Enhancements
-- [ ] Fine-tuned model for YouTube analysis
-- [ ] Multi-model fallback (Gemini → GPT → Claude)
-- [ ] Streaming responses for faster UX
-- [ ] Confidence scoring for predictions
-- [ ] Feedback loop for AI improvement
+### Medium Priority
+| Task | File(s) | Effort |
+|------|---------|--------|
+| Add Storybook | All components | 8h |
+| Internationalize error messages | `app/api/analyze/route.ts` | 4h |
+| Add request logging | API routes | 2h |
+| Optimize bundle size | `package.json` | 4h |
+| Add loading skeletons | Components | 4h |
 
-### Infrastructure
-- [ ] Docker containerization
-- [ ] CI/CD pipeline
-- [ ] Automated testing suite
-- [ ] Error monitoring (Sentry)
-- [ ] Analytics (Mixpanel/Amplitude)
-- [ ] A/B testing framework
+### Low Priority
+| Task | File(s) | Effort |
+|------|---------|--------|
+| Add animation library | Components | 4h |
+| PWA support | `next.config.js` | 4h |
+| Add keyboard shortcuts | App-wide | 4h |
+| Accessibility audit | All components | 8h |
 
-### Security
-- [ ] Rate limiting per IP/user
-- [ ] API key rotation
-- [ ] Audit logging
-- [ ] GDPR compliance
-- [ ] Data encryption at rest
+---
+
+## Infrastructure Roadmap
+
+### CI/CD Pipeline
+```yaml
+# .github/workflows/ci.yml
+- Lint check (ESLint)
+- Type check (TypeScript)
+- Unit tests (Jest)
+- E2E tests (Playwright)
+- Build verification
+- Preview deployments (Vercel)
+```
+
+### Monitoring Stack
+- [ ] **Error tracking**: Sentry
+- [ ] **Analytics**: Mixpanel or PostHog
+- [ ] **Performance**: Vercel Analytics
+- [ ] **Uptime**: Better Uptime or Checkly
+
+### Database (Future)
+- [ ] **Option 1**: Supabase (PostgreSQL + Auth)
+- [ ] **Option 2**: PlanetScale (MySQL)
+- [ ] **Option 3**: MongoDB Atlas
 
 ---
 
@@ -196,37 +271,6 @@
 - **Agency**: $79-149/month
 - **Enterprise**: Custom pricing
 
-### Additional Revenue
-- One-time deep analysis reports
-- Consulting upsell for agencies
-- Affiliate partnerships (tools, courses)
-- Premium templates marketplace
-
----
-
-## Community & Growth
-
-### Content Marketing
-- [ ] YouTube channel about YouTube growth
-- [ ] Blog with SEO case studies
-- [ ] Free resources/templates
-- [ ] Newsletter with trends
-- [ ] Podcast appearances
-
-### Community Building
-- [ ] Discord server for creators
-- [ ] User showcase/testimonials
-- [ ] Feature request voting
-- [ ] Beta tester program
-- [ ] Ambassador program
-
-### Partnerships
-- [ ] YouTube creator networks
-- [ ] Marketing agencies
-- [ ] Content creation tools
-- [ ] Online course platforms
-- [ ] Influencer collaborations
-
 ---
 
 ## Success Metrics
@@ -236,31 +280,57 @@
 - Reports generated per user
 - Feature adoption rates
 - Error rate < 1%
-- API response time < 3s
-
-### Business
-- Monthly Recurring Revenue (MRR)
-- Customer Acquisition Cost (CAC)
-- Lifetime Value (LTV)
-- Churn rate < 5%
-- Net Promoter Score (NPS) > 50
+- API response time < 30s
 
 ### Technical
+- Test coverage > 80%
+- Lighthouse score > 90
+- Bundle size < 500KB (initial)
 - Uptime > 99.9%
-- Page load < 2s
-- AI accuracy rating
-- API success rate > 99%
+
+---
+
+## Quick Wins (Can Do This Week)
+
+1. **Add localStorage caching** (~2h)
+   ```typescript
+   // lib/cache.ts
+   export function getCachedReport(channelId: string): MarketingReport | null
+   export function setCachedReport(channelId: string, report: MarketingReport): void
+   ```
+
+2. **Extract prompt to separate file** (~1h)
+   - Move prompt from `lib/gemini.ts` to `lib/prompts/marketing-report.ts`
+   - Improves readability and maintainability
+
+3. **Add loading steps indicator** (~2h)
+   - Update `LoadingState.tsx` to show: Validating → Fetching → Analyzing → Done
+   - Pass current step from API route via SSE or polling
+
+4. **Add environment validation** (~30m)
+   ```typescript
+   // lib/config.ts
+   export function validateEnv() {
+     if (!process.env.YOUTUBE_API_KEY) throw new Error('Missing YOUTUBE_API_KEY')
+     if (!process.env.GEMINI_API_KEY) throw new Error('Missing GEMINI_API_KEY')
+   }
+   ```
+
+5. **Restrict CORS in production** (~15m)
+   - Update `app/api/analyze/route.ts` to check origin
 
 ---
 
 ## Timeline Overview
 
 ```
-2024 Q1-Q2: v2.2-2.5 (Enhanced Analytics)
-2024 Q3:    v3.0 (Content Creation Suite)
-2024 Q4:    v3.5 (Multi-Platform)
-2025 Q1:    v4.0 (Business Intelligence)
-2025 Q2:    v4.5 (Integrations & API)
+2025 Q1: v2.2 - Optimizations & Code Quality
+2025 Q2: v2.3-2.5 - Enhanced UX & Competitor Analysis
+2025 Q3: v3.0 - Enhanced Analytics
+2025 Q4: v3.5 - Content Creation Suite
+2026 Q1: v4.0 - Multi-Platform
+2026 Q2: v4.5 - Business Intelligence
+2026 Q3: v5.0 - Integrations & API
 ```
 
 ---
