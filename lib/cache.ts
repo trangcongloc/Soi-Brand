@@ -4,7 +4,7 @@ import { MarketingReport } from "./types";
 
 const CACHE_PREFIX = "ourtube_report_";
 const ALIAS_PREFIX = "ourtube_alias_";
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 const MAX_REPORTS_PER_CHANNEL = 5;
 const MAX_TOTAL_REPORTS = 20;
 

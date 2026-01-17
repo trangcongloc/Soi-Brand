@@ -29,7 +29,10 @@ export async function generateMarketingReport(
     customApiKey?: string
 ): Promise<MarketingReport> {
     const genAI = initGemini(customApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash-lite",
+        generationConfig: { responseMimeType: "application/json" },
+    });
 
     // Prepare data for analysis
     const channelData = {
@@ -114,17 +117,8 @@ export async function generateMarketingReport(
         const response = await result.response;
         const text = response.text();
 
-        // Extract JSON from response (remove markdown code blocks if present)
-        let jsonText = text.trim();
-        if (jsonText.startsWith("```json")) {
-            jsonText = jsonText
-                .replace(/```json\n?/g, "")
-                .replace(/```\n?/g, "");
-        } else if (jsonText.startsWith("```")) {
-            jsonText = jsonText.replace(/```\n?/g, "");
-        }
-
-        const aiAnalysis = JSON.parse(jsonText);
+        // With JSON mode, the AI is forced to return a valid JSON object.
+        const aiAnalysis = JSON.parse(text);
 
         // Construct full report
         const report: MarketingReport = {

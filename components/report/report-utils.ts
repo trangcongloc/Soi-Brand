@@ -57,12 +57,18 @@ export const getVideoTypeBadge = (videoType: string) => {
 
     if (!badgeClass && videoType === "Video") return null;
 
-    return { className: `${styles.videoTypeBadge} ${badgeClass}`, label: videoType };
+    return {
+        className: `${styles.videoTypeBadge} ${badgeClass}`,
+        label: videoType,
+    };
 };
 
 // Time-based Ranking Algorithm (Hacker News style)
 // Only uses views and published time - likes/comments excluded due to market manipulation
-export const calculateHackerNewsScore = (views: number, publishedAt: string) => {
+export const calculateHackerNewsScore = (
+    views: number,
+    publishedAt: string
+) => {
     const points = views + 1; // Views as points
     const now = new Date();
     const published = new Date(publishedAt);

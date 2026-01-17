@@ -11,6 +11,18 @@ export const vi = {
         title: "'Soi' Brand",
     },
 
+    common: {
+        days: {
+            0: "Chủ nhật",
+            1: "Thứ 2",
+            2: "Thứ 3",
+            3: "Thứ 4",
+            4: "Thứ 5",
+            5: "Thứ 6",
+            6: "Thứ 7",
+        },
+    },
+
     form: {
         placeholder: "Dán link kênh YouTube...",
         submitButton: "Phân tích ngay",
@@ -32,11 +44,11 @@ export const vi = {
     loading: {
         title: "Đang phân tích kênh YouTube...",
         steps: {
-            validating: "Đang kiểm tra URL...",
-            fetchingChannel: "Đang lấy thông tin kênh",
-            fetchingVideos: "Đang tải danh sách video",
-            analyzingContent: "Đang phân tích nội dung",
-            generatingReport: "Đang tạo báo cáo AI",
+            validating: "Kiểm tra URL...",
+            fetchingChannel: "lấy thông tin kênh...",
+            fetchingVideos: "Tải danh sách video...",
+            analyzingContent: "Phân tích nội dung...",
+            generatingReport: "Tạo báo cáo...",
         },
         note: "Quá trình này có thể mất 30-60 giây...",
     },
