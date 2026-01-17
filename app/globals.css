@@ -164,11 +164,11 @@ input {
 
 /* Simple slide-in transitions */
 .slide-in-right {
-    animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .slide-in-left {
-    animation: slideInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: slideInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @keyframes slideInRight {
