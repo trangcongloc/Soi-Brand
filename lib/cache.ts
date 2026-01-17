@@ -19,6 +19,7 @@ interface CachedReportInfo {
     brandName: string;
     timestamp: number;
     createdAt: string;
+    channelAvatar?: string;
 }
 
 /**
@@ -70,7 +71,9 @@ export function resolveChannelId(urlId: string): string | null {
 /**
  * Get all cached reports for a channel (sorted by date, newest first)
  */
-export function getCachedReportsForChannel(channelId: string): CachedReportInfo[] {
+export function getCachedReportsForChannel(
+    channelId: string
+): CachedReportInfo[] {
     if (!isBrowser()) return [];
 
     const keys = getAllCacheKeys();
@@ -78,7 +81,9 @@ export function getCachedReportsForChannel(channelId: string): CachedReportInfo[
 
     for (const key of keys) {
         try {
-            const data: CachedReport = JSON.parse(localStorage.getItem(key) || "{}");
+            const data: CachedReport = JSON.parse(
+                localStorage.getItem(key) || "{}"
+            );
             if (data.channelId === channelId && data.report) {
                 // Check if not expired
                 if (Date.now() - data.timestamp <= CACHE_TTL) {
@@ -87,6 +92,8 @@ export function getCachedReportsForChannel(channelId: string): CachedReportInfo[
                         brandName: data.report.brand_name,
                         timestamp: data.timestamp,
                         createdAt: data.report.created_at,
+                        channelAvatar:
+                            data.report.report_part_1?.channel_info?.avatar,
                     });
                 } else {
                     localStorage.removeItem(key);
@@ -103,7 +110,10 @@ export function getCachedReportsForChannel(channelId: string): CachedReportInfo[
 /**
  * Get a specific cached report by channel ID and timestamp
  */
-export function getCachedReportByTimestamp(channelId: string, timestamp: number): MarketingReport | null {
+export function getCachedReportByTimestamp(
+    channelId: string,
+    timestamp: number
+): MarketingReport | null {
     if (!isBrowser()) return null;
 
     try {
@@ -263,7 +273,10 @@ export function clearAllReports(): void {
 /**
  * Delete a specific cached report by channel ID and timestamp
  */
-export function deleteCachedReportByTimestamp(channelId: string, timestamp: number): void {
+export function deleteCachedReportByTimestamp(
+    channelId: string,
+    timestamp: number
+): void {
     if (!isBrowser()) return;
 
     const key = getCacheKey(channelId, timestamp);
@@ -295,7 +308,9 @@ export function getCachedChannelList(): CachedReportInfo[] {
 
     for (const key of keys) {
         try {
-            const data: CachedReport = JSON.parse(localStorage.getItem(key) || "{}");
+            const data: CachedReport = JSON.parse(
+                localStorage.getItem(key) || "{}"
+            );
             if (data.report && data.channelId) {
                 // Check if not expired
                 if (Date.now() - data.timestamp <= CACHE_TTL) {
@@ -304,6 +319,8 @@ export function getCachedChannelList(): CachedReportInfo[] {
                         brandName: data.report.brand_name,
                         timestamp: data.timestamp,
                         createdAt: data.report.created_at,
+                        channelAvatar:
+                            data.report.report_part_1?.channel_info?.avatar,
                     });
                 } else {
                     localStorage.removeItem(key);
