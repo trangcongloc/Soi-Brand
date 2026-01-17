@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     getCachedChannelList,
     getCachedReportByTimestamp,
@@ -41,14 +41,45 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(false);
+
+    // Simple transition class: 'forward' | 'backward' | null
+    const [transition, setTransition] = useState<"forward" | "backward" | null>(
+        null
+    );
+    const prevFilteredRef = useRef<string | undefined>(filteredChannelId);
     const pageSize = 5;
 
-    // Filter history based on filteredChannelId
+    // Use filteredChannelId directly for content (simpler approach)
     const history = filteredChannelId
         ? allHistory.filter((item) => item.channelId === filteredChannelId)
         : allHistory;
 
     const isFiltered = !!filteredChannelId;
+
+    // Simple transition effect - just set the animation direction and let CSS handle it
+    useEffect(() => {
+        const wasFiltered = !!prevFilteredRef.current;
+        const willBeFiltered = !!filteredChannelId;
+
+        // Only animate when switching between filtered/unfiltered states
+        if (wasFiltered !== willBeFiltered) {
+            // Set transition direction
+            setTransition(willBeFiltered ? "forward" : "backward");
+
+            // Clear transition after animation completes (match page load timing)
+            const timer = setTimeout(() => {
+                setTransition(null);
+            }, 400);
+
+            // Update ref for next comparison
+            prevFilteredRef.current = filteredChannelId;
+
+            return () => clearTimeout(timer);
+        }
+
+        // Update ref when no animation needed
+        prevFilteredRef.current = filteredChannelId;
+    }, [filteredChannelId]);
 
     // Reset page when filter changes
     useEffect(() => {
@@ -140,8 +171,18 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
         return avatarColors[index];
     };
 
+    // Get transition class based on transition direction
+    const getTransitionClass = () => {
+        if (transition === "forward") return "slide-in-right";
+        if (transition === "backward") return "slide-in-left";
+        return "";
+    };
+
     return (
-        <div style={{ marginTop: "2rem", width: "512px" }}>
+        <div
+            style={{ marginTop: "2rem", width: "512px" }}
+            className={getTransitionClass()}
+        >
             <div
                 style={{
                     display: "flex",
@@ -194,7 +235,10 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                         }}
                     >
                         {isFiltered
-                            ? filteredChannelName || (langCode === "vi" ? "Báo cáo đã lưu" : "Cached Reports")
+                            ? filteredChannelName ||
+                              (langCode === "vi"
+                                  ? "Báo cáo đã lưu"
+                                  : "Cached Reports")
                             : langCode === "vi"
                             ? "Lịch sử phân tích"
                             : "Analysis History"}
@@ -257,7 +301,11 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                     fontSize: "10px",
                                     gap: "0.25rem",
                                 }}
-                                title={langCode === "vi" ? "Xóa tất cả" : "Clear all"}
+                                title={
+                                    langCode === "vi"
+                                        ? "Xóa tất cả"
+                                        : "Clear all"
+                                }
                             >
                                 <svg
                                     width="12"
@@ -391,7 +439,8 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                         <p
                                             style={{
                                                 fontSize: "12px",
-                                                fontWeight: idx === 0 ? "600" : "500",
+                                                fontWeight:
+                                                    idx === 0 ? "600" : "500",
                                                 color:
                                                     idx === 0
                                                         ? colors.textMain
@@ -399,7 +448,10 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                 margin: 0,
                                             }}
                                         >
-                                            {formatDate(item.createdAt, item.timestamp)}
+                                            {formatDate(
+                                                item.createdAt,
+                                                item.timestamp
+                                            )}
                                         </p>
                                         {idx === 0 && (
                                             <span
@@ -408,7 +460,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                     color: colors.textMuted,
                                                 }}
                                             >
-                                                {langCode === "vi" ? "Mới nhất" : "Latest"}
+                                                {langCode === "vi"
+                                                    ? "Mới nhất"
+                                                    : "Latest"}
                                             </span>
                                         )}
                                     </div>
@@ -450,7 +504,10 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                             whiteSpace: "nowrap",
                                         }}
                                     >
-                                        {formatDate(item.createdAt, item.timestamp)}
+                                        {formatDate(
+                                            item.createdAt,
+                                            item.timestamp
+                                        )}
                                     </span>
                                 )}
 
@@ -490,7 +547,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                 ✓
                                             </button>
                                             <button
-                                                onClick={() => setConfirmDelete(null)}
+                                                onClick={() =>
+                                                    setConfirmDelete(null)
+                                                }
                                                 style={{
                                                     padding: "0.25rem 0.5rem",
                                                     fontSize: "10px",
@@ -552,7 +611,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                             </button>
                                             <button
                                                 onClick={() =>
-                                                    setConfirmDelete(item.timestamp)
+                                                    setConfirmDelete(
+                                                        item.timestamp
+                                                    )
                                                 }
                                                 style={{
                                                     padding: "0.25rem",
@@ -631,7 +692,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                     </span>
                     <button
                         onClick={() =>
-                            handlePageChange(Math.min(totalPages, currentPage + 1))
+                            handlePageChange(
+                                Math.min(totalPages, currentPage + 1)
+                            )
                         }
                         disabled={currentPage === totalPages}
                         style={{
@@ -640,7 +703,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                             borderRadius: "4px",
                             padding: "0.25rem 0.5rem",
                             cursor:
-                                currentPage === totalPages ? "default" : "pointer",
+                                currentPage === totalPages
+                                    ? "default"
+                                    : "pointer",
                             opacity: currentPage === totalPages ? 0.3 : 1,
                             color: colors.textMain,
                             fontSize: "10px",

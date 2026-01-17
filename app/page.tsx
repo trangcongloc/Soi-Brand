@@ -148,11 +148,11 @@ export default function Home() {
             >
                 {!report && !isLoading && (
                     <>
-                        <div className="container max-w-2xl mx-auto text-center fade-in py-16 md:py-24">
-                            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
+                        <div className="container max-w-2xl mx-auto text-center py-16 md:py-24">
+                            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em] fade-in">
                                 {lang.home.title}
                             </h1>
-                            <div className="max-w-md mx-auto mb-8 px-4">
+                            <div className="max-w-md mx-auto mb-8 px-4 fade-in-delay-1">
                                 <AnalysisForm
                                     onSubmit={handleAnalyze}
                                     onUpload={handleUpload}
@@ -161,7 +161,7 @@ export default function Home() {
                                 />
                             </div>
                         </div>
-                        <div className="container max-w-lg mx-auto px-4 pb-16">
+                        <div className="container max-w-lg mx-auto px-4 pb-16 fade-in-delay-2">
                             <AnalysisHistory
                                 onLoadReport={(loadedReport) => {
                                     setReport(loadedReport);
