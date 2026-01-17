@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import { Post, ChannelInfo } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
-import { useLang } from "@/lib/lang";
+import { useLang, useLanguage } from "@/lib/lang";
 import UploadHeatmap from "./UploadHeatmap";
 import {
     formatFullNumber,
@@ -10,6 +11,18 @@ import {
     calculateHackerNewsScore,
 } from "./report-utils";
 
+const VideoPerformanceChart = dynamic(
+    () => import("@/components/VideoPerformanceChart"),
+    {
+        ssr: false,
+        loading: () => (
+            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#999" }}>
+                Loading chart...
+            </div>
+        ),
+    }
+);
+
 interface DataTabProps {
     posts: Post[];
     channelInfo?: ChannelInfo;
@@ -17,6 +30,7 @@ interface DataTabProps {
 
 const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
     const lang = useLang();
+    const { langCode } = useLanguage();
     const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
     const [copyStatus, setCopyStatus] = useState<string | null>(null);
     const [isChannelHovered, setIsChannelHovered] = useState(false);
@@ -167,6 +181,18 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                     </div>
                 </div>
             </section>
+
+            {/* Video Performance Chart */}
+            {posts.length > 0 && (
+                <section>
+                    <h3 className={styles.sectionTitle}>
+                        {langCode === "vi" ? "Hiệu suất Video" : "Video Performance"}
+                    </h3>
+                    <div className={styles.card}>
+                        <VideoPerformanceChart posts={posts} maxItems={50} />
+                    </div>
+                </section>
+            )}
 
             {/* Posts Accordion */}
             <section>

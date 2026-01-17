@@ -5,19 +5,45 @@ import axios from "axios";
 import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
+import AnalysisHistory from "@/components/AnalysisHistory";
+import CachePromptDialog from "@/components/CachePromptDialog";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
 import {
-    getCachedReport,
+    getCachedReportsForChannel,
+    getCachedReportByTimestamp,
     setCachedReport,
     clearExpiredReports,
+    resolveChannelId,
 } from "@/lib/cache";
+
+interface CachedReportOption {
+    timestamp: number;
+    createdAt: string;
+}
+
+interface CachePromptState {
+    show: boolean;
+    channelUrl: string;
+    urlExtractedId: string;
+    actualChannelId: string;
+    channelName: string;
+    cachedReports: CachedReportOption[];
+}
 
 export default function Home() {
     const lang = useLang();
     const [isLoading, setIsLoading] = useState(false);
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [cachePrompt, setCachePrompt] = useState<CachePromptState>({
+        show: false,
+        channelUrl: "",
+        urlExtractedId: "",
+        actualChannelId: "",
+        channelName: "",
+        cachedReports: [],
+    });
 
     // Clear expired cache on mount
     useEffect(() => {
@@ -41,21 +67,42 @@ export default function Home() {
     };
 
     const handleAnalyze = async (channelUrl: string) => {
-        setIsLoading(true);
         setError(null);
-        setReport(null);
 
-        // Check cache first
-        const channelId = extractChannelIdFromUrl(channelUrl);
-        if (channelId) {
-            const cachedReport = getCachedReport(channelId);
-            if (cachedReport) {
-                console.log("Using cached report for:", channelId);
-                setReport(cachedReport);
-                setIsLoading(false);
+        // Extract URL ID and try to resolve to actual channel ID
+        const urlExtractedId = extractChannelIdFromUrl(channelUrl);
+        if (urlExtractedId) {
+            // Try to resolve URL ID to actual channel ID
+            const actualChannelId = resolveChannelId(urlExtractedId) || urlExtractedId;
+
+            // Check for cached reports using actual channel ID
+            const cachedReports = getCachedReportsForChannel(actualChannelId);
+
+            if (cachedReports.length > 0) {
+                // Show prompt dialog with all cached reports
+                setCachePrompt({
+                    show: true,
+                    channelUrl,
+                    urlExtractedId,
+                    actualChannelId,
+                    channelName: cachedReports[0].brandName,
+                    cachedReports: cachedReports.map(r => ({
+                        timestamp: r.timestamp,
+                        createdAt: r.createdAt,
+                    })),
+                });
                 return;
             }
         }
+
+        // No cache, proceed with analysis
+        await performAnalysis(channelUrl, urlExtractedId);
+    };
+
+    const performAnalysis = async (channelUrl: string, urlExtractedId: string | null) => {
+        setIsLoading(true);
+        setError(null);
+        setReport(null);
 
         try {
             const response = await axios.post<AnalyzeResponse>("/api/analyze", {
@@ -66,13 +113,11 @@ export default function Home() {
                 const newReport = response.data.data;
                 setReport(newReport);
 
-                // Cache the report
-                const reportChannelId =
-                    newReport.report_part_1?.channel_info?.channelId ||
-                    channelId;
-                if (reportChannelId) {
-                    setCachedReport(reportChannelId, newReport);
-                    console.log("Report cached for:", reportChannelId);
+                // Cache the report using actual channel ID
+                const actualChannelId = newReport.report_part_1?.channel_info?.channelId;
+                if (actualChannelId) {
+                    setCachedReport(actualChannelId, newReport, urlExtractedId || undefined);
+                    console.log("Report cached for:", actualChannelId);
                 }
             } else {
                 setError(response.data.error || lang.form.errors.analysisError);
@@ -97,6 +142,46 @@ export default function Home() {
         }
     };
 
+    const handleSelectReport = (timestamp: number) => {
+        const report = getCachedReportByTimestamp(cachePrompt.actualChannelId, timestamp);
+        if (report) {
+            setReport(report);
+        }
+        setCachePrompt({
+            show: false,
+            channelUrl: "",
+            urlExtractedId: "",
+            actualChannelId: "",
+            channelName: "",
+            cachedReports: [],
+        });
+    };
+
+    const handleReanalyze = async () => {
+        const { channelUrl, urlExtractedId } = cachePrompt;
+        setCachePrompt({
+            show: false,
+            channelUrl: "",
+            urlExtractedId: "",
+            actualChannelId: "",
+            channelName: "",
+            cachedReports: [],
+        });
+
+        await performAnalysis(channelUrl, urlExtractedId);
+    };
+
+    const handleCancelPrompt = () => {
+        setCachePrompt({
+            show: false,
+            channelUrl: "",
+            urlExtractedId: "",
+            actualChannelId: "",
+            channelName: "",
+            cachedReports: [],
+        });
+    };
+
     const handleUpload = (uploadedReport: MarketingReport) => {
         setReport(uploadedReport);
         setError(null);
@@ -113,12 +198,20 @@ export default function Home() {
                         <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]">
                             {lang.home.title}
                         </h1>
-                        <div className="max-w-md mx-auto mb-16 px-4">
+                        <div className="max-w-md mx-auto mb-8 px-4">
                             <AnalysisForm
                                 onSubmit={handleAnalyze}
                                 onUpload={handleUpload}
                                 onError={(msg) => setError(msg)}
                                 isLoading={isLoading}
+                            />
+                        </div>
+                        <div className="max-w-lg mx-auto px-4">
+                            <AnalysisHistory
+                                onLoadReport={(loadedReport) => {
+                                    setReport(loadedReport);
+                                    setError(null);
+                                }}
                             />
                         </div>
                     </div>
@@ -153,6 +246,17 @@ export default function Home() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Cache Prompt Dialog */}
+            {cachePrompt.show && cachePrompt.cachedReports.length > 0 && (
+                <CachePromptDialog
+                    channelName={cachePrompt.channelName}
+                    cachedReports={cachePrompt.cachedReports}
+                    onSelectReport={handleSelectReport}
+                    onReanalyze={handleReanalyze}
+                    onCancel={handleCancelPrompt}
+                />
             )}
         </main>
     );

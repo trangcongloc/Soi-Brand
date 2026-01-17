@@ -64,7 +64,7 @@ export const en = {
             evaluation: "Evaluation",
         },
         description:
-            "Raw YouTube data from {brandName} channel with recent posts.",
+            "Analysis report for {brandName} channel - Created: {reportDate}",
     },
 
     channel: {

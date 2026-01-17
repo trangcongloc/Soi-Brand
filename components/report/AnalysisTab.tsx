@@ -1,20 +1,7 @@
 import React from "react";
-import dynamic from "next/dynamic";
 import { Post, ReportPart2 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";
-
-const VideoPerformanceChart = dynamic(
-    () => import("@/components/VideoPerformanceChart"),
-    {
-        ssr: false,
-        loading: () => (
-            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#999" }}>
-                Loading chart...
-            </div>
-        ),
-    }
-);
 
 interface AnalysisTabProps {
     report_part_2: ReportPart2;
@@ -24,6 +11,81 @@ interface AnalysisTabProps {
 const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
     const lang = useLang();
     const { langCode } = useLanguage();
+
+    // Calculate current posting stats from posts data
+    const calculateCurrentPostingStats = () => {
+        if (posts.length < 2) return null;
+
+        // Sort posts by date
+        const sortedPosts = [...posts].sort(
+            (a, b) => new Date(a.published_at).getTime() - new Date(b.published_at).getTime()
+        );
+
+        // Calculate frequency
+        const firstDate = new Date(sortedPosts[0].published_at);
+        const lastDate = new Date(sortedPosts[sortedPosts.length - 1].published_at);
+        const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const videosPerDay = posts.length / daysDiff;
+
+        let frequency: string;
+        if (videosPerDay >= 1) {
+            frequency = langCode === "vi"
+                ? `${videosPerDay.toFixed(1)} video/ngày`
+                : `${videosPerDay.toFixed(1)} videos/day`;
+        } else if (videosPerDay >= 1/7) {
+            const perWeek = videosPerDay * 7;
+            frequency = langCode === "vi"
+                ? `${perWeek.toFixed(1)} video/tuần`
+                : `${perWeek.toFixed(1)} videos/week`;
+        } else {
+            const perMonth = videosPerDay * 30;
+            frequency = langCode === "vi"
+                ? `${perMonth.toFixed(1)} video/tháng`
+                : `${perMonth.toFixed(1)} videos/month`;
+        }
+
+        // Calculate best posting days from actual data
+        const dayCounts: { [key: string]: number } = {};
+        const dayNames = langCode === "vi"
+            ? ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"]
+            : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+        posts.forEach(post => {
+            const day = new Date(post.published_at).getDay();
+            const dayName = dayNames[day];
+            dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
+        });
+
+        const sortedDays = Object.entries(dayCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([day]) => day);
+
+        // Calculate best posting times from actual data
+        const hourCounts: { [key: number]: number } = {};
+        posts.forEach(post => {
+            const hour = new Date(post.published_at).getHours();
+            hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+        });
+
+        const sortedHours = Object.entries(hourCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([hour]) => {
+                const h = parseInt(hour);
+                return `${h.toString().padStart(2, '0')}:00`;
+            });
+
+        return {
+            frequency,
+            bestDays: sortedDays,
+            bestTimes: sortedHours,
+            totalPosts: posts.length,
+            analyzedPeriod: daysDiff
+        };
+    };
+
+    const currentStats = calculateCurrentPostingStats();
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -165,16 +227,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 </div>
             </section>
 
-            {/* Video Performance Chart */}
-            {posts.length > 0 && (
-                <section>
-                    <h3 className={styles.sectionTitle}>{langCode === "vi" ? "Hiệu suất Video" : "Video Performance"}</h3>
-                    <div className={styles.card} style={{ marginTop: "1rem" }}>
-                        <VideoPerformanceChart posts={posts} maxItems={50} />
-                    </div>
-                </section>
-            )}
-
             {/* Content Pillars */}
             <section>
                 <h3 className={styles.sectionTitle}>{lang.analysis.contentPillars.title}</h3>
@@ -309,54 +361,109 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 </section>
             )}
 
-            {/* Content Calendar */}
-            {report_part_2.content_calendar && (
+            {/* Content Calendar Insights - Current vs Recommended */}
+            {(currentStats || report_part_2.content_calendar) && (
                 <section>
-                    <h3 className={styles.sectionTitle}>{lang.analysis.contentCalendar.title}</h3>
+                    <h3 className={styles.sectionTitle}>
+                        {langCode === "vi" ? "Lịch đăng nội dung" : "Content Calendar Insights"}
+                    </h3>
                     <div className={styles.card}>
-                        <div className={styles.grid2} style={{ gap: "1rem" }}>
-                            <div>
-                                <p style={{ fontSize: "11px", marginBottom: "0.5rem" }}>
-                                    <strong>{lang.analysis.contentCalendar.bestDays}</strong> {report_part_2.content_calendar.best_posting_days.join(", ")}
-                                </p>
-                                <p style={{ fontSize: "11px", marginBottom: "0.5rem" }}>
-                                    <strong>{lang.analysis.contentCalendar.bestTimes}</strong> {report_part_2.content_calendar.best_posting_times.join(", ")}
-                                </p>
-                                <p style={{ fontSize: "11px", marginBottom: 0 }}>
-                                    <strong>{lang.analysis.contentCalendar.recommendedFrequency}</strong> {report_part_2.content_calendar.recommended_frequency}
-                                </p>
-                            </div>
-                            {report_part_2.content_calendar.content_mix && (
+                        <div className={styles.grid2} style={{ gap: "1.5rem" }}>
+                            {/* Current Posting Stats */}
+                            {currentStats && (
                                 <div>
-                                    <p style={{ fontSize: "11px", fontWeight: "600", marginBottom: "0.75rem" }}>{lang.analysis.contentCalendar.contentMix}:</p>
-                                    {report_part_2.content_calendar.content_mix.map((mix, idx) => (
-                                        <div key={idx} style={{ marginBottom: "1rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "6px", borderLeft: `3px solid ${idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6"}` }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                                                <span style={{ fontSize: "12px", fontWeight: "600", color: "#333" }}>{mix.content_type || (mix as any).pillar}</span>
-                                                <span style={{ fontSize: "11px", fontWeight: "700", color: idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6" }}>{mix.percentage}%</span>
-                                            </div>
-                                            <div style={{ height: "4px", background: "#e5e7eb", borderRadius: "2px", overflow: "hidden", marginBottom: "0.5rem" }}>
-                                                <div style={{ width: `${mix.percentage}%`, height: "100%", background: idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6", borderRadius: "2px" }}></div>
-                                            </div>
-                                            {mix.specific_topics && mix.specific_topics.length > 0 && (
-                                                <div style={{ marginTop: "0.5rem" }}>
-                                                    <span style={{ fontSize: "10px", color: "#666" }}>{lang.analysis.contentCalendar.specificTopics}</span>
-                                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.25rem" }}>
-                                                        {mix.specific_topics.map((topic, i) => (
-                                                            <span key={i} style={{ fontSize: "10px", padding: "2px 8px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "4px", color: "#333" }}>{topic}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {mix.example_videos && mix.example_videos.length > 0 && (
-                                                <div style={{ marginTop: "0.5rem", fontSize: "10px", color: "#888" }}>
-                                                    {lang.analysis.contentCalendar.exampleVideos} {mix.example_videos.join(", ")}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                    <h4 style={{ fontSize: "12px", fontWeight: "700", color: "#e53935", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        {langCode === "vi" ? "Hiện tại của kênh" : "Current Channel Stats"}
+                                    </h4>
+                                    <div style={{ background: "#fef2f2", padding: "1rem", borderRadius: "8px", border: "1px solid #fecaca" }}>
+                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
+                                            <strong>{langCode === "vi" ? "Tần suất đăng:" : "Posting Frequency:"}</strong>{" "}
+                                            <span style={{ color: "#e53935", fontWeight: "600" }}>{currentStats.frequency}</span>
+                                        </p>
+                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
+                                            <strong>{langCode === "vi" ? "Ngày hay đăng:" : "Most Active Days:"}</strong>{" "}
+                                            <span style={{ color: "#333" }}>{currentStats.bestDays.join(", ") || "N/A"}</span>
+                                        </p>
+                                        <p style={{ fontSize: "11px", marginBottom: "0.5rem" }}>
+                                            <strong>{langCode === "vi" ? "Giờ hay đăng:" : "Most Active Times:"}</strong>{" "}
+                                            <span style={{ color: "#333" }}>{currentStats.bestTimes.join(", ") || "N/A"}</span>
+                                        </p>
+                                        <p style={{ fontSize: "10px", color: "#666", marginTop: "0.75rem", fontStyle: "italic" }}>
+                                            {langCode === "vi"
+                                                ? `Dựa trên ${currentStats.totalPosts} video trong ${currentStats.analyzedPeriod} ngày`
+                                                : `Based on ${currentStats.totalPosts} videos over ${currentStats.analyzedPeriod} days`}
+                                        </p>
+                                    </div>
                                 </div>
                             )}
+
+                            {/* Recommended Posting Schedule */}
+                            {report_part_2.content_calendar && (
+                                <div>
+                                    <h4 style={{ fontSize: "12px", fontWeight: "700", color: "#10b981", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        {langCode === "vi" ? "Đề xuất tối ưu" : "Recommended Schedule"}
+                                    </h4>
+                                    <div style={{ background: "#f0fdf4", padding: "1rem", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
+                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
+                                            <strong>{lang.analysis.contentCalendar.recommendedFrequency}</strong>{" "}
+                                            <span style={{ color: "#10b981", fontWeight: "600" }}>{report_part_2.content_calendar.recommended_frequency}</span>
+                                        </p>
+                                        <p style={{ fontSize: "11px", marginBottom: "0.75rem" }}>
+                                            <strong>{lang.analysis.contentCalendar.bestDays}</strong>{" "}
+                                            <span style={{ color: "#333" }}>{report_part_2.content_calendar.best_posting_days.join(", ")}</span>
+                                        </p>
+                                        <p style={{ fontSize: "11px", marginBottom: 0 }}>
+                                            <strong>{lang.analysis.contentCalendar.bestTimes}</strong>{" "}
+                                            <span style={{ color: "#333" }}>{report_part_2.content_calendar.best_posting_times.join(", ")}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Content Mix */}
+            {report_part_2.content_calendar?.content_mix && report_part_2.content_calendar.content_mix.length > 0 && (
+                <section>
+                    <h3 className={styles.sectionTitle}>
+                        {langCode === "vi" ? "Phối hợp nội dung" : "Content Mix"}
+                    </h3>
+                    <div className={styles.card}>
+                        <div style={{ display: "grid", gap: "1rem" }}>
+                            {report_part_2.content_calendar.content_mix.map((mix, idx) => (
+                                <div key={idx} style={{ padding: "1rem", background: "#f9fafb", borderRadius: "8px", borderLeft: `4px solid ${idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6"}` }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                                        <span style={{ fontSize: "13px", fontWeight: "600", color: "#333" }}>{mix.content_type || (mix as any).pillar}</span>
+                                        <span style={{ fontSize: "12px", fontWeight: "700", color: idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6" }}>{mix.percentage}%</span>
+                                    </div>
+                                    <div style={{ height: "6px", background: "#e5e7eb", borderRadius: "3px", overflow: "hidden", marginBottom: "0.75rem" }}>
+                                        <div style={{ width: `${mix.percentage}%`, height: "100%", background: idx === 0 ? "#e53935" : idx === 1 ? "#ff7043" : "#3b82f6", borderRadius: "3px" }}></div>
+                                    </div>
+                                    {mix.specific_topics && mix.specific_topics.length > 0 && (
+                                        <div style={{ marginTop: "0.75rem" }}>
+                                            <span style={{ fontSize: "10px", color: "#666", fontWeight: "600" }}>{lang.analysis.contentCalendar.specificTopics}</span>
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.5rem" }}>
+                                                {mix.specific_topics.map((topic, i) => (
+                                                    <span key={i} style={{ fontSize: "10px", padding: "3px 10px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "4px", color: "#333" }}>{topic}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {mix.example_videos && mix.example_videos.length > 0 && (
+                                        <div style={{ marginTop: "0.75rem", fontSize: "10px", color: "#888" }}>
+                                            <strong>{lang.analysis.contentCalendar.exampleVideos}</strong> {mix.example_videos.join(", ")}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>

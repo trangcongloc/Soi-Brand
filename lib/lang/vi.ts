@@ -62,7 +62,7 @@ export const vi = {
             evaluation: "Đánh giá",
         },
         description:
-            "Dữ liệu thô từ YouTube của kênh {brandName} với các bài đăng gần nhất.",
+            "Báo cáo phân tích kênh {brandName} - Ngày tạo: {reportDate}",
     },
 
     channel: {

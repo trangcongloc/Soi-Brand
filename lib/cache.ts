@@ -3,13 +3,22 @@
 import { MarketingReport } from "./types";
 
 const CACHE_PREFIX = "ourtube_report_";
+const ALIAS_PREFIX = "ourtube_alias_";
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-const MAX_CACHED_REPORTS = 10;
+const MAX_REPORTS_PER_CHANNEL = 5;
+const MAX_TOTAL_REPORTS = 20;
 
 interface CachedReport {
     report: MarketingReport;
     timestamp: number;
     channelId: string;
+}
+
+interface CachedReportInfo {
+    channelId: string;
+    brandName: string;
+    timestamp: number;
+    createdAt: string;
 }
 
 /**
@@ -20,10 +29,10 @@ function isBrowser(): boolean {
 }
 
 /**
- * Get cache key for a channel
+ * Get cache key for a channel report (includes timestamp for multiple reports)
  */
-function getCacheKey(channelId: string): string {
-    return `${CACHE_PREFIX}${channelId}`;
+function getCacheKey(channelId: string, timestamp: number): string {
+    return `${CACHE_PREFIX}${channelId}_${timestamp}`;
 }
 
 /**
@@ -43,13 +52,62 @@ function getAllCacheKeys(): string[] {
 }
 
 /**
- * Get a cached report by channel ID
+ * Store alias mapping (URL-extracted ID -> actual channel ID)
  */
-export function getCachedReport(channelId: string): MarketingReport | null {
+export function setChannelAlias(urlId: string, actualChannelId: string): void {
+    if (!isBrowser() || !urlId || !actualChannelId) return;
+    localStorage.setItem(`${ALIAS_PREFIX}${urlId}`, actualChannelId);
+}
+
+/**
+ * Get actual channel ID from URL-extracted ID
+ */
+export function resolveChannelId(urlId: string): string | null {
+    if (!isBrowser()) return null;
+    return localStorage.getItem(`${ALIAS_PREFIX}${urlId}`);
+}
+
+/**
+ * Get all cached reports for a channel (sorted by date, newest first)
+ */
+export function getCachedReportsForChannel(channelId: string): CachedReportInfo[] {
+    if (!isBrowser()) return [];
+
+    const keys = getAllCacheKeys();
+    const reports: CachedReportInfo[] = [];
+
+    for (const key of keys) {
+        try {
+            const data: CachedReport = JSON.parse(localStorage.getItem(key) || "{}");
+            if (data.channelId === channelId && data.report) {
+                // Check if not expired
+                if (Date.now() - data.timestamp <= CACHE_TTL) {
+                    reports.push({
+                        channelId: data.channelId,
+                        brandName: data.report.brand_name,
+                        timestamp: data.timestamp,
+                        createdAt: data.report.created_at,
+                    });
+                } else {
+                    localStorage.removeItem(key);
+                }
+            }
+        } catch {
+            // Skip corrupted entries
+        }
+    }
+
+    return reports.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+/**
+ * Get a specific cached report by channel ID and timestamp
+ */
+export function getCachedReportByTimestamp(channelId: string, timestamp: number): MarketingReport | null {
     if (!isBrowser()) return null;
 
     try {
-        const key = getCacheKey(channelId);
+        const key = getCacheKey(channelId, timestamp);
         const cached = localStorage.getItem(key);
 
         if (!cached) return null;
@@ -70,23 +128,49 @@ export function getCachedReport(channelId: string): MarketingReport | null {
 }
 
 /**
+ * Get the most recent cached report for a channel (backward compatible)
+ */
+export function getCachedReport(channelId: string): MarketingReport | null {
+    const reports = getCachedReportsForChannel(channelId);
+    if (reports.length === 0) return null;
+    return getCachedReportByTimestamp(channelId, reports[0].timestamp);
+}
+
+/**
  * Save a report to cache
  */
 export function setCachedReport(
     channelId: string,
-    report: MarketingReport
+    report: MarketingReport,
+    urlId?: string
 ): void {
     if (!isBrowser()) return;
 
     try {
-        // Enforce max cache size
-        const keys = getAllCacheKeys();
-        if (keys.length >= MAX_CACHED_REPORTS) {
-            // Remove oldest cached report
-            let oldestKey = keys[0];
+        const timestamp = Date.now();
+
+        // Store alias if provided
+        if (urlId && urlId !== channelId) {
+            setChannelAlias(urlId, channelId);
+        }
+
+        // Check reports for this channel and enforce limit
+        const channelReports = getCachedReportsForChannel(channelId);
+        if (channelReports.length >= MAX_REPORTS_PER_CHANNEL) {
+            // Remove oldest report for this channel
+            const oldest = channelReports[channelReports.length - 1];
+            const oldKey = getCacheKey(channelId, oldest.timestamp);
+            localStorage.removeItem(oldKey);
+        }
+
+        // Enforce total report limit
+        const allKeys = getAllCacheKeys();
+        if (allKeys.length >= MAX_TOTAL_REPORTS) {
+            // Find and remove oldest report globally
+            let oldestKey = allKeys[0];
             let oldestTime = Infinity;
 
-            for (const key of keys) {
+            for (const key of allKeys) {
                 try {
                     const data = JSON.parse(localStorage.getItem(key) || "{}");
                     if (data.timestamp < oldestTime) {
@@ -94,29 +178,23 @@ export function setCachedReport(
                         oldestKey = key;
                     }
                 } catch {
-                    // Remove corrupted entries
                     localStorage.removeItem(key);
                 }
             }
-
             localStorage.removeItem(oldestKey);
         }
 
         const cacheData: CachedReport = {
             report,
-            timestamp: Date.now(),
+            timestamp,
             channelId,
         };
 
-        const key = getCacheKey(channelId);
+        const key = getCacheKey(channelId, timestamp);
         localStorage.setItem(key, JSON.stringify(cacheData));
     } catch (error) {
         console.error("Error writing to cache:", error);
-        // If localStorage is full, clear old reports
-        if (
-            error instanceof Error &&
-            error.name === "QuotaExceededError"
-        ) {
+        if (error instanceof Error && error.name === "QuotaExceededError") {
             clearOldReports();
         }
     }
@@ -144,7 +222,7 @@ export function clearExpiredReports(): void {
 }
 
 /**
- * Clear old reports (keep only most recent 5)
+ * Clear old reports (keep only most recent per channel)
  */
 export function clearOldReports(): void {
     if (!isBrowser()) return;
@@ -161,9 +239,9 @@ export function clearOldReports(): void {
         }
     }
 
-    // Sort by timestamp descending and keep only 5
+    // Sort by timestamp descending and keep only 10
     reports.sort((a, b) => b.timestamp - a.timestamp);
-    const toRemove = reports.slice(5);
+    const toRemove = reports.slice(10);
 
     for (const { key } of toRemove) {
         localStorage.removeItem(key);
@@ -183,29 +261,53 @@ export function clearAllReports(): void {
 }
 
 /**
+ * Delete a specific cached report by channel ID and timestamp
+ */
+export function deleteCachedReportByTimestamp(channelId: string, timestamp: number): void {
+    if (!isBrowser()) return;
+
+    const key = getCacheKey(channelId, timestamp);
+    localStorage.removeItem(key);
+}
+
+/**
+ * Delete all cached reports for a channel (backward compatible)
+ */
+export function deleteCachedReport(channelId: string): void {
+    if (!isBrowser()) return;
+
+    const keys = getAllCacheKeys();
+    for (const key of keys) {
+        if (key.startsWith(`${CACHE_PREFIX}${channelId}_`)) {
+            localStorage.removeItem(key);
+        }
+    }
+}
+
+/**
  * Get list of cached channels (for history feature)
  */
-export function getCachedChannelList(): {
-    channelId: string;
-    brandName: string;
-    timestamp: number;
-}[] {
+export function getCachedChannelList(): CachedReportInfo[] {
     if (!isBrowser()) return [];
 
     const keys = getAllCacheKeys();
-    const channels: { channelId: string; brandName: string; timestamp: number }[] = [];
+    const reports: CachedReportInfo[] = [];
 
     for (const key of keys) {
         try {
-            const data: CachedReport = JSON.parse(
-                localStorage.getItem(key) || "{}"
-            );
+            const data: CachedReport = JSON.parse(localStorage.getItem(key) || "{}");
             if (data.report && data.channelId) {
-                channels.push({
-                    channelId: data.channelId,
-                    brandName: data.report.brand_name,
-                    timestamp: data.timestamp,
-                });
+                // Check if not expired
+                if (Date.now() - data.timestamp <= CACHE_TTL) {
+                    reports.push({
+                        channelId: data.channelId,
+                        brandName: data.report.brand_name,
+                        timestamp: data.timestamp,
+                        createdAt: data.report.created_at,
+                    });
+                } else {
+                    localStorage.removeItem(key);
+                }
             }
         } catch {
             // Skip corrupted entries
@@ -213,5 +315,5 @@ export function getCachedChannelList(): {
     }
 
     // Sort by most recent first
-    return channels.sort((a, b) => b.timestamp - a.timestamp);
+    return reports.sort((a, b) => b.timestamp - a.timestamp);
 }
