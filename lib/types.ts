@@ -367,6 +367,8 @@ export interface MarketingReport {
 
 export interface AnalyzeRequest {
     channelUrl: string;
+    youtubeApiKey?: string;
+    geminiApiKey?: string;
 }
 
 export interface AnalyzeResponse {

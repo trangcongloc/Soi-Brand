@@ -7,8 +7,8 @@ import { buildMarketingReportPrompt } from "./prompts/marketing-report";
 /**
  * Initialize Gemini AI
  */
-function initGemini() {
-    const apiKey = process.env.GEMINI_API_KEY;
+function initGemini(customApiKey?: string) {
+    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error("Gemini API key not configured");
     }
@@ -20,9 +20,10 @@ function initGemini() {
  */
 export async function generateMarketingReport(
     channelInfo: YouTubeChannel,
-    videos: YouTubeVideo[]
+    videos: YouTubeVideo[],
+    customApiKey?: string
 ): Promise<MarketingReport> {
-    const genAI = initGemini();
+    const genAI = initGemini(customApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // Prepare data for analysis

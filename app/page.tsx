@@ -9,6 +9,7 @@ import AnalysisHistory from "@/components/AnalysisHistory";
 import CachePromptDialog from "@/components/CachePromptDialog";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLang } from "@/lib/lang";
+import { getUserSettings } from "@/lib/userSettings";
 import {
     getCachedReportsForChannel,
     getCachedReportByTimestamp,
@@ -105,8 +106,13 @@ export default function Home() {
         setReport(null);
 
         try {
+            // Get user settings for API keys
+            const userSettings = getUserSettings();
+
             const response = await axios.post<AnalyzeResponse>("/api/analyze", {
                 channelUrl,
+                youtubeApiKey: userSettings.youtubeApiKey,
+                geminiApiKey: userSettings.geminiApiKey,
             });
 
             if (response.data.success && response.data.data) {

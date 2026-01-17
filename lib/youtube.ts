@@ -90,8 +90,8 @@ function handleYouTubeError(error: any, context: string): never {
 /**
  * Get channel ID from username or custom URL
  */
-export async function resolveChannelId(url: string): Promise<string | null> {
-    const apiKey = process.env.YOUTUBE_API_KEY;
+export async function resolveChannelId(url: string, customApiKey?: string): Promise<string | null> {
+    const apiKey = customApiKey || process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
         throw new Error("YouTube API key not configured");
     }
@@ -154,9 +154,10 @@ export async function resolveChannelId(url: string): Promise<string | null> {
  * Get channel information
  */
 export async function getChannelInfo(
-    channelId: string
+    channelId: string,
+    customApiKey?: string
 ): Promise<YouTubeChannel | null> {
-    const apiKey = process.env.YOUTUBE_API_KEY;
+    const apiKey = customApiKey || process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
         throw new Error("YouTube API key not configured");
     }
@@ -201,9 +202,10 @@ export async function getChannelInfo(
  */
 export async function getChannelVideos(
     channelId: string,
-    maxResults: number = 10
+    maxResults: number = 10,
+    customApiKey?: string
 ): Promise<YouTubeVideo[]> {
-    const apiKey = process.env.YOUTUBE_API_KEY;
+    const apiKey = customApiKey || process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
         throw new Error("YouTube API key not configured");
     }
@@ -294,15 +296,15 @@ export async function getChannelVideos(
 /**
  * Get full channel data (info + videos)
  */
-export async function getFullChannelData(channelUrl: string) {
-    const channelId = await resolveChannelId(channelUrl);
+export async function getFullChannelData(channelUrl: string, customApiKey?: string) {
+    const channelId = await resolveChannelId(channelUrl, customApiKey);
     if (!channelId) {
         throw new Error("Could not resolve channel ID from URL");
     }
 
     const [channelInfo, allVideos] = await Promise.all([
-        getChannelInfo(channelId),
-        getChannelVideos(channelId, 50), // Fetch up to 50 videos
+        getChannelInfo(channelId, customApiKey),
+        getChannelVideos(channelId, 50, customApiKey), // Fetch up to 50 videos
     ]);
 
     if (!channelInfo) {

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
         // Parse request body
         const body: AnalyzeRequest = await request.json();
-        const { channelUrl } = body;
+        const { channelUrl, youtubeApiKey, geminiApiKey } = body;
 
         // Validate input
         if (!channelUrl) {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         // Fetch YouTube data with retry
         console.log("Fetching YouTube data for:", channelUrl);
         const { channelInfo, videos } = await withRetry(
-            () => getFullChannelData(channelUrl),
+            () => getFullChannelData(channelUrl, youtubeApiKey),
             {
                 maxAttempts: 2,
                 initialDelayMs: 1000,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         // Generate marketing report using Gemini AI with retry
         console.log("Generating marketing report with Gemini AI...");
         const report = await withRetry(
-            () => generateMarketingReport(channelInfo, videos),
+            () => generateMarketingReport(channelInfo, videos, geminiApiKey),
             {
                 maxAttempts: 2,
                 initialDelayMs: 2000,

@@ -50,7 +50,11 @@ export default function VideoPerformanceChart({
     // Sort by date: oldest on left, latest on right, preserve original index
     const chartData = posts
         .map((post, originalIndex) => ({ post, originalIndex }))
-        .sort((a, b) => new Date(a.post.published_at).getTime() - new Date(b.post.published_at).getTime())
+        .sort(
+            (a, b) =>
+                new Date(a.post.published_at).getTime() -
+                new Date(b.post.published_at).getTime()
+        )
         .slice(-maxItems)
         .map(({ post, originalIndex }) => ({
             name: `#${originalIndex + 1}`,
@@ -148,7 +152,7 @@ export default function VideoPerformanceChart({
                                                         width: "8px",
                                                         height: "8px",
                                                         borderRadius: "50%",
-                                                        background: "#3b82f6",
+                                                        background: "#fa9191",
                                                     }}
                                                 ></span>
                                                 {lang.posts.viewCount}{" "}
@@ -168,7 +172,7 @@ export default function VideoPerformanceChart({
                                                         width: "8px",
                                                         height: "8px",
                                                         borderRadius: "50%",
-                                                        background: "#22c55e",
+                                                        background: "#3b82f6",
                                                     }}
                                                 ></span>
                                                 {lang.posts.likeCount}{" "}
@@ -231,17 +235,17 @@ export default function VideoPerformanceChart({
                     <Line
                         type="monotone"
                         dataKey="views"
-                        stroke="#3b82f6"
+                        stroke="#fa9191"
                         strokeWidth={2}
-                        dot={{ fill: "#3b82f6", r: 3 }}
+                        dot={{ fill: "#fa9191", r: 3 }}
                         activeDot={{ r: 5 }}
                     />
                     <Line
                         type="monotone"
                         dataKey="likes"
-                        stroke="#22c55e"
+                        stroke="#3b82f6"
                         strokeWidth={2}
-                        dot={{ fill: "#22c55e", r: 3 }}
+                        dot={{ fill: "#3b82f6", r: 3 }}
                         activeDot={{ r: 5 }}
                     />
                     <Line

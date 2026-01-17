@@ -194,41 +194,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 </div>
             </section>
 
-            {/* Funnel Analysis */}
-            <section>
-                <h3 className={styles.sectionTitle}>{lang.analysis.funnelAnalysis.title}</h3>
-                <div style={{ marginTop: "1rem" }}>
-                    <div className={styles.card}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                            {/* TOFU */}
-                            <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "0.25rem 0.5rem", background: "#3b82f6", color: "white", borderRadius: "0.25rem" }}>TOFU</span>
-                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>{lang.analysis.funnelAnalysis.tofu}</span>
-                                </div>
-                                <p style={{ fontSize: "12px", lineHeight: "1.6", color: "#444" }}>{report_part_2.funnel_analysis.tofu}</p>
-                            </div>
-                            {/* MOFU */}
-                            <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "0.25rem 0.5rem", background: "#f59e0b", color: "white", borderRadius: "0.25rem" }}>MOFU</span>
-                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>{lang.analysis.funnelAnalysis.mofu}</span>
-                                </div>
-                                <p style={{ fontSize: "12px", lineHeight: "1.6", color: "#444" }}>{report_part_2.funnel_analysis.mofu}</p>
-                            </div>
-                            {/* BOFU */}
-                            <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "0.25rem 0.5rem", background: "#10b981", color: "white", borderRadius: "0.25rem" }}>BOFU</span>
-                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>{lang.analysis.funnelAnalysis.bofu}</span>
-                                </div>
-                                <p style={{ fontSize: "12px", lineHeight: "1.6", color: "#444" }}>{report_part_2.funnel_analysis.bofu}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Content Pillars */}
             <section>
                 <h3 className={styles.sectionTitle}>{lang.analysis.contentPillars.title}</h3>
@@ -244,124 +209,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                     ))}
                 </div>
             </section>
-
-            {/* Audience Analysis */}
-            {report_part_2.audience_analysis && (
-                <section>
-                    <h3 className={styles.sectionTitle}>{lang.analysis.audienceAnalysis.title}</h3>
-                    <div className={styles.grid2}>
-                        {/* Demographics */}
-                        <div className={styles.card}>
-                            <h4 className={styles.cardTitle}>{lang.analysis.audienceAnalysis.demographicsTitle}</h4>
-                            <div style={{ fontSize: "11px", lineHeight: "1.8" }}>
-                                {report_part_2.audience_analysis.demographics?.age_distribution && (
-                                    <div style={{ marginBottom: "1rem" }}>
-                                        <strong>{lang.analysis.audienceAnalysis.ageDistribution}</strong>
-                                        <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                                            {report_part_2.audience_analysis.demographics.age_distribution.map((age, i) => (
-                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                    <span style={{ minWidth: "50px", fontSize: "10px" }}>{age.range}</span>
-                                                    <div style={{ flex: 1, height: "6px", background: "#f0f0f0", borderRadius: "3px", overflow: "hidden" }}>
-                                                        <div style={{ width: `${age.percentage}%`, height: "100%", background: "#e53935", borderRadius: "3px" }}></div>
-                                                    </div>
-                                                    <span style={{ minWidth: "30px", fontSize: "10px", textAlign: "right" }}>{age.percentage}%</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                {report_part_2.audience_analysis.demographics?.gender_split && (
-                                    <div style={{ marginBottom: "1rem" }}>
-                                        <strong>{lang.analysis.audienceAnalysis.genderSplit}</strong>
-                                        <div style={{ marginTop: "0.5rem", display: "flex", gap: "1rem" }}>
-                                            <span style={{ color: "#3b82f6" }}>{lang.analysis.audienceAnalysis.male}: {report_part_2.audience_analysis.demographics.gender_split.male}%</span>
-                                            <span style={{ color: "#ec4899" }}>{lang.analysis.audienceAnalysis.female}: {report_part_2.audience_analysis.demographics.gender_split.female}%</span>
-                                            {report_part_2.audience_analysis.demographics.gender_split.other > 0 && (
-                                                <span style={{ color: "#8b5cf6" }}>{lang.analysis.audienceAnalysis.other}: {report_part_2.audience_analysis.demographics.gender_split.other}%</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                                {report_part_2.audience_analysis.demographics?.top_countries && (
-                                    <div style={{ marginBottom: "1rem" }}>
-                                        <strong>{lang.analysis.audienceAnalysis.topCountries}</strong>
-                                        <div style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                                            {report_part_2.audience_analysis.demographics.top_countries.map((country, i) => (
-                                                <span key={i} className={styles.angleTag}>{country.country} ({country.percentage}%)</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                <p><strong>{lang.analysis.audienceAnalysis.primaryLanguages}</strong> {report_part_2.audience_analysis.demographics?.primary_languages?.join(", ")}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.incomeLevel}</strong> {report_part_2.audience_analysis.demographics?.income_level}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.educationLevel}</strong> {report_part_2.audience_analysis.demographics?.education_level}</p>
-                            </div>
-                        </div>
-                        {/* Behavior */}
-                        <div className={styles.card}>
-                            <h4 className={styles.cardTitle}>{lang.analysis.audienceAnalysis.behaviorTitle}</h4>
-                            <div style={{ fontSize: "11px", lineHeight: "1.8" }}>
-                                <p><strong>{lang.analysis.audienceAnalysis.estimatedWatchTime}</strong> {report_part_2.audience_analysis.behavior?.estimated_watch_time}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.returningVsNew}</strong> {report_part_2.audience_analysis.behavior?.returning_vs_new_ratio}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.subscriberGrowth}</strong> {report_part_2.audience_analysis.behavior?.subscriber_growth_trend}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.peakViewingDays}</strong> {report_part_2.audience_analysis.behavior?.peak_viewing_days?.join(", ")}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.peakViewingHours}</strong> {report_part_2.audience_analysis.behavior?.peak_viewing_hours?.join(", ")}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.engagementPatterns}</strong> {report_part_2.audience_analysis.behavior?.engagement_patterns}</p>
-                                <p><strong>{lang.analysis.audienceAnalysis.devicePreferences}</strong> {report_part_2.audience_analysis.behavior?.device_preferences}</p>
-                                {report_part_2.audience_analysis.psychographics && (
-                                    <div style={{ marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "0.75rem" }}>
-                                        <strong>{lang.analysis.audienceAnalysis.psychographicsTitle}</strong>
-                                        <p style={{ marginTop: "0.5rem" }}><strong>{lang.analysis.audienceAnalysis.values}</strong> {report_part_2.audience_analysis.psychographics.values?.join(", ")}</p>
-                                        <p><strong>{lang.analysis.audienceAnalysis.lifestyle}</strong> {report_part_2.audience_analysis.psychographics.lifestyle}</p>
-                                        <p><strong>{lang.analysis.audienceAnalysis.purchaseBehavior}</strong> {report_part_2.audience_analysis.psychographics.purchase_behavior}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* Audience Personas */}
-            {report_part_2.audience_personas && report_part_2.audience_personas.length > 0 && (
-                <section>
-                    <h3 className={styles.sectionTitle}>{lang.analysis.audiencePersonas.title}</h3>
-                    <div className={styles.grid2}>
-                        {report_part_2.audience_personas.map((persona, idx) => (
-                            <div key={idx} className={styles.card}>
-                                <h4 className={styles.cardTitle} style={{ color: "#6366f1" }}>{persona.name}</h4>
-                                {persona.avatar_description && (
-                                    <p style={{ fontSize: "11px", color: "#666", marginBottom: "0.75rem", fontStyle: "italic" }}>{persona.avatar_description}</p>
-                                )}
-                                <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.25rem 1rem", marginBottom: "0.75rem" }}>
-                                        {persona.age_range && <p><strong>{lang.analysis.audiencePersonas.ageRange}</strong> {persona.age_range}</p>}
-                                        {persona.gender && <p><strong>{lang.analysis.audiencePersonas.gender}</strong> {persona.gender}</p>}
-                                        {persona.location && <p><strong>{lang.analysis.audiencePersonas.location}</strong> {persona.location}</p>}
-                                        {persona.occupation && <p><strong>{lang.analysis.audiencePersonas.occupation}</strong> {persona.occupation}</p>}
-                                        {persona.viewing_frequency && <p><strong>{lang.analysis.audiencePersonas.viewingFrequency}</strong> {persona.viewing_frequency}</p>}
-                                    </div>
-                                    <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.interests}</strong> {persona.interests?.join(", ")}</p>
-                                    <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.painPoints}</strong> {persona.pain_points?.join(", ")}</p>
-                                    {persona.goals && persona.goals.length > 0 && (
-                                        <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.goals}</strong> {persona.goals.join(", ")}</p>
-                                    )}
-                                    <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.contentPreferences}</strong> {persona.content_preferences}</p>
-                                    {persona.preferred_video_length && (
-                                        <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.preferredVideoLength}</strong> {persona.preferred_video_length}</p>
-                                    )}
-                                    {persona.social_platforms && persona.social_platforms.length > 0 && (
-                                        <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.socialPlatforms}</strong> {persona.social_platforms.join(", ")}</p>
-                                    )}
-                                    {persona.buying_triggers && persona.buying_triggers.length > 0 && (
-                                        <p style={{ marginBottom: 0 }}><strong>{lang.analysis.audiencePersonas.buyingTriggers}</strong> {persona.buying_triggers.join(", ")}</p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
 
             {/* Content Calendar Insights - Current vs Recommended */}
             {(currentStats || report_part_2.content_calendar) && (
@@ -521,19 +368,153 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 </section>
             )}
 
-            {/* Growth Opportunities */}
-            {report_part_2.growth_opportunities && report_part_2.growth_opportunities.length > 0 && (
-                <section>
-                    <h3 className={styles.sectionTitle}>{lang.analysis.growthOpportunities.title}</h3>
-                    <div style={{ display: "grid", gap: "0.75rem" }}>
-                        {report_part_2.growth_opportunities.map((opp, idx) => (
-                            <div key={idx} className={styles.card} style={{ borderLeft: `3px solid ${opp.priority === "high" ? "#ef4444" : opp.priority === "medium" ? "#f59e0b" : "#10b981"}` }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                                    <span style={{ fontSize: "9px", fontWeight: "700", padding: "0.125rem 0.375rem", borderRadius: "0.25rem", textTransform: "uppercase", background: opp.priority === "high" ? "#fef2f2" : opp.priority === "medium" ? "#fffbeb" : "#f0fdf4", color: opp.priority === "high" ? "#ef4444" : opp.priority === "medium" ? "#f59e0b" : "#10b981" }}>{opp.priority}</span>
-                                    <h4 style={{ fontSize: "12px", fontWeight: "600", margin: 0 }}>{opp.opportunity}</h4>
+            {/* Funnel Analysis */}
+            <section>
+                <h3 className={styles.sectionTitle}>{lang.analysis.funnelAnalysis.title}</h3>
+                <div style={{ marginTop: "1rem" }}>
+                    <div className={styles.card}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                            {/* TOFU */}
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "0.25rem 0.5rem", background: "#3b82f6", color: "white", borderRadius: "0.25rem" }}>TOFU</span>
+                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>{lang.analysis.funnelAnalysis.tofu}</span>
                                 </div>
-                                <p style={{ fontSize: "11px", color: "#666", marginBottom: "0.5rem" }}>{opp.description}</p>
-                                <p style={{ fontSize: "10px", color: "#10b981", fontWeight: "500" }}>{opp.expected_impact}</p>
+                                <p style={{ fontSize: "12px", lineHeight: "1.6", color: "#444" }}>{report_part_2.funnel_analysis.tofu}</p>
+                            </div>
+                            {/* MOFU */}
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "0.25rem 0.5rem", background: "#f59e0b", color: "white", borderRadius: "0.25rem" }}>MOFU</span>
+                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>{lang.analysis.funnelAnalysis.mofu}</span>
+                                </div>
+                                <p style={{ fontSize: "12px", lineHeight: "1.6", color: "#444" }}>{report_part_2.funnel_analysis.mofu}</p>
+                            </div>
+                            {/* BOFU */}
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "0.25rem 0.5rem", background: "#10b981", color: "white", borderRadius: "0.25rem" }}>BOFU</span>
+                                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>{lang.analysis.funnelAnalysis.bofu}</span>
+                                </div>
+                                <p style={{ fontSize: "12px", lineHeight: "1.6", color: "#444" }}>{report_part_2.funnel_analysis.bofu}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Audience Analysis */}
+            {report_part_2.audience_analysis && (
+                <section>
+                    <h3 className={styles.sectionTitle}>{lang.analysis.audienceAnalysis.title}</h3>
+                    <div className={styles.grid2}>
+                        {/* Demographics */}
+                        <div className={styles.card}>
+                            <h4 className={styles.cardTitle}>{lang.analysis.audienceAnalysis.demographicsTitle}</h4>
+                            <div style={{ fontSize: "11px", lineHeight: "1.8" }}>
+                                {report_part_2.audience_analysis.demographics?.age_distribution && (
+                                    <div style={{ marginBottom: "1rem" }}>
+                                        <strong>{lang.analysis.audienceAnalysis.ageDistribution}</strong>
+                                        <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                            {report_part_2.audience_analysis.demographics.age_distribution.map((age, i) => (
+                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                    <span style={{ minWidth: "50px", fontSize: "10px" }}>{age.range}</span>
+                                                    <div style={{ flex: 1, height: "6px", background: "#f0f0f0", borderRadius: "3px", overflow: "hidden" }}>
+                                                        <div style={{ width: `${age.percentage}%`, height: "100%", background: "#e53935", borderRadius: "3px" }}></div>
+                                                    </div>
+                                                    <span style={{ minWidth: "30px", fontSize: "10px", textAlign: "right" }}>{age.percentage}%</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {report_part_2.audience_analysis.demographics?.gender_split && (
+                                    <div style={{ marginBottom: "1rem" }}>
+                                        <strong>{lang.analysis.audienceAnalysis.genderSplit}</strong>
+                                        <div style={{ marginTop: "0.5rem", display: "flex", gap: "1rem" }}>
+                                            <span style={{ color: "#3b82f6" }}>{lang.analysis.audienceAnalysis.male}: {report_part_2.audience_analysis.demographics.gender_split.male}%</span>
+                                            <span style={{ color: "#ec4899" }}>{lang.analysis.audienceAnalysis.female}: {report_part_2.audience_analysis.demographics.gender_split.female}%</span>
+                                            {report_part_2.audience_analysis.demographics.gender_split.other > 0 && (
+                                                <span style={{ color: "#8b5cf6" }}>{lang.analysis.audienceAnalysis.other}: {report_part_2.audience_analysis.demographics.gender_split.other}%</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                                {report_part_2.audience_analysis.demographics?.top_countries && (
+                                    <div style={{ marginBottom: "1rem" }}>
+                                        <strong>{lang.analysis.audienceAnalysis.topCountries}</strong>
+                                        <div style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                                            {report_part_2.audience_analysis.demographics.top_countries.map((country, i) => (
+                                                <span key={i} className={styles.angleTag}>{country.country} ({country.percentage}%)</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <p><strong>{lang.analysis.audienceAnalysis.primaryLanguages}</strong> {report_part_2.audience_analysis.demographics?.primary_languages?.join(", ")}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.incomeLevel}</strong> {report_part_2.audience_analysis.demographics?.income_level}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.educationLevel}</strong> {report_part_2.audience_analysis.demographics?.education_level}</p>
+                            </div>
+                        </div>
+                        {/* Behavior */}
+                        <div className={styles.card}>
+                            <h4 className={styles.cardTitle}>{lang.analysis.audienceAnalysis.behaviorTitle}</h4>
+                            <div style={{ fontSize: "11px", lineHeight: "1.8" }}>
+                                <p><strong>{lang.analysis.audienceAnalysis.estimatedWatchTime}</strong> {report_part_2.audience_analysis.behavior?.estimated_watch_time}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.returningVsNew}</strong> {report_part_2.audience_analysis.behavior?.returning_vs_new_ratio}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.subscriberGrowth}</strong> {report_part_2.audience_analysis.behavior?.subscriber_growth_trend}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.peakViewingDays}</strong> {report_part_2.audience_analysis.behavior?.peak_viewing_days?.join(", ")}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.peakViewingHours}</strong> {report_part_2.audience_analysis.behavior?.peak_viewing_hours?.join(", ")}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.engagementPatterns}</strong> {report_part_2.audience_analysis.behavior?.engagement_patterns}</p>
+                                <p><strong>{lang.analysis.audienceAnalysis.devicePreferences}</strong> {report_part_2.audience_analysis.behavior?.device_preferences}</p>
+                                {report_part_2.audience_analysis.psychographics && (
+                                    <div style={{ marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "0.75rem" }}>
+                                        <strong>{lang.analysis.audienceAnalysis.psychographicsTitle}</strong>
+                                        <p style={{ marginTop: "0.5rem" }}><strong>{lang.analysis.audienceAnalysis.values}</strong> {report_part_2.audience_analysis.psychographics.values?.join(", ")}</p>
+                                        <p><strong>{lang.analysis.audienceAnalysis.lifestyle}</strong> {report_part_2.audience_analysis.psychographics.lifestyle}</p>
+                                        <p><strong>{lang.analysis.audienceAnalysis.purchaseBehavior}</strong> {report_part_2.audience_analysis.psychographics.purchase_behavior}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Audience Personas */}
+            {report_part_2.audience_personas && report_part_2.audience_personas.length > 0 && (
+                <section>
+                    <h3 className={styles.sectionTitle}>{lang.analysis.audiencePersonas.title}</h3>
+                    <div className={styles.grid2}>
+                        {report_part_2.audience_personas.map((persona, idx) => (
+                            <div key={idx} className={styles.card}>
+                                <h4 className={styles.cardTitle} style={{ color: "#6366f1" }}>{persona.name}</h4>
+                                {persona.avatar_description && (
+                                    <p style={{ fontSize: "11px", color: "#666", marginBottom: "0.75rem", fontStyle: "italic" }}>{persona.avatar_description}</p>
+                                )}
+                                <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.25rem 1rem", marginBottom: "0.75rem" }}>
+                                        {persona.age_range && <p><strong>{lang.analysis.audiencePersonas.ageRange}</strong> {persona.age_range}</p>}
+                                        {persona.gender && <p><strong>{lang.analysis.audiencePersonas.gender}</strong> {persona.gender}</p>}
+                                        {persona.location && <p><strong>{lang.analysis.audiencePersonas.location}</strong> {persona.location}</p>}
+                                        {persona.occupation && <p><strong>{lang.analysis.audiencePersonas.occupation}</strong> {persona.occupation}</p>}
+                                        {persona.viewing_frequency && <p><strong>{lang.analysis.audiencePersonas.viewingFrequency}</strong> {persona.viewing_frequency}</p>}
+                                    </div>
+                                    <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.interests}</strong> {persona.interests?.join(", ")}</p>
+                                    <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.painPoints}</strong> {persona.pain_points?.join(", ")}</p>
+                                    {persona.goals && persona.goals.length > 0 && (
+                                        <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.goals}</strong> {persona.goals.join(", ")}</p>
+                                    )}
+                                    <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.contentPreferences}</strong> {persona.content_preferences}</p>
+                                    {persona.preferred_video_length && (
+                                        <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.preferredVideoLength}</strong> {persona.preferred_video_length}</p>
+                                    )}
+                                    {persona.social_platforms && persona.social_platforms.length > 0 && (
+                                        <p style={{ marginBottom: "0.5rem" }}><strong>{lang.analysis.audiencePersonas.socialPlatforms}</strong> {persona.social_platforms.join(", ")}</p>
+                                    )}
+                                    {persona.buying_triggers && persona.buying_triggers.length > 0 && (
+                                        <p style={{ marginBottom: 0 }}><strong>{lang.analysis.audiencePersonas.buyingTriggers}</strong> {persona.buying_triggers.join(", ")}</p>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -664,6 +645,25 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                             </div>
                         </div>
                     )}
+                </section>
+            )}
+
+            {/* Growth Opportunities */}
+            {report_part_2.growth_opportunities && report_part_2.growth_opportunities.length > 0 && (
+                <section>
+                    <h3 className={styles.sectionTitle}>{lang.analysis.growthOpportunities.title}</h3>
+                    <div style={{ display: "grid", gap: "0.75rem" }}>
+                        {report_part_2.growth_opportunities.map((opp, idx) => (
+                            <div key={idx} className={styles.card} style={{ borderLeft: `3px solid ${opp.priority === "high" ? "#ef4444" : opp.priority === "medium" ? "#f59e0b" : "#10b981"}` }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                                    <span style={{ fontSize: "9px", fontWeight: "700", padding: "0.125rem 0.375rem", borderRadius: "0.25rem", textTransform: "uppercase", background: opp.priority === "high" ? "#fef2f2" : opp.priority === "medium" ? "#fffbeb" : "#f0fdf4", color: opp.priority === "high" ? "#ef4444" : opp.priority === "medium" ? "#f59e0b" : "#10b981" }}>{opp.priority}</span>
+                                    <h4 style={{ fontSize: "12px", fontWeight: "600", margin: 0 }}>{opp.opportunity}</h4>
+                                </div>
+                                <p style={{ fontSize: "11px", color: "#666", marginBottom: "0.5rem" }}>{opp.description}</p>
+                                <p style={{ fontSize: "10px", color: "#10b981", fontWeight: "500" }}>{opp.expected_impact}</p>
+                            </div>
+                        ))}
+                    </div>
                 </section>
             )}
         </div>

@@ -61,8 +61,7 @@ export const vi = {
             analysis: "Phân tích",
             evaluation: "Đánh giá",
         },
-        description:
-            "Báo cáo phân tích kênh {brandName} - Ngày tạo: {reportDate}",
+        description: "Báo cáo kênh {brandName} - Ngày tạo: {reportDate}",
     },
 
     channel: {

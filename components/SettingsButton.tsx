@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useLanguage, LanguageCode } from "@/lib/lang";
+import { getUserSettings, saveUserSettings } from "@/lib/userSettings";
 import styles from "./SettingsButton.module.css";
 
 export default function SettingsButton() {
@@ -15,10 +16,24 @@ export default function SettingsButton() {
 
     // Load saved keys from localStorage
     useEffect(() => {
-        const savedGemini = localStorage.getItem("gemini_api_key") || "";
-        const savedYoutube = localStorage.getItem("youtube_api_key") || "";
-        setGeminiKey(savedGemini);
-        setYoutubeKey(savedYoutube);
+        // Migrate old keys to new format if they exist
+        const oldGemini = localStorage.getItem("gemini_api_key");
+        const oldYoutube = localStorage.getItem("youtube_api_key");
+
+        if (oldGemini || oldYoutube) {
+            // Migrate to new format
+            saveUserSettings({
+                geminiApiKey: oldGemini || undefined,
+                youtubeApiKey: oldYoutube || undefined,
+            });
+            // Remove old keys
+            localStorage.removeItem("gemini_api_key");
+            localStorage.removeItem("youtube_api_key");
+        }
+
+        const settings = getUserSettings();
+        setGeminiKey(settings.geminiApiKey || "");
+        setYoutubeKey(settings.youtubeApiKey || "");
     }, []);
 
     // Close panel when clicking outside
@@ -53,8 +68,10 @@ export default function SettingsButton() {
 
     const handleSave = () => {
         setSaveStatus("saving");
-        localStorage.setItem("gemini_api_key", geminiKey);
-        localStorage.setItem("youtube_api_key", youtubeKey);
+        saveUserSettings({
+            geminiApiKey: geminiKey || undefined,
+            youtubeApiKey: youtubeKey || undefined,
+        });
 
         setTimeout(() => {
             setSaveStatus("saved");
