@@ -66,7 +66,11 @@ export default function AnalysisForm({
 
     return (
         <div className={styles.container} role="search">
-            <form onSubmit={handleSubmit} className={styles.form} aria-label="YouTube Channel Analysis">
+            <form
+                onSubmit={handleSubmit}
+                className={styles.form}
+                aria-label="YouTube Channel Analysis"
+            >
                 <div className={styles.inputGroup}>
                     <label htmlFor="channel-url" className="sr-only">
                         YouTube Channel URL

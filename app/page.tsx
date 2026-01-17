@@ -74,7 +74,8 @@ export default function Home() {
         const urlExtractedId = extractChannelIdFromUrl(channelUrl);
         if (urlExtractedId) {
             // Try to resolve URL ID to actual channel ID
-            const actualChannelId = resolveChannelId(urlExtractedId) || urlExtractedId;
+            const actualChannelId =
+                resolveChannelId(urlExtractedId) || urlExtractedId;
 
             // Check for cached reports using actual channel ID
             const cachedReports = getCachedReportsForChannel(actualChannelId);
@@ -87,7 +88,7 @@ export default function Home() {
                     urlExtractedId,
                     actualChannelId,
                     channelName: cachedReports[0].brandName,
-                    cachedReports: cachedReports.map(r => ({
+                    cachedReports: cachedReports.map((r) => ({
                         timestamp: r.timestamp,
                         createdAt: r.createdAt,
                     })),
@@ -100,7 +101,10 @@ export default function Home() {
         await performAnalysis(channelUrl, urlExtractedId);
     };
 
-    const performAnalysis = async (channelUrl: string, urlExtractedId: string | null) => {
+    const performAnalysis = async (
+        channelUrl: string,
+        urlExtractedId: string | null
+    ) => {
         setIsLoading(true);
         setError(null);
         setReport(null);
@@ -120,9 +124,14 @@ export default function Home() {
                 setReport(newReport);
 
                 // Cache the report using actual channel ID
-                const actualChannelId = newReport.report_part_1?.channel_info?.channelId;
+                const actualChannelId =
+                    newReport.report_part_1?.channel_info?.channelId;
                 if (actualChannelId) {
-                    setCachedReport(actualChannelId, newReport, urlExtractedId || undefined);
+                    setCachedReport(
+                        actualChannelId,
+                        newReport,
+                        urlExtractedId || undefined
+                    );
                     console.log("Report cached for:", actualChannelId);
                 }
             } else {
@@ -149,7 +158,10 @@ export default function Home() {
     };
 
     const handleSelectReport = (timestamp: number) => {
-        const report = getCachedReportByTimestamp(cachePrompt.actualChannelId, timestamp);
+        const report = getCachedReportByTimestamp(
+            cachePrompt.actualChannelId,
+            timestamp
+        );
         if (report) {
             setReport(report);
         }
@@ -224,7 +236,11 @@ export default function Home() {
                 )}
 
                 {isLoading && (
-                    <div className="container py-8" aria-live="polite" aria-busy="true">
+                    <div
+                        className="container py-8"
+                        aria-live="polite"
+                        aria-busy="true"
+                    >
                         <LoadingState />
                     </div>
                 )}
@@ -240,7 +256,11 @@ export default function Home() {
             </div>
 
             {error && (
-                <div className="toast-container" role="alert" aria-live="assertive">
+                <div
+                    className="toast-container"
+                    role="alert"
+                    aria-live="assertive"
+                >
                     <div className="toast toast-error">
                         <span className="text-[12px]">{error}</span>
                         <button

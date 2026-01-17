@@ -63,7 +63,9 @@ ${i + 1}. ${v.title}
    - Lượt xem: ${v.views.toLocaleString()}
    - Lượt thích: ${v.likes.toLocaleString()}
    - Bình luận: ${v.comments.toLocaleString()}
-   - Ngày đăng: ${new Date(v.publishedAt).toLocaleDateString("vi-VN")} lúc ${new Date(v.publishedAt).getHours()}:00
+   - Ngày đăng: ${new Date(v.publishedAt).toLocaleDateString(
+       "vi-VN"
+   )} lúc ${new Date(v.publishedAt).getHours()}:00
    - Tags: ${v.tags.slice(0, 5).join(", ") || "Không có"}
    - Mô tả: ${v.description.substring(0, 200)}...
 `
@@ -73,7 +75,15 @@ ${i + 1}. ${v.title}
 YÊU CẦU:
 Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trúc sau:
 
-${JSON_STRUCTURE_TEMPLATE(videosData.length, totalVideoViews, totalLikes, subscriberCount, videoCount, avgViews, topVideoViews)}
+${JSON_STRUCTURE_TEMPLATE(
+    videosData.length,
+    totalVideoViews,
+    totalLikes,
+    subscriberCount,
+    videoCount,
+    avgViews,
+    topVideoViews
+)}
 
 QUAN TRỌNG:
 - Trả về CHÍNH XÁC object JSON hợp lệ, không có markdown hay text khác
@@ -414,13 +424,21 @@ function JSON_STRUCTURE_TEMPLATE(
         {
           "title": "Tiêu đề video hấp dẫn, cụ thể cho kênh này",
           "concept": "Mô tả chi tiết concept, cách triển khai",
-          "estimated_views": "Ước tính lượt xem dựa trên hiệu suất kênh (VD: '${Math.round(avgViews * 0.8).toLocaleString()} - ${Math.round(avgViews * 1.5).toLocaleString()}')",
+          "estimated_views": "Ước tính lượt xem dựa trên hiệu suất kênh (VD: '${Math.round(
+              avgViews * 0.8
+          ).toLocaleString()} - ${Math.round(
+        avgViews * 1.5
+    ).toLocaleString()}')",
           "content_type": "Loại nội dung (hướng dẫn/review/vlog/giải trí...)"
         },
         {
           "title": "Tiêu đề video 2 - viral potential",
           "concept": "Mô tả concept có tiềm năng viral dựa trên video hiệu suất cao nhất của kênh",
-          "estimated_views": "Ước tính lượt xem (VD: '${Math.round(topVideoViews * 0.5).toLocaleString()} - ${Math.round(topVideoViews * 0.8).toLocaleString()}')",
+          "estimated_views": "Ước tính lượt xem (VD: '${Math.round(
+              topVideoViews * 0.5
+          ).toLocaleString()} - ${Math.round(
+        topVideoViews * 0.8
+    ).toLocaleString()}')",
           "content_type": "Loại nội dung"
         },
         {

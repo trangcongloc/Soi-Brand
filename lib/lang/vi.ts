@@ -45,7 +45,7 @@ export const vi = {
         title: "Đang phân tích kênh YouTube...",
         steps: {
             validating: "Kiểm tra URL...",
-            fetchingChannel: "lấy thông tin kênh...",
+            fetchingChannel: "Lấy thông tin kênh...",
             fetchingVideos: "Tải danh sách video...",
             analyzingContent: "Phân tích nội dung...",
             generatingReport: "Tạo báo cáo...",
