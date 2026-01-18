@@ -20,17 +20,33 @@ import {
 } from "@/lib/cache";
 
 const staggerContainer = {
+    initial: { opacity: 0 },
     animate: {
+        opacity: 1,
         transition: {
-            staggerChildren: 0.1
-        }
-    }
+            staggerChildren: 0.1,
+            delayChildren: 0.1,
+        },
+    },
+    exit: {
+        opacity: 0,
+        transition: {
+            duration: 0.01,
+        },
+    },
 };
 
 const fadeInUp = {
     initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4, ease: "easeOut" }
+    animate: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.3, ease: "easeOut" as const },
+    },
+    exit: {
+        opacity: 0,
+        transition: { duration: 0.01 },
+    },
 };
 
 interface FilterState {
@@ -51,6 +67,16 @@ export default function Home() {
     useEffect(() => {
         clearExpiredReports();
     }, []);
+
+    // Auto dismiss error after 5 seconds
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => {
+                setError(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
 
     const handleAnalyze = async (channelUrl: string) => {
         setError(null);
@@ -169,6 +195,7 @@ export default function Home() {
                             animate="animate"
                             exit="exit"
                             variants={staggerContainer}
+                            transition={{ duration: 0.12 }}
                         >
                             <div className="container max-w-2xl mx-auto text-center py-16 md:py-24">
                                 {lang.home.title && (
@@ -187,9 +214,19 @@ export default function Home() {
                                         onSubmit={handleAnalyze}
                                         onError={(msg) => setError(msg)}
                                         isLoading={isLoading}
-                                        filteredChannelName={filter?.channelName}
+                                        filteredChannelName={
+                                            filter?.channelName
+                                        }
                                         onClearFilter={handleClearFilter}
-                                        onReanalyze={filter ? () => performAnalysis(filter.channelUrl, filter.urlExtractedId) : undefined}
+                                        onReanalyze={
+                                            filter
+                                                ? () =>
+                                                      performAnalysis(
+                                                          filter.channelUrl,
+                                                          filter.urlExtractedId
+                                                      )
+                                                : undefined
+                                        }
                                     />
                                 </motion.div>
                             </div>
@@ -219,10 +256,10 @@ export default function Home() {
                             className="container py-8"
                             aria-live="polite"
                             aria-busy="true"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.25 }}
                         >
                             <LoadingState />
                         </motion.div>
@@ -232,10 +269,9 @@ export default function Home() {
                         <motion.div
                             key="report"
                             className="container py-8"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -30 }}
-                            transition={{ duration: 0.4, ease: "easeOut" }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1, transition: { duration: 0.15 } }}
+                            exit={{ opacity: 0, transition: { duration: 0.01 } }}
                         >
                             <ReportDisplay
                                 report={report}
@@ -248,16 +284,16 @@ export default function Home() {
 
             <AnimatePresence>
                 {error && (
-                    <motion.div
-                        className="toast-container"
-                        role="alert"
-                        aria-live="assertive"
-                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 50, scale: 0.9 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                    >
-                        <div className="toast toast-error">
+                    <div className="toast-container">
+                        <motion.div
+                            className="toast toast-error"
+                            role="alert"
+                            aria-live="assertive"
+                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                        >
                             <span className="text-[12px]">{error}</span>
                             <button
                                 onClick={() => setError(null)}
@@ -266,8 +302,8 @@ export default function Home() {
                             >
                                 ✕
                             </button>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </main>
