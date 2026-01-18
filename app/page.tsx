@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
 import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
@@ -17,6 +18,20 @@ import {
     clearExpiredReports,
     resolveChannelId,
 } from "@/lib/cache";
+
+const staggerContainer = {
+    animate: {
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.4, ease: "easeOut" }
+};
 
 interface FilterState {
     channelId: string;
@@ -146,74 +161,115 @@ export default function Home() {
                 className={`flex-1 ${!report ? "center-screen" : ""}`}
                 role="main"
             >
-                {!report && !isLoading && (
-                    <>
-                        <div className="container max-w-2xl mx-auto text-center py-16 md:py-24">
-                            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em] fade-in">
-                                {lang.home.title}
-                            </h1>
-                            <div className="max-w-md mx-auto mb-8 px-4 fade-in-delay-1">
-                                <AnalysisForm
-                                    onSubmit={handleAnalyze}
+                <AnimatePresence mode="wait">
+                    {!report && !isLoading && (
+                        <motion.div
+                            key="home"
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            variants={staggerContainer}
+                        >
+                            <div className="container max-w-2xl mx-auto text-center py-16 md:py-24">
+                                {lang.home.title && (
+                                    <motion.h1
+                                        className="text-[36px] md:text-[52px] font-extrabold tracking-tight mb-5 leading-[1.1] letter-spacing-[-0.03em]"
+                                        variants={fadeInUp}
+                                    >
+                                        {lang.home.title}
+                                    </motion.h1>
+                                )}
+                                <motion.div
+                                    className="max-w-md mx-auto mb-8 px-4"
+                                    variants={fadeInUp}
+                                >
+                                    <AnalysisForm
+                                        onSubmit={handleAnalyze}
+                                        onError={(msg) => setError(msg)}
+                                        isLoading={isLoading}
+                                        filteredChannelName={filter?.channelName}
+                                        onClearFilter={handleClearFilter}
+                                        onReanalyze={filter ? () => performAnalysis(filter.channelUrl, filter.urlExtractedId) : undefined}
+                                    />
+                                </motion.div>
+                            </div>
+                            <motion.div
+                                className="container max-w-lg mx-auto px-4 pb-16"
+                                variants={fadeInUp}
+                            >
+                                <AnalysisHistory
+                                    onLoadReport={(loadedReport) => {
+                                        setReport(loadedReport);
+                                        setError(null);
+                                        setFilter(null);
+                                    }}
+                                    filteredChannelId={filter?.channelId}
+                                    filteredChannelName={filter?.channelName}
+                                    onClearFilter={handleClearFilter}
                                     onUpload={handleUpload}
                                     onError={(msg) => setError(msg)}
-                                    isLoading={isLoading}
                                 />
-                            </div>
-                        </div>
-                        <div className="container max-w-lg mx-auto px-4 pb-16 fade-in-delay-2">
-                            <AnalysisHistory
-                                onLoadReport={(loadedReport) => {
-                                    setReport(loadedReport);
-                                    setError(null);
-                                    setFilter(null);
-                                }}
-                                filteredChannelId={filter?.channelId}
-                                filteredChannelName={filter?.channelName}
-                                onClearFilter={handleClearFilter}
+                            </motion.div>
+                        </motion.div>
+                    )}
+
+                    {isLoading && (
+                        <motion.div
+                            key="loading"
+                            className="container py-8"
+                            aria-live="polite"
+                            aria-busy="true"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                        >
+                            <LoadingState />
+                        </motion.div>
+                    )}
+
+                    {report && !isLoading && (
+                        <motion.div
+                            key="report"
+                            className="container py-8"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -30 }}
+                            transition={{ duration: 0.4, ease: "easeOut" }}
+                        >
+                            <ReportDisplay
+                                report={report}
+                                onReset={() => setReport(null)}
                             />
-                        </div>
-                    </>
-                )}
-
-                {isLoading && (
-                    <div
-                        className="container py-8"
-                        aria-live="polite"
-                        aria-busy="true"
-                    >
-                        <LoadingState />
-                    </div>
-                )}
-
-                {report && !isLoading && (
-                    <div className="container py-8 fade-in">
-                        <ReportDisplay
-                            report={report}
-                            onReset={() => setReport(null)}
-                        />
-                    </div>
-                )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            {error && (
-                <div
-                    className="toast-container"
-                    role="alert"
-                    aria-live="assertive"
-                >
-                    <div className="toast toast-error">
-                        <span className="text-[12px]">{error}</span>
-                        <button
-                            onClick={() => setError(null)}
-                            className="ml-1 opacity-50 hover:opacity-100"
-                            aria-label="Dismiss error"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                </div>
-            )}
+            <AnimatePresence>
+                {error && (
+                    <motion.div
+                        className="toast-container"
+                        role="alert"
+                        aria-live="assertive"
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                    >
+                        <div className="toast toast-error">
+                            <span className="text-[12px]">{error}</span>
+                            <button
+                                onClick={() => setError(null)}
+                                className="ml-1 opacity-50 hover:opacity-100"
+                                aria-label="Dismiss error"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }

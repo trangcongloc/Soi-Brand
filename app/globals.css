@@ -121,8 +121,9 @@ input {
 }
 
 .input:focus {
-    border-color: var(--text-main);
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.02);
+    outline: none;
+    border-color: var(--border);
+    box-shadow: none;
 }
 
 /* Animations */

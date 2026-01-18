@@ -13,6 +13,47 @@
     width: 100%;
 }
 
+.inputWrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.arrowButton {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: #000000;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.arrowButton:hover:not(:disabled) {
+    background: #1a1a1a;
+}
+
+.arrowButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .errorText {
     color: #ef4444;
     font-size: 10px;
@@ -22,8 +63,40 @@
     padding-left: 4px;
 }
 
-.actions {
-    display: flex;
-    gap: 0.5rem;
+.channelNameDisplay {
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 0;
+    min-height: 56px;
+    gap: 0.75rem;
+}
+
+.backButton {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.backButton:hover {
+    background: var(--bg-hover);
+    color: var(--text-main);
+}
+
+.channelNameText {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
 }

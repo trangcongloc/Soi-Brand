@@ -1,6 +1,6 @@
 export const en = {
     metadata: {
-        title: "'Soi' Brand",
+        title: "OurTube",
         description:
             "Professional YouTube marketing strategy analysis tool, using AI to generate detailed reports about your YouTube channel.",
         keywords:
@@ -8,7 +8,7 @@ export const en = {
     },
 
     home: {
-        title: "'Soi' Brand",
+        title: "",
     },
 
     common: {

@@ -7,7 +7,7 @@ import {
     clearAllReports,
 } from "@/lib/cache";
 import { MarketingReport } from "@/lib/types";
-import { useLanguage } from "@/lib/lang";
+import { useLanguage, useLang } from "@/lib/lang";
 import { colors } from "@/lib/theme";
 
 interface AnalysisHistoryProps {
@@ -17,6 +17,9 @@ interface AnalysisHistoryProps {
     filteredChannelId?: string;
     filteredChannelName?: string;
     onClearFilter?: () => void;
+    // Upload props
+    onUpload?: (report: MarketingReport) => void;
+    onError?: (msg: string) => void;
 }
 
 interface HistoryItem {
@@ -48,10 +51,15 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
     onLoadReport,
     onHistoryChange,
     filteredChannelId,
-    filteredChannelName,
+    filteredChannelName: _filteredChannelName,
     onClearFilter,
+    onUpload,
+    onError,
 }) => {
+    // Note: filteredChannelName is kept in props for API compatibility but not used
+    void _filteredChannelName;
     const { langCode } = useLanguage();
+    const lang = useLang();
     const [allHistory, setAllHistory] = useState<HistoryItem[]>(() =>
         getCachedChannelList()
     );
@@ -59,6 +67,29 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const json = JSON.parse(event.target?.result as string);
+                if (json.report_part_1 && json.brand_name) {
+                    onUpload?.(json as MarketingReport);
+                } else {
+                    onError?.(lang.form.errors.invalidJson);
+                }
+            } catch (err) {
+                onError?.(lang.form.errors.cannotReadJson);
+            }
+        };
+        reader.readAsText(file);
+        // Reset input
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
 
     // Track direction for animations using a ref (updated synchronously during render)
     const directionRef = useRef<1 | -1>(1); // 1 = forward, -1 = backward
@@ -197,36 +228,6 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                 gap: "0.5rem",
                             }}
                         >
-                            {isFiltered && onClearFilter && (
-                                <button
-                                    onClick={onClearFilter}
-                                    style={{
-                                        background: "transparent",
-                                        border: "none",
-                                        padding: "0.25rem",
-                                        cursor: "pointer",
-                                        color: colors.textSecondary,
-                                        display: "flex",
-                                        alignItems: "center",
-                                    }}
-                                    title={
-                                        langCode === "vi"
-                                            ? "Quay lại"
-                                            : "Go back"
-                                    }
-                                >
-                                    <svg
-                                        width="12"
-                                        height="12"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                    >
-                                        <path d="M19 12H5M12 19l-7-7 7-7" />
-                                    </svg>
-                                </button>
-                            )}
                             <h3
                                 style={{
                                     fontSize: "12px",
@@ -236,10 +237,9 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                 }}
                             >
                                 {isFiltered
-                                    ? filteredChannelName ||
-                                      (langCode === "vi"
-                                          ? "Báo cáo đã lưu"
-                                          : "Cached Reports")
+                                    ? langCode === "vi"
+                                        ? "Báo Cáo Đã Lưu"
+                                        : "Saved Reports"
                                     : langCode === "vi"
                                     ? "Lịch sử phân tích"
                                     : "Analysis History"}
@@ -256,7 +256,45 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                         </div>
 
                         {!isFiltered && (
-                            <>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                                {/* Upload JSON button */}
+                                {onUpload && (
+                                    <>
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            style={{
+                                                background: "transparent",
+                                                border: "none",
+                                                padding: "0.25rem",
+                                                cursor: "pointer",
+                                                color: colors.textSecondary,
+                                                display: "flex",
+                                                alignItems: "center",
+                                            }}
+                                            title={lang.form.uploadButtonTitle}
+                                        >
+                                            <svg
+                                                width="12"
+                                                height="12"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                                            </svg>
+                                        </button>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileUpload}
+                                            accept=".json"
+                                            style={{ display: "none" }}
+                                            aria-label="Upload JSON report"
+                                        />
+                                    </>
+                                )}
+                                {/* Delete all button */}
                                 {confirmDeleteAll ? (
                                     <div
                                         style={{
@@ -305,7 +343,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                             border: "none",
                                             padding: "0.25rem",
                                             cursor: "pointer",
-                                            color: colors.textSecondary,
+                                            color: "#ef4444",
                                             display: "flex",
                                             alignItems: "center",
                                             fontSize: "10px",
@@ -329,7 +367,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                         </svg>
                                     </button>
                                 )}
-                            </>
+                            </div>
                         )}
                     </div>
 
@@ -653,7 +691,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                             fontWeight: "600",
                                                             background:
                                                                 "transparent",
-                                                            color: colors.textSecondary,
+                                                            color: "#ef4444",
                                                             border: "none",
                                                             borderRadius: "4px",
                                                             cursor: "pointer",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import styles from "./LoadingState.module.css";
 import { useLang } from "@/lib/lang";
 
@@ -50,28 +51,59 @@ export default function LoadingState() {
     };
 
     return (
-        <div className={styles.container}>
-            <div className={styles.spinner}>
+        <motion.div
+            className={styles.container}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+        >
+            <motion.div
+                className={styles.spinner}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+            >
                 <div className={styles.spinnerRing}></div>
-            </div>
+            </motion.div>
 
-            <h3 className={styles.title}>{lang.loading.title}</h3>
+            <motion.h3
+                className={styles.title}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+            >
+                {lang.loading.title}
+            </motion.h3>
 
             <div className={styles.steps}>
                 {STEPS.map((step, index) => (
-                    <div
+                    <motion.div
                         key={step.key}
                         className={`${styles.step} ${getStepClass(index)}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}
                     >
-                        <div className={styles.stepIcon}>
+                        <motion.div
+                            className={styles.stepIcon}
+                            animate={index === currentStep ? { scale: [1, 1.2, 1] } : {}}
+                            transition={{ duration: 0.3 }}
+                        >
                             {getStepIcon(index)}
-                        </div>
+                        </motion.div>
                         <p>{stepLabels[step.key]}</p>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
 
-            <p className={styles.note}>{lang.loading.note}</p>
-        </div>
+            <motion.p
+                className={styles.note}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+            >
+                {lang.loading.note}
+            </motion.p>
+        </motion.div>
     );
 }
