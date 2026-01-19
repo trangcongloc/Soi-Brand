@@ -15,6 +15,8 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
 
     // State for expanded tag categories
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+    // State for expanded top SEO tags
+    const [expandedTopSeoTags, setExpandedTopSeoTags] = useState(false);
 
     const toggleCategory = (index: number) => {
         setExpandedCategories((prev) => {
@@ -2009,7 +2011,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                             gap: "0.5rem",
                                         }}
                                     >
-                                        {topSeoTags.slice(0, 30).map((tagData, i) => (
+                                        {(expandedTopSeoTags ? topSeoTags : topSeoTags.slice(0, 20)).map((tagData, i) => (
                                             <div
                                                 key={i}
                                                 style={{
@@ -2043,21 +2045,27 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                 )}
                                             </div>
                                         ))}
+                                        {topSeoTags.length > 20 && (
+                                            <button
+                                                onClick={() => setExpandedTopSeoTags(!expandedTopSeoTags)}
+                                                style={{
+                                                    fontSize: "10px",
+                                                    padding: "4px 12px",
+                                                    background: expandedTopSeoTags ? "#6b7280" : "#059669",
+                                                    color: "#fff",
+                                                    borderRadius: "12px",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600",
+                                                    transition: "all 0.2s ease",
+                                                }}
+                                            >
+                                                {expandedTopSeoTags
+                                                    ? (langCode === "vi" ? "Thu gọn" : "Collapse")
+                                                    : `+${topSeoTags.length - 20}`}
+                                            </button>
+                                        )}
                                     </div>
-                                    {topSeoTags.length > 30 && (
-                                        <p
-                                            style={{
-                                                fontSize: "9px",
-                                                color: "#6b7280",
-                                                marginTop: "0.5rem",
-                                                marginBottom: 0,
-                                            }}
-                                        >
-                                            {langCode === "vi"
-                                                ? `+${topSeoTags.length - 30} tags khác...`
-                                                : `+${topSeoTags.length - 30} more tags...`}
-                                        </p>
-                                    )}
                                 </div>
                             )}
 
