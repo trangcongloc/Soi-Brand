@@ -142,6 +142,8 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+
+            {/* ========== BRAND & POSITIONING ========== */}
             {/* Strategy Analysis Section */}
             <section>
                 <h3 className={styles.sectionTitle}>
@@ -414,6 +416,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                     )}
                 </div>
 
+
                 {/* Ad Strategy */}
                 <div style={{ marginTop: "1rem" }}>
                     <div className={styles.card}>
@@ -434,10 +437,21 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                 )
                             )}
                         </div>
+                        {report_part_2.ad_strategy.target_audience_clues && (
+                            <div style={{ marginTop: "1rem" }}>
+                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
+                                    {lang.analysis.adStrategy.targetAudience}
+                                </p>
+                                <p className={styles.analysisText}>
+                                    {report_part_2.ad_strategy.target_audience_clues}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
 
+            {/* ========== CONTENT ANALYSIS ========== */}
             {/* Content Pillars */}
             <section>
                 <h3 className={styles.sectionTitle}>
@@ -463,6 +477,125 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                     )}
                 </div>
             </section>
+
+            {/* Content Structure Analysis */}
+            {report_part_2.strategy_analysis.content_structure_analysis && (
+                <section>
+                    <h3 className={styles.sectionTitle}>
+                        {lang.analysis.contentStructureAnalysis.title}
+                    </h3>
+                    <div className={styles.grid2}>
+                        <div className={styles.card}>
+                            <h4 className={`${styles.cardTitle} ${styles.textPurple}`}>
+                                {lang.analysis.contentStructureAnalysis.hookTactics}
+                            </h4>
+                            <p className={styles.analysisText} style={{ marginTop: "0.5rem" }}>
+                                {report_part_2.strategy_analysis.content_structure_analysis.hook_tactics}
+                            </p>
+                        </div>
+                        <div className={styles.card}>
+                            <h4 className={`${styles.cardTitle} ${styles.textBlue}`}>
+                                {lang.analysis.contentStructureAnalysis.storytelling}
+                            </h4>
+                            <p className={styles.analysisText} style={{ marginTop: "0.5rem" }}>
+                                {report_part_2.strategy_analysis.content_structure_analysis.storytelling}
+                            </p>
+                        </div>
+                        <div className={styles.card}>
+                            <h4 className={`${styles.cardTitle} ${styles.textGreen}`}>
+                                {lang.analysis.contentStructureAnalysis.ctaStrategy}
+                            </h4>
+                            <p className={styles.analysisText} style={{ marginTop: "0.5rem" }}>
+                                {report_part_2.strategy_analysis.content_structure_analysis.cta_strategy}
+                            </p>
+                        </div>
+                        <div className={styles.card}>
+                            <h4 className={`${styles.cardTitle} ${styles.textPink}`}>
+                                {lang.analysis.contentStructureAnalysis.emotionalTriggers}
+                            </h4>
+                            <p className={styles.analysisText} style={{ marginTop: "0.5rem" }}>
+                                {report_part_2.strategy_analysis.content_structure_analysis.emotional_triggers}
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Top Content Analysis */}
+            {report_part_2.strategy_analysis.top_content_analysis && (
+                <section>
+                    <h3 className={styles.sectionTitle}>
+                        {lang.analysis.topContentAnalysis.title}
+                    </h3>
+                    <div className={styles.grid2}>
+                        {/* Best Performing */}
+                        <div className={`${styles.card} ${styles.bgGreen}`}>
+                            <h4 className={`${styles.cardTitle} ${styles.textGreen}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                                {lang.analysis.topContentAnalysis.bestPerforming}
+                            </h4>
+                            <div style={{ marginTop: "0.75rem" }}>
+                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
+                                    {lang.analysis.topContentAnalysis.overview}
+                                </p>
+                                <p className={styles.analysisText} style={{ marginBottom: "0.75rem" }}>
+                                    {report_part_2.strategy_analysis.top_content_analysis.best_performing.overview}
+                                </p>
+                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
+                                    {lang.analysis.topContentAnalysis.reasonsForSuccess}
+                                </p>
+                                <p className={styles.analysisText}>
+                                    {report_part_2.strategy_analysis.top_content_analysis.best_performing.reasons_for_success}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Worst Performing */}
+                        <div className={`${styles.card} ${styles.bgOrange}`}>
+                            <h4 className={`${styles.cardTitle} ${styles.textOrange}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                                {lang.analysis.topContentAnalysis.worstPerforming}
+                            </h4>
+                            <div style={{ marginTop: "0.75rem" }}>
+                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
+                                    {lang.analysis.topContentAnalysis.overview}
+                                </p>
+                                <p className={styles.analysisText} style={{ marginBottom: "0.75rem" }}>
+                                    {report_part_2.strategy_analysis.top_content_analysis.worst_performing.overview}
+                                </p>
+                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
+                                    {lang.analysis.topContentAnalysis.reasonsForFailure}
+                                </p>
+                                <p className={styles.analysisText}>
+                                    {report_part_2.strategy_analysis.top_content_analysis.worst_performing.reasons_for_failure}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* ========== MARKETING STRATEGY ========== */}
+            {/* Hashtag Strategy */}
+            {report_part_2.strategy_analysis.hashtag_strategy && (
+                <section>
+                    <h3 className={styles.sectionTitle}>
+                        {lang.analysis.hashtagStrategy.title}
+                    </h3>
+                    <div className={styles.card}>
+                        <p className={styles.analysisText}>
+                            {report_part_2.strategy_analysis.hashtag_strategy}
+                        </p>
+                    </div>
+                </section>
+            )}
+
 
             {/* Content Calendar Insights - Current vs Recommended */}
             {(currentStats || report_part_2.content_calendar) && (
@@ -907,6 +1040,8 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                     </section>
                 )}
 
+
+            {/* ========== MARKETING FUNNEL ========== */}
             {/* Funnel Analysis */}
             <section>
                 <h3 className={styles.sectionTitle}>
@@ -1052,6 +1187,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 </div>
             </section>
 
+            {/* ========== AUDIENCE INTELLIGENCE ========== */}
             {/* Audience Analysis */}
             {report_part_2.audience_analysis && (
                 <section>
@@ -1674,6 +1810,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                     </section>
                 )}
 
+            {/* ========== OPTIMIZATION & GROWTH ========== */}
             {/* SEO Analysis */}
             {report_part_2.seo_analysis && (
                 <section>

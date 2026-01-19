@@ -61,9 +61,56 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
                 </div>
             </section>
 
-            {/* Video Ideas / Insights */}
+            {/* Actionable Insights - Learn From and Avoid */}
+            {(report_part_3.actionable_insights.learn_from || report_part_3.actionable_insights.avoid) && (
+                <section>
+                    <h3 className={styles.sectionTitle}>{lang.evaluation.insights.title}</h3>
+                    <div className={styles.grid2}>
+                        {/* Learn From */}
+                        {report_part_3.actionable_insights.learn_from && (
+                            <div className={`${styles.card} ${styles.bgGreen}`}>
+                                <h4
+                                    className={`${styles.cardTitle} ${styles.textGreen}`}
+                                    style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                    {lang.evaluation.insights.learnFrom}
+                                </h4>
+                                <p className={styles.analysisText} style={{ marginTop: "0.75rem" }}>
+                                    {report_part_3.actionable_insights.learn_from}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Avoid */}
+                        {report_part_3.actionable_insights.avoid && (
+                            <div className={`${styles.card} ${styles.bgOrange}`}>
+                                <h4
+                                    className={`${styles.cardTitle} ${styles.textOrange}`}
+                                    style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                                    </svg>
+                                    {lang.evaluation.insights.avoid}
+                                </h4>
+                                <p className={styles.analysisText} style={{ marginTop: "0.75rem" }}>
+                                    {report_part_3.actionable_insights.avoid}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
+
+            {/* Video Ideas */}
             <section>
-                <h3 className={styles.sectionTitle}>{lang.evaluation.insights.title}</h3>
+                <h3 className={styles.sectionTitle}>{lang.evaluation.videoIdeas.title}</h3>
                 <div style={{ display: "grid", gap: "0.75rem" }}>
                     {report_part_3.actionable_insights.video_ideas.map((idea, idx) => (
                         <div key={idx} className={styles.ideaCard}>

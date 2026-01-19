@@ -160,6 +160,7 @@ export const en = {
         },
         adStrategy: {
             title: "Ad Strategy",
+            targetAudience: "Target Audience Clues:",
         },
         funnelAnalysis: {
             title: "Marketing Funnel Analysis",
@@ -201,6 +202,24 @@ export const en = {
         },
         contentPillars: {
             title: "Content Pillars",
+        },
+        hashtagStrategy: {
+            title: "Hashtag Strategy",
+        },
+        topContentAnalysis: {
+            title: "Top Content Analysis",
+            bestPerforming: "Best Performing Content",
+            overview: "Overview:",
+            reasonsForSuccess: "Reasons for Success:",
+            worstPerforming: "Worst Performing Content",
+            reasonsForFailure: "Reasons for Low Performance:",
+        },
+        contentStructureAnalysis: {
+            title: "Content Structure Analysis",
+            hookTactics: "Hook Tactics:",
+            storytelling: "Storytelling:",
+            ctaStrategy: "Call-to-Action Strategy:",
+            emotionalTriggers: "Emotional Triggers:",
         },
         audiencePersonas: {
             title: "Audience Segments",
@@ -266,6 +285,8 @@ export const en = {
         },
         insights: {
             title: "Actionable Insights",
+            learnFrom: "What's Working Well (Keep Doing)",
+            avoid: "What to Avoid or Change",
         },
         videoIdeas: {
             title: "Video Ideas",

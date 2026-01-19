@@ -157,6 +157,7 @@ export const vi = {
         },
         adStrategy: {
             title: "Chiến lược Quảng cáo",
+            targetAudience: "Đối tượng mục tiêu:",
         },
         funnelAnalysis: {
             title: "Phân tích Phễu Marketing",
@@ -198,6 +199,24 @@ export const vi = {
         },
         contentPillars: {
             title: "Trụ cột nội dung (Content Pillars)",
+        },
+        hashtagStrategy: {
+            title: "Chiến lược Hashtag",
+        },
+        topContentAnalysis: {
+            title: "Phân tích Nội dung Nổi bật",
+            bestPerforming: "Nội dung hoạt động tốt nhất",
+            overview: "Tổng quan:",
+            reasonsForSuccess: "Lý do thành công:",
+            worstPerforming: "Nội dung hoạt động kém nhất",
+            reasonsForFailure: "Lý do hoạt động kém:",
+        },
+        contentStructureAnalysis: {
+            title: "Phân tích Cấu trúc Nội dung",
+            hookTactics: "Chiến thuật Hook:",
+            storytelling: "Kể chuyện:",
+            ctaStrategy: "Chiến lược CTA:",
+            emotionalTriggers: "Yếu tố cảm xúc:",
         },
         audiencePersonas: {
             title: "Phân khúc Khán giả",
@@ -263,6 +282,8 @@ export const vi = {
         },
         insights: {
             title: "Đề xuất hành động",
+            learnFrom: "Điều nên học hỏi (Tiếp tục làm)",
+            avoid: "Điều cần tránh hoặc thay đổi",
         },
         videoIdeas: {
             title: "Ý tưởng Video",
