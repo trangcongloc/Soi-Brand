@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Post, ReportPart2 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";
@@ -12,6 +12,21 @@ interface AnalysisTabProps {
 const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
     const lang = useLang();
     const { langCode } = useLanguage();
+
+    // State for expanded tag categories
+    const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+
+    const toggleCategory = (index: number) => {
+        setExpandedCategories((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
 
     // Calculate top 10 performing videos and extract their SEO tags
     const getTopSeoTags = () => {
@@ -1971,7 +1986,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                 gap: "0.5rem",
                                             }}
                                         >
-                                            <span style={{ fontSize: "14px" }}>🔥</span>
                                             {lang.analysis.seoAnalysis.topSeoTags}
                                         </strong>
                                         <span
@@ -2047,7 +2061,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                 </div>
                             )}
 
-                            {/* Most Used Tags */}
+                            {/* Most Used Tags - Reorganized */}
                             {report_part_2.seo_analysis.tag_analysis
                                 .most_used_tags &&
                                 report_part_2.seo_analysis.tag_analysis
@@ -2055,81 +2069,117 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                     <div
                                         style={{
                                             marginBottom: "1rem",
-                                            padding: "0.75rem",
-                                            background: "#f9fafb",
-                                            borderRadius: "6px",
+                                            padding: "0.875rem",
+                                            background: "linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)",
+                                            borderRadius: "8px",
+                                            border: "1px solid #bfdbfe",
                                         }}
                                     >
-                                        <strong
-                                            style={{
-                                                display: "block",
-                                                marginBottom: "0.5rem",
-                                            }}
-                                        >
-                                            {
-                                                lang.analysis.seoAnalysis
-                                                    .mostUsedTags
-                                            }
-                                        </strong>
                                         <div
                                             style={{
                                                 display: "flex",
-                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                marginBottom: "0.75rem",
+                                            }}
+                                        >
+                                            <strong style={{ fontSize: "12px", color: "#1e40af" }}>
+                                                {lang.analysis.seoAnalysis.mostUsedTags}
+                                            </strong>
+                                            <span
+                                                style={{
+                                                    fontSize: "9px",
+                                                    color: "#3b82f6",
+                                                    background: "#dbeafe",
+                                                    padding: "2px 8px",
+                                                    borderRadius: "10px",
+                                                }}
+                                            >
+                                                {report_part_2.seo_analysis.tag_analysis.most_used_tags.length} tags
+                                            </span>
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
                                                 gap: "0.5rem",
                                             }}
                                         >
-                                            {report_part_2.seo_analysis.tag_analysis.most_used_tags.map(
-                                                (tag, i) => (
-                                                    <div
-                                                        key={i}
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: "0.75rem",
-                                                            flexWrap: "wrap",
-                                                        }}
-                                                    >
-                                                        <span
-                                                            className={
-                                                                styles.angleTag
-                                                            }
+                                            {(() => {
+                                                const mostUsedTags = report_part_2.seo_analysis!.tag_analysis.most_used_tags;
+                                                const maxFreq = Math.max(...mostUsedTags.map(t => t.frequency));
+                                                return mostUsedTags.map((tag, i) => {
+                                                    const percentage = (tag.frequency / maxFreq) * 100;
+
+                                                    return (
+                                                        <div
+                                                            key={i}
                                                             style={{
-                                                                background:
-                                                                    "#e0f2fe",
-                                                                color: "#0369a1",
+                                                                padding: "0.5rem 0.625rem",
+                                                                background: "#fff",
+                                                                borderRadius: "6px",
+                                                                border: "1px solid #e5e7eb",
+                                                                position: "relative",
+                                                                overflow: "hidden",
                                                             }}
                                                         >
-                                                            {tag.tag}
-                                                        </span>
-                                                        <span
-                                                            style={{
-                                                                fontSize:
-                                                                    "10px",
-                                                                color: "#666",
-                                                            }}
-                                                        >
-                                                            {
-                                                                lang.analysis
-                                                                    .seoAnalysis
-                                                                    .tagFrequency
-                                                            }{" "}
-                                                            {tag.frequency}x
-                                                        </span>
-                                                        <span
-                                                            style={{
-                                                                fontSize:
-                                                                    "10px",
-                                                                color: "#059669",
-                                                            }}
-                                                        >
-                                                            {
-                                                                tag.performance_impact
-                                                            }
-                                                        </span>
-                                                    </div>
-                                                )
-                                            )}
+                                                            {/* Progress bar background */}
+                                                            <div
+                                                                style={{
+                                                                    position: "absolute",
+                                                                    left: 0,
+                                                                    top: 0,
+                                                                    height: "100%",
+                                                                    width: `${percentage}%`,
+                                                                    background: i === 0 ? "rgba(37, 99, 235, 0.1)" : "rgba(59, 130, 246, 0.05)",
+                                                                    transition: "width 0.3s ease",
+                                                                }}
+                                                            />
+                                                            <div style={{ position: "relative", zIndex: 1 }}>
+                                                                <div
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "space-between",
+                                                                        marginBottom: "0.25rem",
+                                                                    }}
+                                                                >
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "10px",
+                                                                            fontWeight: "600",
+                                                                            color: "#1e40af",
+                                                                        }}
+                                                                    >
+                                                                        {tag.tag}
+                                                                    </span>
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "9px",
+                                                                            fontWeight: "700",
+                                                                            color: "#2563eb",
+                                                                            background: "#dbeafe",
+                                                                            padding: "1px 6px",
+                                                                            borderRadius: "8px",
+                                                                        }}
+                                                                    >
+                                                                        {tag.frequency}x
+                                                                    </span>
+                                                                </div>
+                                                                <div
+                                                                    style={{
+                                                                        fontSize: "9px",
+                                                                        color: "#059669",
+                                                                        lineHeight: "1.3",
+                                                                    }}
+                                                                >
+                                                                    {tag.performance_impact}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 )}
@@ -2164,7 +2214,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                     fontSize: "12px",
                                                 }}
                                             >
-                                                <span style={{ fontSize: "14px" }}>🏷️</span>
                                                 {lang.analysis.seoAnalysis.tagCategories}
                                             </strong>
                                             <span
@@ -2256,10 +2305,10 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                                     }}
                                                                 >
                                                                     {isHighEffective
-                                                                        ? langCode === "vi" ? "Hiệu quả cao" : "High"
+                                                                        ? "HIGH"
                                                                         : isMediumEffective
-                                                                        ? langCode === "vi" ? "Trung bình" : "Medium"
-                                                                        : langCode === "vi" ? "Cần cải thiện" : "Low"}
+                                                                        ? "MEDIUM"
+                                                                        : "LOW"}
                                                                 </span>
                                                             </div>
 
@@ -2283,7 +2332,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                                 </div>
                                                             )}
 
-                                                            {/* Tags */}
+                                                            {/* Tags - Collapsible */}
                                                             <div
                                                                 style={{
                                                                     display: "flex",
@@ -2292,7 +2341,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                                     marginBottom: "0.5rem",
                                                                 }}
                                                             >
-                                                                {cat.tags.slice(0, 8).map((t, j) => (
+                                                                {(expandedCategories.has(i) ? cat.tags : cat.tags.slice(0, 8)).map((t, j) => (
                                                                     <span
                                                                         key={j}
                                                                         style={{
@@ -2308,18 +2357,24 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                                     </span>
                                                                 ))}
                                                                 {cat.tags.length > 8 && (
-                                                                    <span
+                                                                    <button
+                                                                        onClick={() => toggleCategory(i)}
                                                                         style={{
                                                                             fontSize: "9px",
                                                                             padding: "2px 8px",
-                                                                            background: colorScheme.accent,
+                                                                            background: expandedCategories.has(i) ? "#6b7280" : colorScheme.accent,
                                                                             borderRadius: "10px",
                                                                             color: "#fff",
                                                                             fontWeight: "600",
+                                                                            border: "none",
+                                                                            cursor: "pointer",
+                                                                            transition: "all 0.2s ease",
                                                                         }}
                                                                     >
-                                                                        +{cat.tags.length - 8}
-                                                                    </span>
+                                                                        {expandedCategories.has(i)
+                                                                            ? (langCode === "vi" ? "Thu gọn" : "Collapse")
+                                                                            : `+${cat.tags.length - 8}`}
+                                                                    </button>
                                                                 )}
                                                             </div>
 
