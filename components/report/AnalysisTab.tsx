@@ -1261,30 +1261,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                         ", "
                                     )}
                                 </p>
-                                <p>
-                                    <strong>
-                                        {
-                                            lang.analysis.audienceAnalysis
-                                                .incomeLevel
-                                        }
-                                    </strong>{" "}
-                                    {
-                                        report_part_2.audience_analysis
-                                            .demographics?.income_level
-                                    }
-                                </p>
-                                <p>
-                                    <strong>
-                                        {
-                                            lang.analysis.audienceAnalysis
-                                                .educationLevel
-                                        }
-                                    </strong>{" "}
-                                    {
-                                        report_part_2.audience_analysis
-                                            .demographics?.education_level
-                                    }
-                                </p>
                             </div>
                         </div>
                         {/* Behavior */}
@@ -1994,7 +1970,8 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                             style={{
                                                                 fontWeight:
                                                                     "700",
-                                                                fontSize: "13px",
+                                                                fontSize:
+                                                                    "13px",
                                                                 marginBottom:
                                                                     "0.4rem",
                                                                 color: "#111",
@@ -2010,12 +1987,18 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                                     color: "#444",
                                                                     marginBottom:
                                                                         "0.5rem",
-                                                                    fontStyle: "italic",
-                                                                    paddingLeft: "0.5rem",
-                                                                    borderLeft: "2px solid rgba(0,0,0,0.2)",
+                                                                    fontStyle:
+                                                                        "italic",
+                                                                    paddingLeft:
+                                                                        "0.5rem",
+                                                                    borderLeft:
+                                                                        "2px solid rgba(0,0,0,0.2)",
                                                                 }}
                                                             >
-                                                                <strong>Mục đích:</strong> {cat.purpose}
+                                                                <strong>
+                                                                    Mục đích:
+                                                                </strong>{" "}
+                                                                {cat.purpose}
                                                             </div>
                                                         )}
                                                         <div

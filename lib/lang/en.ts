@@ -145,8 +145,6 @@ export const en = {
             other: "Other",
             topCountries: "Top Countries",
             primaryLanguages: "Primary Languages:",
-            incomeLevel: "Income Level:",
-            educationLevel: "Education Level:",
             behaviorTitle: "Audience Behavior",
             estimatedWatchTime: "Avg Watch Time:",
             returningVsNew: "Returning vs New:",

@@ -142,8 +142,6 @@ export const vi = {
             other: "Khác",
             topCountries: "Quốc gia hàng đầu",
             primaryLanguages: "Ngôn ngữ chính:",
-            incomeLevel: "Mức thu nhập:",
-            educationLevel: "Trình độ học vấn:",
             behaviorTitle: "Hành vi Khán giả",
             estimatedWatchTime: "Thời gian xem TB:",
             returningVsNew: "Quay lại vs Mới:",
