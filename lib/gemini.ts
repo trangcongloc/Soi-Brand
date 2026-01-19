@@ -144,7 +144,8 @@ export async function generateMarketingReport(
     channelInfo: YouTubeChannel,
     videos: YouTubeVideo[],
     customApiKey?: string,
-    modelId?: GeminiModel
+    modelId?: GeminiModel,
+    language?: "vi" | "en"
 ): Promise<MarketingReport> {
     const genAI = initGemini(customApiKey);
     const model = genAI.getGenerativeModel({
@@ -230,7 +231,7 @@ export async function generateMarketingReport(
             tags: v.tags,
             description: v.description,
         })),
-    });
+    }, language || "vi");
 
     try {
         const result = await model.generateContent(prompt);

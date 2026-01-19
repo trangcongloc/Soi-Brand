@@ -8,7 +8,7 @@ import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
 import AnalysisHistory from "@/components/AnalysisHistory";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
-import { useLang } from "@/lib/lang";
+import { useLanguage } from "@/lib/lang";
 import { getUserSettings } from "@/lib/userSettings";
 import { extractChannelId, extractUsername } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -58,7 +58,7 @@ interface FilterState {
 }
 
 export default function Home() {
-    const lang = useLang();
+    const { lang, langCode } = useLanguage();
     const [isLoading, setIsLoading] = useState(false);
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -133,6 +133,7 @@ export default function Home() {
                 youtubeApiKey: userSettings.youtubeApiKey,
                 geminiApiKey: userSettings.geminiApiKey,
                 geminiModel: userSettings.geminiModel,
+                language: langCode,
             });
 
             if (response.data.success && response.data.data) {

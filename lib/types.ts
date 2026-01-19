@@ -412,6 +412,7 @@ export interface AnalyzeRequest {
     youtubeApiKey?: string;
     geminiApiKey?: string;
     geminiModel?: GeminiModel;
+    language?: "vi" | "en";
 }
 
 export interface AnalyzeResponse {
