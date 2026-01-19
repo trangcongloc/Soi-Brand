@@ -256,6 +256,7 @@ export const vi = {
             missingKeywords: "Từ khóa thiếu:",
             tagAnalysis: "Phân tích Tag",
             tagCoverage: "Độ bao phủ tag:",
+            topSeoTags: "Top SEO Tags từ Video Hiệu suất Cao",
             allChannelTags: "Tất cả Tags của kênh:",
             recommendedTags: "Tag đề xuất:",
             tagConsistency: "Tính nhất quán tag:",

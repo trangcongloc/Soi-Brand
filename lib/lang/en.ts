@@ -259,6 +259,7 @@ export const en = {
             missingKeywords: "Missing Keywords:",
             tagAnalysis: "Tag Analysis",
             tagCoverage: "Tag Coverage:",
+            topSeoTags: "Top SEO Tags from High-Performing Videos",
             allChannelTags: "All Channel Tags:",
             recommendedTags: "Recommended Tags:",
             tagConsistency: "Tag Consistency:",

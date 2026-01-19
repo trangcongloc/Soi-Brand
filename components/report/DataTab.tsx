@@ -16,11 +16,19 @@ const VideoPerformanceChart = dynamic(
     {
         ssr: false,
         loading: () => (
-            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#999" }}>
+            <div
+                style={{
+                    height: 200,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#999",
+                }}
+            >
                 Loading chart...
             </div>
         ),
-    }
+    },
 );
 
 interface DataTabProps {
@@ -53,22 +61,22 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
         }
     };
 
-    // Calculate top 5 posts by rating score
+    // Calculate top 10 posts by rating score
     const postsWithScores = posts.map((post, index) => ({
         index,
         score: parseFloat(
             calculateHackerNewsScore(
                 post.statistics.play_count,
-                post.published_at
-            )
+                post.published_at,
+            ),
         ),
     }));
 
     const sortedByScore = [...postsWithScores].sort(
-        (a, b) => b.score - a.score
+        (a, b) => b.score - a.score,
     );
     const topIndices = new Set(
-        sortedByScore.slice(0, 5).map((item) => item.index)
+        sortedByScore.slice(0, 10).map((item) => item.index),
     );
 
     return (
@@ -115,7 +123,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                         {lang.channel.createdDate}{" "}
                                         {channelInfo.joinedAt
                                             ? new Date(
-                                                  channelInfo.joinedAt
+                                                  channelInfo.joinedAt,
                                               ).toLocaleDateString("vi-VN")
                                             : lang.channel.notUpdated}
                                     </span>
@@ -126,7 +134,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                 <div className={styles.channelStatCard}>
                                     <span className={styles.channelStatValue}>
                                         {formatFullNumber(
-                                            channelInfo.stats.videoCount
+                                            channelInfo.stats.videoCount,
                                         )}
                                     </span>
                                     <span className={styles.channelStatLabel}>
@@ -136,7 +144,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                 <div className={styles.channelStatCard}>
                                     <span className={styles.channelStatValue}>
                                         {formatFullNumber(
-                                            channelInfo.stats.viewCount
+                                            channelInfo.stats.viewCount,
                                         )}
                                     </span>
                                     <span className={styles.channelStatLabel}>
@@ -146,7 +154,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                 <div className={styles.channelStatCard}>
                                     <span className={styles.channelStatValue}>
                                         {formatFullNumber(
-                                            channelInfo.stats.followerCount
+                                            channelInfo.stats.followerCount,
                                         )}
                                     </span>
                                     <span className={styles.channelStatLabel}>
@@ -156,7 +164,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                 <div className={styles.channelStatCard}>
                                     <span className={styles.channelStatValue}>
                                         {formatFullNumber(
-                                            channelInfo.stats.heartCount
+                                            channelInfo.stats.heartCount,
                                         )}
                                     </span>
                                     <span className={styles.channelStatLabel}>
@@ -169,7 +177,10 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                             {channelInfo.signature && (
                                 <div className={styles.channelDescription}>
                                     <p className={styles.channelDescText}>
-                                        {truncateText(channelInfo.signature, 150)}
+                                        {truncateText(
+                                            channelInfo.signature,
+                                            150,
+                                        )}
                                     </p>
                                 </div>
                             )}
@@ -186,7 +197,9 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
             {posts.length > 0 && (
                 <section>
                     <h3 className={styles.sectionTitle}>
-                        {langCode === "vi" ? "Hiệu suất Video" : "Video Performance"}
+                        {langCode === "vi"
+                            ? "Hiệu suất Video"
+                            : "Video Performance"}
                     </h3>
                     <div className={styles.card}>
                         <VideoPerformanceChart posts={posts} maxItems={50} />
@@ -196,7 +209,9 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
 
             {/* Posts Accordion */}
             <section>
-                <h3 className={styles.sectionTitle}>{lang.posts.sectionTitle}</h3>
+                <h3 className={styles.sectionTitle}>
+                    {lang.posts.sectionTitle}
+                </h3>
                 <div className={styles.postList}>
                     {posts.map((post, index) => (
                         <div key={index} className={styles.postCard}>
@@ -216,7 +231,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                         <span className={styles.ratingScore}>
                                             {calculateHackerNewsScore(
                                                 post.statistics.play_count,
-                                                post.published_at
+                                                post.published_at,
                                             )}
                                             {topIndices.has(index) && " 🔥"}
                                         </span>
@@ -264,7 +279,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                             </span>
                                             <span className="font-bold">
                                                 {formatFullNumber(
-                                                    post.statistics.play_count
+                                                    post.statistics.play_count,
                                                 )}
                                             </span>
                                         </div>
@@ -274,7 +289,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                             </span>
                                             <span className="font-bold">
                                                 {formatFullNumber(
-                                                    post.statistics.digg_count
+                                                    post.statistics.digg_count,
                                                 )}
                                             </span>
                                         </div>
@@ -284,7 +299,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                             </span>
                                             <span className="font-semibold">
                                                 {new Date(
-                                                    post.created_at
+                                                    post.created_at,
                                                 ).toLocaleDateString("vi-VN")}
                                             </span>
                                         </div>
@@ -299,7 +314,8 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                             <div
                                                 style={{
                                                     display: "flex",
-                                                    justifyContent: "space-between",
+                                                    justifyContent:
+                                                        "space-between",
                                                     alignItems: "center",
                                                     marginBottom: "0.5rem",
                                                 }}
@@ -329,7 +345,9 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleCopyTags(post.tags);
+                                                        handleCopyTags(
+                                                            post.tags,
+                                                        );
                                                     }}
                                                     style={{
                                                         fontSize: "10px",
@@ -356,12 +374,14 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                                     return (
                                                         <span
                                                             key={tidx}
-                                                            className={styles.tag}
+                                                            className={
+                                                                styles.tag
+                                                            }
                                                         >
                                                             #
                                                             {cleanTag.replace(
                                                                 /^#/,
-                                                                ""
+                                                                "",
                                                             )}
                                                         </span>
                                                     );
@@ -376,7 +396,8 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                             {lang.posts.description}
                                         </p>
                                         <p className={styles.descText}>
-                                            {post.desc || lang.posts.noDescription}
+                                            {post.desc ||
+                                                lang.posts.noDescription}
                                         </p>
                                     </div>
 

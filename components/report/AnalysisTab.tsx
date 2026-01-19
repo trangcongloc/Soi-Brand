@@ -2,6 +2,7 @@ import React from "react";
 import { Post, ReportPart2 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";
+import { calculateHackerNewsScore } from "./report-utils";
 
 interface AnalysisTabProps {
     report_part_2: ReportPart2;
@@ -11,6 +12,62 @@ interface AnalysisTabProps {
 const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
     const lang = useLang();
     const { langCode } = useLanguage();
+
+    // Calculate top 10 performing videos and extract their SEO tags
+    const getTopSeoTags = () => {
+        if (posts.length === 0) return { tags: [], topVideos: [] };
+
+        const postsWithScores = posts.map((post, index) => ({
+            index,
+            post,
+            score: parseFloat(
+                calculateHackerNewsScore(
+                    post.statistics.play_count,
+                    post.published_at
+                )
+            ),
+        }));
+
+        const sortedByScore = [...postsWithScores].sort(
+            (a, b) => b.score - a.score
+        );
+
+        // Get top 10 videos
+        const topVideos = sortedByScore.slice(0, 10);
+
+        // Extract unique tags from top videos with frequency count
+        const tagFrequency: { [tag: string]: { count: number; videos: string[] } } = {};
+
+        topVideos.forEach(({ post }) => {
+            if (post.tags && post.tags.length > 0) {
+                post.tags.forEach((tag) => {
+                    const cleanTag = tag.replace(/['"\[\]]/g, "").trim();
+                    if (cleanTag) {
+                        if (!tagFrequency[cleanTag]) {
+                            tagFrequency[cleanTag] = { count: 0, videos: [] };
+                        }
+                        tagFrequency[cleanTag].count++;
+                        if (!tagFrequency[cleanTag].videos.includes(post.title)) {
+                            tagFrequency[cleanTag].videos.push(post.title);
+                        }
+                    }
+                });
+            }
+        });
+
+        // Sort tags by frequency
+        const sortedTags = Object.entries(tagFrequency)
+            .sort((a, b) => b[1].count - a[1].count)
+            .map(([tag, data]) => ({
+                tag,
+                count: data.count,
+                videos: data.videos,
+            }));
+
+        return { tags: sortedTags, topVideos };
+    };
+
+    const { tags: topSeoTags } = getTopSeoTags();
 
     // Calculate current posting stats from posts data
     const calculateCurrentPostingStats = () => {
@@ -1887,60 +1944,108 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                 </p>
                             )}
 
-                            {/* All Channel Tags */}
-                            {report_part_2.seo_analysis.tag_analysis
-                                .all_channel_tags &&
-                                report_part_2.seo_analysis.tag_analysis
-                                    .all_channel_tags.length > 0 && (
+                            {/* Top SEO Tags from Best Performing Videos */}
+                            {topSeoTags.length > 0 && (
+                                <div
+                                    style={{
+                                        marginBottom: "1rem",
+                                        padding: "0.75rem",
+                                        background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+                                        borderRadius: "8px",
+                                        border: "1px solid #bbf7d0",
+                                    }}
+                                >
                                     <div
                                         style={{
-                                            marginBottom: "1rem",
-                                            padding: "0.75rem",
-                                            background: "#f0fdf4",
-                                            borderRadius: "6px",
-                                            border: "1px solid #bbf7d0",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            marginBottom: "0.75rem",
                                         }}
                                     >
                                         <strong
                                             style={{
-                                                display: "block",
-                                                marginBottom: "0.5rem",
                                                 color: "#166534",
-                                            }}
-                                        >
-                                            {
-                                                lang.analysis.seoAnalysis
-                                                    .allChannelTags
-                                            }
-                                        </strong>
-                                        <div
-                                            style={{
                                                 display: "flex",
-                                                flexWrap: "wrap",
-                                                gap: "0.35rem",
+                                                alignItems: "center",
+                                                gap: "0.5rem",
                                             }}
                                         >
-                                            {report_part_2.seo_analysis.tag_analysis.all_channel_tags.map(
-                                                (tag, i) => (
+                                            <span style={{ fontSize: "14px" }}>🔥</span>
+                                            {lang.analysis.seoAnalysis.topSeoTags}
+                                        </strong>
+                                        <span
+                                            style={{
+                                                fontSize: "9px",
+                                                color: "#059669",
+                                                background: "#d1fae5",
+                                                padding: "2px 8px",
+                                                borderRadius: "10px",
+                                            }}
+                                        >
+                                            {langCode === "vi"
+                                                ? `Từ ${Math.min(10, posts.length)} video hiệu suất cao`
+                                                : `From top ${Math.min(10, posts.length)} performing videos`}
+                                        </span>
+                                    </div>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexWrap: "wrap",
+                                            gap: "0.5rem",
+                                        }}
+                                    >
+                                        {topSeoTags.slice(0, 30).map((tagData, i) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                    fontSize: "10px",
+                                                    padding: "4px 10px",
+                                                    background: i < 5 ? "#dcfce7" : i < 15 ? "#f0fdf4" : "#ffffff",
+                                                    color: "#166534",
+                                                    borderRadius: "12px",
+                                                    border: `1px solid ${i < 5 ? "#86efac" : "#bbf7d0"}`,
+                                                    fontWeight: i < 5 ? "600" : "400",
+                                                }}
+                                                title={`${langCode === "vi" ? "Xuất hiện trong" : "Appears in"} ${tagData.count} video(s): ${tagData.videos.slice(0, 3).join(", ")}${tagData.videos.length > 3 ? "..." : ""}`}
+                                            >
+                                                <span>{tagData.tag}</span>
+                                                {tagData.count > 1 && (
                                                     <span
-                                                        key={i}
                                                         style={{
-                                                            fontSize: "10px",
-                                                            padding: "3px 8px",
-                                                            background:
-                                                                "#dcfce7",
-                                                            color: "#166534",
-                                                            borderRadius: "4px",
-                                                            border: "1px solid #bbf7d0",
+                                                            fontSize: "8px",
+                                                            background: "#059669",
+                                                            color: "#fff",
+                                                            padding: "1px 4px",
+                                                            borderRadius: "6px",
+                                                            fontWeight: "600",
                                                         }}
                                                     >
-                                                        {tag}
+                                                        {tagData.count}
                                                     </span>
-                                                )
-                                            )}
-                                        </div>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                    {topSeoTags.length > 30 && (
+                                        <p
+                                            style={{
+                                                fontSize: "9px",
+                                                color: "#6b7280",
+                                                marginTop: "0.5rem",
+                                                marginBottom: 0,
+                                            }}
+                                        >
+                                            {langCode === "vi"
+                                                ? `+${topSeoTags.length - 30} tags khác...`
+                                                : `+${topSeoTags.length - 30} more tags...`}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Most Used Tags */}
                             {report_part_2.seo_analysis.tag_analysis
@@ -2029,124 +2134,215 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                     </div>
                                 )}
 
-                            {/* Tag Categories */}
+                            {/* Tag Categories - Enhanced Deep Analysis */}
                             {report_part_2.seo_analysis.tag_analysis
                                 .tag_categories &&
                                 report_part_2.seo_analysis.tag_analysis
                                     .tag_categories.length > 0 && (
-                                    <div style={{ marginBottom: "1rem" }}>
-                                        <strong
-                                            style={{
-                                                display: "block",
-                                                marginBottom: "0.5rem",
-                                            }}
-                                        >
-                                            {
-                                                lang.analysis.seoAnalysis
-                                                    .tagCategories
-                                            }
-                                        </strong>
+                                    <div
+                                        style={{
+                                            marginBottom: "1rem",
+                                            padding: "1rem",
+                                            background: "#fafafa",
+                                            borderRadius: "8px",
+                                            border: "1px solid #e5e7eb",
+                                        }}
+                                    >
                                         <div
                                             style={{
                                                 display: "flex",
-                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                marginBottom: "1rem",
+                                            }}
+                                        >
+                                            <strong
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "0.5rem",
+                                                    fontSize: "12px",
+                                                }}
+                                            >
+                                                <span style={{ fontSize: "14px" }}>🏷️</span>
+                                                {lang.analysis.seoAnalysis.tagCategories}
+                                            </strong>
+                                            <span
+                                                style={{
+                                                    fontSize: "9px",
+                                                    color: "#6b7280",
+                                                    background: "#f3f4f6",
+                                                    padding: "2px 8px",
+                                                    borderRadius: "10px",
+                                                }}
+                                            >
+                                                {report_part_2.seo_analysis.tag_analysis.tag_categories.length}{" "}
+                                                {langCode === "vi" ? "nhóm" : "categories"}
+                                            </span>
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
                                                 gap: "0.75rem",
                                             }}
                                         >
                                             {report_part_2.seo_analysis.tag_analysis.tag_categories.map(
-                                                (cat, i) => (
-                                                    <div
-                                                        key={i}
-                                                        style={{
-                                                            padding: "0.75rem",
-                                                            background:
-                                                                i % 2 === 0
-                                                                    ? "#fef3c7"
-                                                                    : "#dbeafe",
-                                                            borderRadius: "4px",
-                                                        }}
-                                                    >
+                                                (cat, i) => {
+                                                    // Determine effectiveness color
+                                                    const effectivenessLower = (cat.effectiveness || "").toLowerCase();
+                                                    const isHighEffective = effectivenessLower.includes("cao") || effectivenessLower.includes("high") || effectivenessLower.includes("tốt") || effectivenessLower.includes("good");
+                                                    const isMediumEffective = effectivenessLower.includes("trung bình") || effectivenessLower.includes("medium") || effectivenessLower.includes("average");
+
+                                                    const bgColors = [
+                                                        { bg: "linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)", border: "#fcd34d", accent: "#d97706" },
+                                                        { bg: "linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%)", border: "#93c5fd", accent: "#2563eb" },
+                                                        { bg: "linear-gradient(135deg, #f3e8ff 0%, #fae8ff 100%)", border: "#d8b4fe", accent: "#9333ea" },
+                                                        { bg: "linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%)", border: "#86efac", accent: "#16a34a" },
+                                                        { bg: "linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%)", border: "#fca5a5", accent: "#dc2626" },
+                                                        { bg: "linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)", border: "#a5b4fc", accent: "#4f46e5" },
+                                                    ];
+                                                    const colorScheme = bgColors[i % bgColors.length];
+
+                                                    return (
                                                         <div
+                                                            key={i}
                                                             style={{
-                                                                fontWeight:
-                                                                    "700",
-                                                                fontSize:
-                                                                    "13px",
-                                                                marginBottom:
-                                                                    "0.4rem",
-                                                                color: "#111",
+                                                                padding: "0.875rem",
+                                                                background: colorScheme.bg,
+                                                                borderRadius: "8px",
+                                                                border: `1px solid ${colorScheme.border}`,
+                                                                position: "relative",
+                                                                overflow: "hidden",
                                                             }}
                                                         >
-                                                            {cat.category}
-                                                        </div>
-                                                        {cat.purpose && (
+                                                            {/* Category Header */}
                                                             <div
                                                                 style={{
-                                                                    fontSize:
-                                                                        "11px",
-                                                                    color: "#444",
-                                                                    marginBottom:
-                                                                        "0.5rem",
-                                                                    fontStyle:
-                                                                        "italic",
-                                                                    paddingLeft:
-                                                                        "0.5rem",
-                                                                    borderLeft:
-                                                                        "2px solid rgba(0,0,0,0.2)",
+                                                                    display: "flex",
+                                                                    alignItems: "flex-start",
+                                                                    justifyContent: "space-between",
+                                                                    marginBottom: "0.5rem",
                                                                 }}
                                                             >
-                                                                <strong>
-                                                                    Mục đích:
-                                                                </strong>{" "}
-                                                                {cat.purpose}
+                                                                <div
+                                                                    style={{
+                                                                        fontWeight: "700",
+                                                                        fontSize: "11px",
+                                                                        color: "#111",
+                                                                        flex: 1,
+                                                                    }}
+                                                                >
+                                                                    {cat.category}
+                                                                </div>
+                                                                {/* Effectiveness Badge */}
+                                                                <span
+                                                                    style={{
+                                                                        fontSize: "8px",
+                                                                        padding: "2px 6px",
+                                                                        borderRadius: "8px",
+                                                                        fontWeight: "600",
+                                                                        background: isHighEffective
+                                                                            ? "#dcfce7"
+                                                                            : isMediumEffective
+                                                                            ? "#fef3c7"
+                                                                            : "#fee2e2",
+                                                                        color: isHighEffective
+                                                                            ? "#166534"
+                                                                            : isMediumEffective
+                                                                            ? "#92400e"
+                                                                            : "#991b1b",
+                                                                        whiteSpace: "nowrap",
+                                                                    }}
+                                                                >
+                                                                    {isHighEffective
+                                                                        ? langCode === "vi" ? "Hiệu quả cao" : "High"
+                                                                        : isMediumEffective
+                                                                        ? langCode === "vi" ? "Trung bình" : "Medium"
+                                                                        : langCode === "vi" ? "Cần cải thiện" : "Low"}
+                                                                </span>
                                                             </div>
-                                                        )}
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                flexWrap:
-                                                                    "wrap",
-                                                                gap: "0.25rem",
-                                                                marginBottom:
-                                                                    "0.4rem",
-                                                            }}
-                                                        >
-                                                            {cat.tags.map(
-                                                                (t, j) => (
+
+                                                            {/* Purpose */}
+                                                            {cat.purpose && (
+                                                                <div
+                                                                    style={{
+                                                                        fontSize: "10px",
+                                                                        color: "#4b5563",
+                                                                        marginBottom: "0.625rem",
+                                                                        padding: "0.375rem 0.5rem",
+                                                                        background: "rgba(255,255,255,0.6)",
+                                                                        borderRadius: "4px",
+                                                                        borderLeft: `3px solid ${colorScheme.accent}`,
+                                                                    }}
+                                                                >
+                                                                    <strong style={{ color: colorScheme.accent }}>
+                                                                        {langCode === "vi" ? "Mục đích:" : "Purpose:"}
+                                                                    </strong>{" "}
+                                                                    {cat.purpose}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Tags */}
+                                                            <div
+                                                                style={{
+                                                                    display: "flex",
+                                                                    flexWrap: "wrap",
+                                                                    gap: "0.3rem",
+                                                                    marginBottom: "0.5rem",
+                                                                }}
+                                                            >
+                                                                {cat.tags.slice(0, 8).map((t, j) => (
                                                                     <span
                                                                         key={j}
                                                                         style={{
-                                                                            fontSize:
-                                                                                "10px",
-                                                                            padding:
-                                                                                "2px 6px",
-                                                                            background:
-                                                                                "rgba(255,255,255,0.7)",
-                                                                            borderRadius:
-                                                                                "3px",
+                                                                            fontSize: "9px",
+                                                                            padding: "2px 8px",
+                                                                            background: "rgba(255,255,255,0.85)",
+                                                                            borderRadius: "10px",
+                                                                            border: "1px solid rgba(0,0,0,0.08)",
+                                                                            color: "#374151",
                                                                         }}
                                                                     >
                                                                         {t}
                                                                     </span>
-                                                                )
-                                                            )}
+                                                                ))}
+                                                                {cat.tags.length > 8 && (
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: "9px",
+                                                                            padding: "2px 8px",
+                                                                            background: colorScheme.accent,
+                                                                            borderRadius: "10px",
+                                                                            color: "#fff",
+                                                                            fontWeight: "600",
+                                                                        }}
+                                                                    >
+                                                                        +{cat.tags.length - 8}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Effectiveness Detail */}
+                                                            <div
+                                                                style={{
+                                                                    fontSize: "9px",
+                                                                    color: "#6b7280",
+                                                                    display: "flex",
+                                                                    alignItems: "flex-start",
+                                                                    gap: "0.25rem",
+                                                                }}
+                                                            >
+                                                                <span style={{ fontWeight: "600", flexShrink: 0 }}>
+                                                                    {lang.analysis.seoAnalysis.categoryEffectiveness}
+                                                                </span>
+                                                                <span style={{ color: "#374151" }}>
+                                                                    {cat.effectiveness}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div
-                                                            style={{
-                                                                fontSize:
-                                                                    "10px",
-                                                                color: "#666",
-                                                            }}
-                                                        >
-                                                            {
-                                                                lang.analysis
-                                                                    .seoAnalysis
-                                                                    .categoryEffectiveness
-                                                            }{" "}
-                                                            {cat.effectiveness}
-                                                        </div>
-                                                    </div>
-                                                )
+                                                    );
+                                                }
                                             )}
                                         </div>
                                     </div>
