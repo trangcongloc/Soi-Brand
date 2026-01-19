@@ -241,11 +241,11 @@ export async function getChannelInfo(
 }
 
 /**
- * Get recent videos from channel
+ * Get all videos from the last 30 days using pagination
  */
 export async function getChannelVideos(
     channelId: string,
-    maxResults: number = 10,
+    _maxResults: number = 50, // Kept for API compatibility, but function fetches all 30-day videos
     customApiKey?: string
 ): Promise<YouTubeVideo[]> {
     const apiKey = customApiKey || process.env.YOUTUBE_API_KEY;
@@ -277,57 +277,128 @@ export async function getChannelVideos(
             channelResponse.data.items[0].contentDetails.relatedPlaylists
                 .uploads;
 
-        // Get videos from uploads playlist
-        const playlistResponse = await axios.get(
-            `${YOUTUBE_API_BASE}/playlistItems`,
-            {
+        // Calculate 30 days ago for filtering
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Helper function to fetch playlist page
+        const fetchPlaylistPage = async (pageToken?: string) => {
+            const response = await axios.get(
+                `${YOUTUBE_API_BASE}/playlistItems`,
+                {
+                    params: {
+                        part: "snippet,contentDetails",
+                        playlistId: uploadsPlaylistId,
+                        maxResults: 50,
+                        pageToken,
+                        key: apiKey,
+                    },
+                }
+            );
+            return response.data as {
+                items?: Array<{
+                    contentDetails: { videoId: string; videoPublishedAt?: string };
+                    snippet: { publishedAt: string };
+                }>;
+                nextPageToken?: string;
+            };
+        };
+
+        // Fetch all videos from last 30 days using pagination
+        let allVideoIds: string[] = [];
+        const MAX_PAGES = 10; // Safety limit: 10 pages * 50 = 500 max videos
+        let nextPageToken: string | undefined = undefined;
+        let stopFetching = false;
+
+        for (let pageCount = 0; pageCount < MAX_PAGES && !stopFetching; pageCount++) {
+            const data = await fetchPlaylistPage(nextPageToken);
+
+            const items = data.items;
+            if (!items || items.length === 0) {
+                break;
+            }
+
+            // Check each video's publish date
+            for (const item of items) {
+                const publishedAt = new Date(item.contentDetails.videoPublishedAt || item.snippet.publishedAt);
+
+                if (publishedAt >= thirtyDaysAgo) {
+                    allVideoIds.push(item.contentDetails.videoId);
+                } else {
+                    // Videos are sorted by date, so once we find an older video,
+                    // all subsequent videos will also be older
+                    stopFetching = true;
+                    break;
+                }
+            }
+
+            nextPageToken = data.nextPageToken;
+            if (!nextPageToken) {
+                break;
+            }
+        }
+
+        // If no videos in last 30 days, get the 10 most recent
+        if (allVideoIds.length === 0) {
+            const fallbackResponse = await axios.get(
+                `${YOUTUBE_API_BASE}/playlistItems`,
+                {
+                    params: {
+                        part: "snippet,contentDetails",
+                        playlistId: uploadsPlaylistId,
+                        maxResults: 10,
+                        key: apiKey,
+                    },
+                }
+            );
+
+            if (fallbackResponse.data.items) {
+                allVideoIds = fallbackResponse.data.items.map(
+                    (item: any) => item.contentDetails.videoId
+                );
+            }
+        }
+
+        if (allVideoIds.length === 0) {
+            return [];
+        }
+
+        // Fetch detailed video information in batches of 50
+        const allVideos: YouTubeVideo[] = [];
+
+        for (let i = 0; i < allVideoIds.length; i += 50) {
+            const batchIds = allVideoIds.slice(i, i + 50);
+
+            const videosResponse = await axios.get(`${YOUTUBE_API_BASE}/videos`, {
                 params: {
-                    part: "snippet,contentDetails",
-                    playlistId: uploadsPlaylistId,
-                    maxResults,
+                    part: "snippet,statistics,contentDetails",
+                    id: batchIds.join(","),
                     key: apiKey,
                 },
+            });
+
+            if (videosResponse.data.items) {
+                const videos = videosResponse.data.items.map((video: any) => ({
+                    id: video.id,
+                    title: video.snippet.title,
+                    description: video.snippet.description,
+                    publishedAt: video.snippet.publishedAt,
+                    thumbnails: video.snippet.thumbnails,
+                    statistics: {
+                        viewCount: video.statistics.viewCount || "0",
+                        likeCount: video.statistics.likeCount || "0",
+                        commentCount: video.statistics.commentCount || "0",
+                    },
+                    tags: video.snippet.tags || [],
+                    contentDetails: {
+                        duration: video.contentDetails.duration,
+                    },
+                }));
+                allVideos.push(...videos);
             }
-        );
-
-        if (!playlistResponse.data.items) {
-            return [];
         }
 
-        // Get video IDs
-        const videoIds = playlistResponse.data.items.map(
-            (item: any) => item.contentDetails.videoId
-        );
-
-        // Get detailed video information
-        const videosResponse = await axios.get(`${YOUTUBE_API_BASE}/videos`, {
-            params: {
-                part: "snippet,statistics,contentDetails",
-                id: videoIds.join(","),
-                key: apiKey,
-            },
-        });
-
-        if (!videosResponse.data.items) {
-            return [];
-        }
-
-        return videosResponse.data.items.map((video: any) => ({
-            id: video.id,
-            title: video.snippet.title,
-            description: video.snippet.description,
-            publishedAt: video.snippet.publishedAt,
-            thumbnails: video.snippet.thumbnails,
-            statistics: {
-                viewCount: video.statistics.viewCount || "0",
-                likeCount: video.statistics.likeCount || "0",
-                commentCount: video.statistics.commentCount || "0",
-            },
-            tags: video.snippet.tags || [],
-            contentDetails: {
-                duration: video.contentDetails.duration,
-            },
-        }));
+        return allVideos;
     } catch (error: any) {
         if (error instanceof APIError) {
             throw error;
@@ -338,6 +409,7 @@ export async function getChannelVideos(
 
 /**
  * Get full channel data (info + videos)
+ * Videos are filtered to last 30 days (or 10 most recent if none in 30 days)
  */
 export async function getFullChannelData(
     channelUrl: string,
@@ -348,26 +420,13 @@ export async function getFullChannelData(
         throw new Error("Could not resolve channel ID from URL");
     }
 
-    const [channelInfo, allVideos] = await Promise.all([
+    const [channelInfo, videos] = await Promise.all([
         getChannelInfo(channelId, customApiKey),
-        getChannelVideos(channelId, 50, customApiKey), // Fetch up to 50 videos
+        getChannelVideos(channelId, 50, customApiKey), // Fetches all videos from last 30 days
     ]);
 
     if (!channelInfo) {
         throw new Error("Channel not found");
-    }
-
-    // Filter videos for the last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    let videos = allVideos.filter(
-        (video) => new Date(video.publishedAt) >= thirtyDaysAgo
-    );
-
-    // If no videos in last 30 days, keep the top 10 most recent to ensure we have data
-    if (videos.length === 0) {
-        videos = allVideos.slice(0, 10);
     }
 
     return {
