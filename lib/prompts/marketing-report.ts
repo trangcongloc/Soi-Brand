@@ -44,9 +44,6 @@ function buildVietnamesePrompt(data: PromptData): string {
         videosData,
     } = data;
 
-    const totalLikes = videosData.reduce((sum, v) => sum + v.likes, 0);
-    const totalVideoViews = videosData.reduce((sum, v) => sum + v.views, 0);
-
     return `
 Bạn là chuyên gia phân tích marketing YouTube cấp cao. Hãy phân tích kênh YouTube sau và tạo báo cáo marketing chi tiết, chuyên sâu.
 
@@ -84,11 +81,6 @@ YÊU CẦU:
 Hãy phân tích và trả về một object JSON hoàn chỉnh với cấu trúc sau:
 
 ${JSON_STRUCTURE_TEMPLATE(
-    videosData.length,
-    totalVideoViews,
-    totalLikes,
-    subscriberCount,
-    videoCount,
     avgViews,
     topVideoViews
 )}
@@ -113,10 +105,14 @@ QUAN TRỌNG:
   - Chuyển đổi tên ngày từ tiếng Anh sang tiếng Việt
 - content_niche_analysis: Phân tích CHÍNH XÁC niche dựa trên nội dung video, xác định thể loại và tỷ lệ phần trăm
 - audience_analysis: ƯỚC TÍNH demographics dựa trên nội dung, ngôn ngữ, chủ đề của kênh (toàn cầu, không giới hạn quốc gia cụ thể)
+  * top_countries PHẢI là tên quốc gia CỤ THỂ BẰNG TIẾNG VIỆT (VD: "Hoa Kỳ", "Việt Nam", "Nhật Bản", "Ấn Độ", "Brasil"), KHÔNG được dùng "Quốc gia 1", "Quốc gia 2"
 - Tạo ÍT NHẤT 2 audience segments (NHÓM khán giả, không phải cá nhân) với ĐẦY ĐỦ thông tin
 - Tạo ÍT NHẤT 3 growth opportunities với priority khác nhau (cao, trung bình, thấp)
 - Video ideas phải CỤ THỂ cho kênh này, không chung chung
 - content_mix trong content_calendar phải RẤT CỤ THỂ:
+  * QUAN TRỌNG: content_type và specific_topics PHẢI sử dụng ngôn ngữ CHÍNH của kênh (dựa trên tiêu đề và mô tả video)
+  * Nếu kênh tiếng Anh: content_type = "Cake Decorating", specific_topics = ["Rainbow Cake", "KitKat Cake"]
+  * Nếu kênh tiếng Việt: content_type = "Trang trí bánh", specific_topics = ["Bánh cầu vồng", "Bánh KitKat"]
   * Ví dụ kênh bánh: "Bánh cầu vồng", "Bánh KitKat", "Bánh Socola" - KHÔNG phải "Hướng dẫn làm bánh"
   * Ví dụ kênh nhà máy: "Sản xuất ô tô", "Chế biến đu đủ", "Nhà máy chocolate" - KHÔNG phải "Video công nghiệp"
   * Liệt kê specific_topics là những CHỦ ĐỀ THỰC SỰ kênh đang làm từ video data
@@ -156,9 +152,6 @@ function buildEnglishPrompt(data: PromptData): string {
         videosData,
     } = data;
 
-    const totalLikes = videosData.reduce((sum, v) => sum + v.likes, 0);
-    const totalVideoViews = videosData.reduce((sum, v) => sum + v.views, 0);
-
     return `
 You are a senior YouTube marketing analyst. Analyze the following YouTube channel and create a detailed, in-depth marketing report.
 
@@ -196,11 +189,6 @@ REQUIREMENTS:
 Analyze and return a complete JSON object with the following structure:
 
 ${JSON_STRUCTURE_TEMPLATE_EN(
-    videosData.length,
-    totalVideoViews,
-    totalLikes,
-    subscriberCount,
-    videoCount,
     avgViews,
     topVideoViews
 )}
@@ -218,10 +206,14 @@ IMPORTANT:
   - Keep day names in English
 - content_niche_analysis: Analyze EXACT niche based on video content, identify categories and percentages
 - audience_analysis: ESTIMATE demographics based on content, language, channel topics (global, not limited to specific countries)
+  * top_countries MUST be SPECIFIC country names (e.g., "United States", "Vietnam", "Japan", "India"), DO NOT use "Country 1", "Country 2"
 - Create AT LEAST 2 audience segments (GROUPS, not individuals) with COMPLETE information
 - Create AT LEAST 3 growth opportunities with different priorities (high, medium, low)
 - Video ideas must be SPECIFIC to this channel, not generic
 - content_mix in content_calendar must be VERY SPECIFIC:
+  * IMPORTANT: content_type and specific_topics MUST use the channel's PRIMARY language (based on video titles and descriptions)
+  * If English channel: content_type = "Cake Decorating", specific_topics = ["Rainbow Cake", "KitKat Cake"]
+  * If Vietnamese channel: content_type = "Trang trí bánh", specific_topics = ["Bánh cầu vồng", "Bánh KitKat"]
   * Example for baking channel: "Rainbow Cake", "KitKat Cake", "Chocolate Cake" - NOT "Baking tutorials"
   * Example for factory channel: "Car Manufacturing", "Papaya Processing", "Chocolate Factory" - NOT "Industrial videos"
   * List specific_topics as ACTUAL TOPICS the channel is making from video data
@@ -248,11 +240,6 @@ IMPORTANT:
 }
 
 function JSON_STRUCTURE_TEMPLATE(
-    videoCount: number,
-    totalViews: number,
-    totalLikes: number,
-    subscriberCount: number,
-    totalVideoCount: number,
     avgViews: number,
     topVideoViews: number
 ): string {
@@ -275,13 +262,6 @@ function JSON_STRUCTURE_TEMPLATE(
         "tone_of_voice": "Giọng điệu và thông điệp cốt lõi",
         "brand_positioning": "Định vị thương hiệu"
       },
-      "content_pillars": [
-        {
-          "pillar": "Tên trụ cột nội dung 1",
-          "purpose": "Mục đích",
-          "description": "Mô tả chi tiết"
-        }
-      ],
       "content_focus": {
         "overview": "Mô tả tổng quan về các nội dung chính mà kênh đang tập trung thực hiện (ví dụ: các loại bánh, review công nghệ...)",
         "topics": ["Chủ đề 1", "Chủ đề 2", "Chủ đề 3"]
@@ -310,17 +290,6 @@ function JSON_STRUCTURE_TEMPLATE(
         "competitor_landscape": "Phân tích cạnh tranh - các kênh tương tự, điểm khác biệt",
         "content_uniqueness": "Điều gì làm nội dung kênh này độc đáo so với đối thủ"
       },
-      "hashtag_strategy": "Phân tích chiến lược hashtag/tags",
-      "top_content_analysis": {
-        "best_performing": {
-          "overview": "Tổng quan về video hiệu suất tốt nhất",
-          "reasons_for_success": "Lý do thành công"
-        },
-        "worst_performing": {
-          "overview": "Tổng quan về video hiệu suất thấp",
-          "reasons_for_failure": "Lý do kém hiệu quả"
-        }
-      },
       "content_structure_analysis": {
         "hook_tactics": "Chiến thuật thu hút trong 3-5 giây đầu",
         "storytelling": "Cấu trúc kể chuyện",
@@ -343,8 +312,8 @@ function JSON_STRUCTURE_TEMPLATE(
           "other": 2
         },
         "top_countries": [
-          {"country": "Quốc gia 1 (ước tính dựa trên ngôn ngữ nội dung)", "percentage": 70},
-          {"country": "Quốc gia 2", "percentage": 20},
+          {"country": "TÊN QUỐC GIA CỤ THỂ BẰNG TIẾNG VIỆT (ước tính dựa trên ngôn ngữ nội dung - VD: 'Hoa Kỳ', 'Việt Nam', 'Nhật Bản', 'Ấn Độ', 'Brasil')", "percentage": 70},
+          {"country": "Quốc gia cụ thể thứ 2 bằng tiếng Việt (VD: 'Philippines', 'Thái Lan', 'Indonesia')", "percentage": 20},
           {"country": "Khác", "percentage": 10}
         ],
         "primary_languages": ["Ngôn ngữ chính của kênh", "Ngôn ngữ phụ nếu có"]
@@ -404,24 +373,32 @@ function JSON_STRUCTURE_TEMPLATE(
       "best_posting_days": ["Sử dụng dữ liệu từ 'Các ngày đã đăng bài' ở trên, sắp xếp theo thứ tự từ Thứ 2 đến Chủ nhật (VD: 'Thứ 2', 'Thứ 4', 'Thứ 7', 'Chủ nhật')"],
       "best_posting_times": ["Sử dụng dữ liệu từ 'Các giờ đã đăng bài' ở trên, sắp xếp theo thứ tự từ 0:00 đến 23:00 (VD: '8:00', '14:00', '20:00')"],
       "recommended_frequency": "Tần suất đăng đề xuất (VD: '3-4 video/tuần')",
+      "best_performing_overview": "Tổng quan về các video hiệu suất tốt nhất - phân tích lý do thành công và bài học rút ra",
+      "worst_performing_overview": "Tổng quan về các video hiệu suất thấp - phân tích lý do kém hiệu quả và cách khắc phục",
       "content_mix": [
         {
-          "content_type": "Loại nội dung chính (VD: 'Trang trí bánh', 'Tour nhà máy', 'Review công nghệ')",
-          "specific_topics": ["Chủ đề CỤ THỂ 1 mà kênh làm (VD: 'Bánh cầu vồng', 'Sản xuất ô tô', 'Review iPhone')", "Chủ đề cụ thể 2", "Chủ đề cụ thể 3"],
+          "content_type": "Loại nội dung chính - SỬ DỤNG NGÔN NGỮ CỦA KÊNH (VD: 'Cake Decorating' nếu kênh tiếng Anh, 'Trang trí bánh' nếu kênh tiếng Việt)",
+          "pillar_purpose": "Mục đích chiến lược của trụ cột nội dung này (VD: 'Thu hút khán giả mới', 'Xây dựng chuyên môn', 'Tạo viral', 'Giữ chân khán giả cũ')",
+          "specific_topics": ["Chủ đề CỤ THỂ 1 - SỬ DỤNG NGÔN NGỮ CỦA KÊNH (VD: 'Rainbow Cake' nếu kênh tiếng Anh, 'Bánh cầu vồng' nếu kênh tiếng Việt)", "Chủ đề cụ thể 2", "Chủ đề cụ thể 3"],
           "percentage": 50,
-          "example_videos": ["Tên video ví dụ từ kênh"]
+          "example_videos": ["Tên video ví dụ từ kênh"],
+          "performance_insight": "Phân tích hiệu suất của loại nội dung này - lượt xem trung bình, tỷ lệ tương tác, và xu hướng (VD: 'Hiệu suất cao - View trung bình 200K, engagement 5%')"
         },
         {
           "content_type": "Loại nội dung phụ 1",
+          "pillar_purpose": "Mục đích của trụ cột này",
           "specific_topics": ["Chủ đề cụ thể 1", "Chủ đề cụ thể 2"],
           "percentage": 30,
-          "example_videos": ["Tên video ví dụ"]
+          "example_videos": ["Tên video ví dụ"],
+          "performance_insight": "Phân tích hiệu suất loại nội dung này"
         },
         {
           "content_type": "Loại nội dung phụ 2",
+          "pillar_purpose": "Mục đích của trụ cột này",
           "specific_topics": ["Chủ đề cụ thể 1"],
           "percentage": 20,
-          "example_videos": ["Tên video ví dụ"]
+          "example_videos": ["Tên video ví dụ"],
+          "performance_insight": "Phân tích hiệu suất loại nội dung này"
         }
       ]
     },
@@ -499,34 +476,6 @@ function JSON_STRUCTURE_TEMPLATE(
           "priority": "medium"
         }
       ]
-    },
-    "quantitative_synthesis": {
-      "summary_stats": {
-        "total_posts": ${videoCount},
-        "total_views": ${totalViews},
-        "total_likes": ${totalLikes},
-        "total_shares": 0,
-        "total_saves": 0,
-        "total_photos": 0,
-        "total_videos": ${videoCount}
-      },
-      "channel_health": {
-        "follower_count": "${subscriberCount.toLocaleString()}",
-        "posting_frequency": "Ước tính tần suất đăng bài, trả về kết quả ngắn gọn (VD: '1 video/ngày', '3-4 video/tuần')",
-        "er_rate": "Tính tỷ lệ tương tác theo công thức: (Tổng Like + Tổng Bình luận) / Tổng Lượt xem * 100%. CHỈ trả về kết quả cuối cùng dạng 'X.XX%', KHÔNG bao gồm công thức hay giải thích."
-      },
-      "channel_metrics": {
-        "video_count": ${totalVideoCount},
-        "follower_count": ${subscriberCount},
-        "following_count": 0,
-        "heart_count": ${totalLikes}
-      },
-      "content_performance": {
-        "avg_view": "Trung bình lượt xem, chỉ trả về số (VD: '134,769 lượt xem/video')",
-        "viral_score": "Điểm viral, trả về đánh giá ngắn gọn (VD: 'Cao', 'Trung bình', 'Thấp')",
-        "value_score": "Điểm giá trị, trả về đánh giá ngắn gọn (VD: 'Cao', 'Trung bình', 'Thấp')",
-        "ad_ratio": "Tỷ lệ quảng cáo, trả về kết quả ngắn gọn (VD: 'Không xác định', '5%')"
-      }
     }
   },
   "report_part_3": {
@@ -622,11 +571,6 @@ function JSON_STRUCTURE_TEMPLATE(
 }
 
 function JSON_STRUCTURE_TEMPLATE_EN(
-    videoCount: number,
-    totalViews: number,
-    totalLikes: number,
-    subscriberCount: number,
-    totalVideoCount: number,
     avgViews: number,
     topVideoViews: number
 ): string {
@@ -649,13 +593,6 @@ function JSON_STRUCTURE_TEMPLATE_EN(
         "tone_of_voice": "Tone and core messaging",
         "brand_positioning": "Brand positioning"
       },
-      "content_pillars": [
-        {
-          "pillar": "Content pillar name 1",
-          "purpose": "Purpose",
-          "description": "Detailed description"
-        }
-      ],
       "content_focus": {
         "overview": "Overall description of main content areas the channel focuses on (e.g., cake types, tech reviews...)",
         "topics": ["Topic 1", "Topic 2", "Topic 3"]
@@ -684,17 +621,6 @@ function JSON_STRUCTURE_TEMPLATE_EN(
         "competitor_landscape": "Competitive analysis - similar channels, differentiating factors",
         "content_uniqueness": "What makes this channel's content unique compared to competitors"
       },
-      "hashtag_strategy": "Hashtag/tags strategy analysis",
-      "top_content_analysis": {
-        "best_performing": {
-          "overview": "Overview of best performing videos",
-          "reasons_for_success": "Reasons for success"
-        },
-        "worst_performing": {
-          "overview": "Overview of underperforming videos",
-          "reasons_for_failure": "Reasons for poor performance"
-        }
-      },
       "content_structure_analysis": {
         "hook_tactics": "Hook tactics in the first 3-5 seconds",
         "storytelling": "Storytelling structure",
@@ -717,8 +643,8 @@ function JSON_STRUCTURE_TEMPLATE_EN(
           "other": 2
         },
         "top_countries": [
-          {"country": "Country 1 (estimated based on content language)", "percentage": 70},
-          {"country": "Country 2", "percentage": 20},
+          {"country": "SPECIFIC COUNTRY NAME (estimated based on content language - e.g., 'United States', 'Vietnam', 'Japan', 'India', 'Brazil')", "percentage": 70},
+          {"country": "Specific country 2 (e.g., 'Philippines', 'Thailand', 'Indonesia')", "percentage": 20},
           {"country": "Other", "percentage": 10}
         ],
         "primary_languages": ["Channel's main language", "Secondary language if any"]
@@ -778,24 +704,32 @@ function JSON_STRUCTURE_TEMPLATE_EN(
       "best_posting_days": ["Use data from 'Days Posted' above, sort from Monday to Sunday (e.g., 'Monday', 'Wednesday', 'Saturday', 'Sunday')"],
       "best_posting_times": ["Use data from 'Hours Posted' above, sort from 0:00 to 23:00 (e.g., '8:00', '14:00', '20:00')"],
       "recommended_frequency": "Recommended posting frequency (e.g., '3-4 videos/week')",
+      "best_performing_overview": "Overview of best performing videos - analyze reasons for success and key takeaways",
+      "worst_performing_overview": "Overview of underperforming videos - analyze reasons for poor performance and how to improve",
       "content_mix": [
         {
-          "content_type": "Main content type (e.g., 'Cake Decorating', 'Factory Tours', 'Tech Reviews')",
-          "specific_topics": ["SPECIFIC topic 1 the channel makes (e.g., 'Rainbow Cake', 'Car Manufacturing', 'iPhone Reviews')", "Specific topic 2", "Specific topic 3"],
+          "content_type": "Main content type - USE CHANNEL'S LANGUAGE (e.g., 'Cake Decorating' for English channel, 'Trang trí bánh' for Vietnamese channel)",
+          "pillar_purpose": "Strategic purpose of this content pillar (e.g., 'Attract new audience', 'Build expertise', 'Create viral moments', 'Retain existing audience')",
+          "specific_topics": ["SPECIFIC topic 1 - USE CHANNEL'S LANGUAGE (e.g., 'Rainbow Cake' for English channel, 'Bánh cầu vồng' for Vietnamese channel)", "Specific topic 2", "Specific topic 3"],
           "percentage": 50,
-          "example_videos": ["Example video title from the channel"]
+          "example_videos": ["Example video title from the channel"],
+          "performance_insight": "Performance analysis of this content type - average views, engagement rate, and trends (e.g., 'High performance - 200K avg views, 5% engagement')"
         },
         {
           "content_type": "Secondary content type 1",
+          "pillar_purpose": "Purpose of this pillar",
           "specific_topics": ["Specific topic 1", "Specific topic 2"],
           "percentage": 30,
-          "example_videos": ["Example video title"]
+          "example_videos": ["Example video title"],
+          "performance_insight": "Performance analysis of this content type"
         },
         {
           "content_type": "Secondary content type 2",
+          "pillar_purpose": "Purpose of this pillar",
           "specific_topics": ["Specific topic 1"],
           "percentage": 20,
-          "example_videos": ["Example video title"]
+          "example_videos": ["Example video title"],
+          "performance_insight": "Performance analysis of this content type"
         }
       ]
     },
@@ -873,34 +807,6 @@ function JSON_STRUCTURE_TEMPLATE_EN(
           "priority": "medium"
         }
       ]
-    },
-    "quantitative_synthesis": {
-      "summary_stats": {
-        "total_posts": ${videoCount},
-        "total_views": ${totalViews},
-        "total_likes": ${totalLikes},
-        "total_shares": 0,
-        "total_saves": 0,
-        "total_photos": 0,
-        "total_videos": ${videoCount}
-      },
-      "channel_health": {
-        "follower_count": "${subscriberCount.toLocaleString()}",
-        "posting_frequency": "Estimate posting frequency, return concise result (e.g., '1 video/day', '3-4 videos/week')",
-        "er_rate": "Calculate engagement rate using formula: (Total Likes + Total Comments) / Total Views * 100%. ONLY return final result in format 'X.XX%', DO NOT include formula or explanation."
-      },
-      "channel_metrics": {
-        "video_count": ${totalVideoCount},
-        "follower_count": ${subscriberCount},
-        "following_count": 0,
-        "heart_count": ${totalLikes}
-      },
-      "content_performance": {
-        "avg_view": "Average views, only return number (e.g., '134,769 views/video')",
-        "viral_score": "Viral score, return concise assessment (e.g., 'High', 'Medium', 'Low')",
-        "value_score": "Value score, return concise assessment (e.g., 'High', 'Medium', 'Low')",
-        "ad_ratio": "Ad ratio, return concise result (e.g., 'Unknown', '5%')"
-      }
     }
   },
   "report_part_3": {

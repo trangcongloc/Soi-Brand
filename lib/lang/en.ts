@@ -8,7 +8,7 @@ export const en = {
     },
 
     home: {
-        title: "",
+        title: "Soi'Brand",
     },
 
     common: {

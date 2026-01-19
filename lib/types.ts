@@ -150,23 +150,6 @@ export interface BrandIdentity {
     brand_positioning: string;
 }
 
-export interface ContentPillar {
-    pillar: string;
-    purpose: string;
-    description: string;
-}
-
-export interface TopContentAnalysis {
-    best_performing: {
-        overview: string;
-        reasons_for_success: string;
-    };
-    worst_performing: {
-        overview: string;
-        reasons_for_failure: string;
-    };
-}
-
 export interface ContentStructureAnalysis {
     hook_tactics: string;
     storytelling: string;
@@ -231,41 +214,10 @@ export interface AudienceAnalysis {
 
 export interface StrategyAnalysis {
     brand_identity: BrandIdentity;
-    content_pillars: ContentPillar[];
     content_focus: ContentFocus;
-    hashtag_strategy: string;
-    top_content_analysis: TopContentAnalysis;
     content_structure_analysis: ContentStructureAnalysis;
 }
 
-export interface QuantitativeSynthesis {
-    summary_stats: {
-        total_posts: number;
-        total_views: number;
-        total_likes: number;
-        total_shares: number;
-        total_saves: number;
-        total_photos: number;
-        total_videos: number;
-    };
-    channel_health: {
-        follower_count: string;
-        posting_frequency: string;
-        er_rate: string;
-    };
-    channel_metrics: {
-        video_count: number;
-        follower_count: number;
-        following_count: number;
-        heart_count: number;
-    };
-    content_performance: {
-        avg_view: string;
-        viral_score: string;
-        value_score: string;
-        ad_ratio: string;
-    };
-}
 
 export interface VideoIdea {
     title: string;
@@ -296,11 +248,15 @@ export interface ContentCalendar {
     best_posting_days: string[];
     best_posting_times: string[];
     recommended_frequency: string;
+    best_performing_overview: string;
+    worst_performing_overview: string;
     content_mix: {
         content_type: string;
+        pillar_purpose: string;
         specific_topics: string[];
         percentage: number;
         example_videos?: string[];
+        performance_insight: string;
     }[];
 }
 
@@ -379,7 +335,6 @@ export interface ReportPart2 {
     ad_strategy: AdStrategy;
     funnel_analysis: FunnelAnalysis;
     strategy_analysis: StrategyAnalysis;
-    quantitative_synthesis: QuantitativeSynthesis;
     // New enhanced fields (optional for backward compatibility)
     content_niche_analysis?: ContentNicheAnalysis;
     audience_analysis?: AudienceAnalysis;

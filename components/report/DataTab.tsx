@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import { Post, ChannelInfo, ReportPart2 } from "@/lib/types";
+import { Post, ChannelInfo } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";
 import UploadHeatmap from "./UploadHeatmap";
@@ -26,10 +26,9 @@ const VideoPerformanceChart = dynamic(
 interface DataTabProps {
     posts: Post[];
     channelInfo?: ChannelInfo;
-    report_part_2?: ReportPart2;
 }
 
-const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo, report_part_2 }) => {
+const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
     const lang = useLang();
     const { langCode } = useLanguage();
     const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
@@ -80,162 +79,6 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo, report_part_2 }) 
                 gap: "2rem",
             }}
         >
-            {/* Quantitative Synthesis */}
-            {report_part_2?.quantitative_synthesis && (
-                <section>
-                    <h3 className={styles.sectionTitle}>
-                        {lang.analysis.quantitativeSynthesis.title}
-                    </h3>
-                    <div className={styles.grid2}>
-                        {/* Summary Stats */}
-                        <div className={`${styles.card} ${styles.bgBlue}`}>
-                            <h4 className={`${styles.cardTitle} ${styles.textBlue}`}>
-                                {lang.analysis.quantitativeSynthesis.summaryStats.title}
-                            </h4>
-                            <div style={{ display: "grid", gap: "0.75rem" }}>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.summaryStats.totalViews}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {formatFullNumber(report_part_2.quantitative_synthesis.summary_stats.total_views)}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.summaryStats.totalLikes}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {formatFullNumber(report_part_2.quantitative_synthesis.summary_stats.total_likes)}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.summaryStats.totalVideos}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {formatFullNumber(report_part_2.quantitative_synthesis.summary_stats.total_posts)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Channel Health */}
-                        <div className={`${styles.card} ${styles.bgGreen}`}>
-                            <h4 className={`${styles.cardTitle} ${styles.textGreen}`}>
-                                {lang.analysis.quantitativeSynthesis.channelHealth.title}
-                            </h4>
-                            <div style={{ display: "grid", gap: "0.75rem" }}>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.channelHealth.followerCount}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.channel_health.follower_count}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.channelHealth.postingFrequency}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.channel_health.posting_frequency}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.channelHealth.erRate}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.channel_health.er_rate}
-                                    </span>
-                                    <span className={styles.mutedText} style={{ fontSize: "9px", marginLeft: "0.25rem" }}>
-                                        ({lang.analysis.quantitativeSynthesis.channelHealth.erTooltip})
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Channel Metrics */}
-                        <div className={`${styles.card} ${styles.bgPurple}`}>
-                            <h4 className={`${styles.cardTitle} ${styles.textPurple}`}>
-                                {lang.analysis.quantitativeSynthesis.channelMetrics.title}
-                            </h4>
-                            <div style={{ display: "grid", gap: "0.75rem" }}>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.channelMetrics.videoCount}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {formatFullNumber(report_part_2.quantitative_synthesis.channel_metrics.video_count)}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.channelMetrics.followerCount}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {formatFullNumber(report_part_2.quantitative_synthesis.channel_metrics.follower_count)}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.channelMetrics.heartCount}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {formatFullNumber(report_part_2.quantitative_synthesis.channel_metrics.heart_count)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Content Performance */}
-                        <div className={`${styles.card} ${styles.bgOrange}`}>
-                            <h4 className={`${styles.cardTitle} ${styles.textOrange}`}>
-                                {lang.analysis.quantitativeSynthesis.contentPerformance.title}
-                            </h4>
-                            <div style={{ display: "grid", gap: "0.75rem" }}>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.contentPerformance.avgView}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.content_performance.avg_view}
-                                    </span>
-                                    <span className={styles.mutedText} style={{ fontSize: "9px", marginLeft: "0.25rem" }}>
-                                        ({lang.analysis.quantitativeSynthesis.contentPerformance.avgViewTooltip})
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.contentPerformance.viralScore}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.content_performance.viral_score}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.contentPerformance.valueScore}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.content_performance.value_score}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className={styles.mutedText}>
-                                        {lang.analysis.quantitativeSynthesis.contentPerformance.adRatio}{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                        {report_part_2.quantitative_synthesis.content_performance.ad_ratio}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
-
             {/* Channel Info + Heatmap */}
             <section>
                 <h3 className={styles.sectionTitle}>

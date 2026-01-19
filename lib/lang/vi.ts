@@ -8,7 +8,7 @@ export const vi = {
     },
 
     home: {
-        title: "",
+        title: "Soi'Brand",
     },
 
     common: {

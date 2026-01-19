@@ -79,6 +79,36 @@ export default function Home() {
         }
     }, [error]);
 
+    // Update document title and favicon based on report
+    useEffect(() => {
+        if (report) {
+            // When report is loaded, show channel name
+            document.title = report.brand_name;
+
+            // Update favicon to channel avatar
+            const channelAvatar = report.report_part_1.channel_info.avatar;
+            if (channelAvatar) {
+                // Remove existing favicon links
+                const existingLinks = document.querySelectorAll("link[rel*='icon']");
+                existingLinks.forEach(link => link.remove());
+
+                // Add new favicon with channel avatar
+                const link = document.createElement('link');
+                link.rel = 'icon';
+                link.type = 'image/png';
+                link.href = channelAvatar;
+                document.head.appendChild(link);
+            }
+        } else {
+            // When no report, show default title
+            document.title = lang.metadata.title;
+
+            // Reset favicon to default (Next.js will handle it)
+            const existingLinks = document.querySelectorAll("link[rel*='icon']");
+            existingLinks.forEach(link => link.remove());
+        }
+    }, [report, lang.metadata.title]);
+
     const handleAnalyze = async (channelUrl: string) => {
         setError(null);
 

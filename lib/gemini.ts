@@ -33,7 +33,6 @@ function validateAIResponse(data: any): void {
         "ad_strategy",
         "funnel_analysis",
         "strategy_analysis",
-        "quantitative_synthesis",
     ];
 
     for (const section of requiredPart2Sections) {

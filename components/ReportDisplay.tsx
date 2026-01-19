@@ -107,7 +107,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                 {/* Content based on Active Tab */}
                 <div className="fade-in">
                     {activeTab === "data" && (
-                        <DataTab posts={posts} channelInfo={channelInfo} report_part_2={report_part_2} />
+                        <DataTab posts={posts} channelInfo={channelInfo} />
                     )}
 
                     {activeTab === "analysis" && (

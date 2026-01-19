@@ -97,16 +97,23 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
         });
 
         const sortedDays = Object.entries(dayCounts)
+            .sort((a, b) => b[1] - a[1]) // Sort by frequency (descending)
+            .slice(0, 3) // Get top 3
             .sort((a, b) => {
-                // Primary: by frequency (descending)
-                if (b[1] !== a[1]) return b[1] - a[1];
-                // Secondary: by day index (ascending, Mon -> Sun)
+                // Sort top 3 chronologically
                 const indexA = dayNames.indexOf(a[0]);
                 const indexB = dayNames.indexOf(b[0]);
-                // Shift Sunday (index 0) to end if needed, but dayNames order is already custom
-                return indexA - indexB;
+
+                if (langCode === "vi") {
+                    // Vietnamese: Monday (1) to Sunday (0), so Sunday should be last
+                    const orderA = indexA === 0 ? 7 : indexA; // Sunday becomes 7
+                    const orderB = indexB === 0 ? 7 : indexB; // Sunday becomes 7
+                    return orderA - orderB;
+                } else {
+                    // English: Sunday (0) to Saturday (6)
+                    return indexA - indexB;
+                }
             })
-            .slice(0, 3)
             .map(([day]) => day);
 
         // Calculate best posting times from actual data
@@ -117,13 +124,9 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
         });
 
         const sortedHours = Object.entries(hourCounts)
-            .sort((a, b) => {
-                // Primary: by frequency (descending)
-                if (b[1] !== a[1]) return b[1] - a[1];
-                // Secondary: by hour (ascending)
-                return parseInt(a[0]) - parseInt(b[0]);
-            })
-            .slice(0, 3)
+            .sort((a, b) => b[1] - a[1]) // Sort by frequency (descending)
+            .slice(0, 3) // Get top 3
+            .sort((a, b) => parseInt(a[0]) - parseInt(b[0])) // Sort top 3 chronologically (0:00 to 23:00)
             .map(([hour]) => {
                 const h = parseInt(hour);
                 return `${h.toString().padStart(2, "0")}:00`;
@@ -452,32 +455,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             </section>
 
             {/* ========== CONTENT ANALYSIS ========== */}
-            {/* Content Pillars */}
-            <section>
-                <h3 className={styles.sectionTitle}>
-                    {lang.analysis.contentPillars.title}
-                </h3>
-                <div style={{ display: "grid", gap: "0.75rem" }}>
-                    {report_part_2.strategy_analysis.content_pillars.map(
-                        (pillar, idx) => (
-                            <div key={idx} className={styles.pillarCard}>
-                                <div className={styles.pillarHeader}>
-                                    <span className={styles.pillarIndex}>
-                                        {idx + 1}
-                                    </span>
-                                    <h4 className={styles.pillarTitle}>
-                                        {pillar.pillar}
-                                    </h4>
-                                </div>
-                                <p className={styles.pillarDesc}>
-                                    {pillar.description}
-                                </p>
-                            </div>
-                        )
-                    )}
-                </div>
-            </section>
-
             {/* Content Structure Analysis */}
             {report_part_2.strategy_analysis.content_structure_analysis && (
                 <section>
@@ -520,82 +497,6 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                     </div>
                 </section>
             )}
-
-            {/* Top Content Analysis */}
-            {report_part_2.strategy_analysis.top_content_analysis && (
-                <section>
-                    <h3 className={styles.sectionTitle}>
-                        {lang.analysis.topContentAnalysis.title}
-                    </h3>
-                    <div className={styles.grid2}>
-                        {/* Best Performing */}
-                        <div className={`${styles.card} ${styles.bgGreen}`}>
-                            <h4 className={`${styles.cardTitle} ${styles.textGreen}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                </svg>
-                                {lang.analysis.topContentAnalysis.bestPerforming}
-                            </h4>
-                            <div style={{ marginTop: "0.75rem" }}>
-                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
-                                    {lang.analysis.topContentAnalysis.overview}
-                                </p>
-                                <p className={styles.analysisText} style={{ marginBottom: "0.75rem" }}>
-                                    {report_part_2.strategy_analysis.top_content_analysis.best_performing.overview}
-                                </p>
-                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
-                                    {lang.analysis.topContentAnalysis.reasonsForSuccess}
-                                </p>
-                                <p className={styles.analysisText}>
-                                    {report_part_2.strategy_analysis.top_content_analysis.best_performing.reasons_for_success}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Worst Performing */}
-                        <div className={`${styles.card} ${styles.bgOrange}`}>
-                            <h4 className={`${styles.cardTitle} ${styles.textOrange}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                                </svg>
-                                {lang.analysis.topContentAnalysis.worstPerforming}
-                            </h4>
-                            <div style={{ marginTop: "0.75rem" }}>
-                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
-                                    {lang.analysis.topContentAnalysis.overview}
-                                </p>
-                                <p className={styles.analysisText} style={{ marginBottom: "0.75rem" }}>
-                                    {report_part_2.strategy_analysis.top_content_analysis.worst_performing.overview}
-                                </p>
-                                <p className={styles.mutedText} style={{ fontSize: "10px", marginBottom: "0.5rem" }}>
-                                    {lang.analysis.topContentAnalysis.reasonsForFailure}
-                                </p>
-                                <p className={styles.analysisText}>
-                                    {report_part_2.strategy_analysis.top_content_analysis.worst_performing.reasons_for_failure}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* ========== MARKETING STRATEGY ========== */}
-            {/* Hashtag Strategy */}
-            {report_part_2.strategy_analysis.hashtag_strategy && (
-                <section>
-                    <h3 className={styles.sectionTitle}>
-                        {lang.analysis.hashtagStrategy.title}
-                    </h3>
-                    <div className={styles.card}>
-                        <p className={styles.analysisText}>
-                            {report_part_2.strategy_analysis.hashtag_strategy}
-                        </p>
-                    </div>
-                </section>
-            )}
-
 
             {/* Content Calendar Insights - Current vs Recommended */}
             {(currentStats || report_part_2.content_calendar) && (
@@ -866,6 +767,48 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 </section>
             )}
 
+            {/* Performance Overview */}
+            {(report_part_2.content_calendar?.best_performing_overview ||
+                report_part_2.content_calendar?.worst_performing_overview) && (
+                <section>
+                    <h3 className={styles.sectionTitle}>
+                        {langCode === "vi"
+                            ? "Tổng quan hiệu suất nội dung"
+                            : "Content Performance Overview"}
+                    </h3>
+                    <div className={styles.grid2}>
+                        {report_part_2.content_calendar.best_performing_overview && (
+                            <div className={`${styles.card} ${styles.bgGreen}`}>
+                                <h4 className={`${styles.cardTitle} ${styles.textGreen}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                    </svg>
+                                    {langCode === "vi" ? "Video hiệu suất tốt nhất" : "Best Performing Videos"}
+                                </h4>
+                                <p className={styles.analysisText} style={{ marginTop: "0.75rem" }}>
+                                    {report_part_2.content_calendar.best_performing_overview}
+                                </p>
+                            </div>
+                        )}
+                        {report_part_2.content_calendar.worst_performing_overview && (
+                            <div className={`${styles.card} ${styles.bgOrange}`}>
+                                <h4 className={`${styles.cardTitle} ${styles.textOrange}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    {langCode === "vi" ? "Video hiệu suất thấp" : "Underperforming Videos"}
+                                </h4>
+                                <p className={styles.analysisText} style={{ marginTop: "0.75rem" }}>
+                                    {report_part_2.content_calendar.worst_performing_overview}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
+
             {/* Content Mix */}
             {report_part_2.content_calendar?.content_mix &&
                 report_part_2.content_calendar.content_mix.length > 0 && (
@@ -951,6 +894,26 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                     }}
                                                 ></div>
                                             </div>
+                                            {mix.pillar_purpose && (
+                                                <div style={{ marginBottom: "0.75rem" }}>
+                                                    <span style={{ fontSize: "10px", color: "#666", fontWeight: "600" }}>
+                                                        {langCode === "vi" ? "Mục đích chiến lược:" : "Strategic Purpose:"}
+                                                    </span>
+                                                    <p style={{ fontSize: "11px", color: "#555", marginTop: "0.25rem", marginBottom: 0 }}>
+                                                        {mix.pillar_purpose}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {mix.performance_insight && (
+                                                <div style={{ marginBottom: "0.75rem" }}>
+                                                    <span style={{ fontSize: "10px", color: "#666", fontWeight: "600" }}>
+                                                        {langCode === "vi" ? "Phân tích hiệu suất:" : "Performance Insight:"}
+                                                    </span>
+                                                    <p style={{ fontSize: "11px", color: "#555", marginTop: "0.25rem", marginBottom: 0 }}>
+                                                        {mix.performance_insight}
+                                                    </p>
+                                                </div>
+                                            )}
                                             {mix.specific_topics &&
                                                 mix.specific_topics.length >
                                                     0 && (
