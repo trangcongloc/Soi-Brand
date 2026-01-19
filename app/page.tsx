@@ -12,6 +12,7 @@ import { useLang } from "@/lib/lang";
 import { getUserSettings } from "@/lib/userSettings";
 import { extractChannelId, extractUsername } from "@/lib/utils";
 import { logger } from "@/lib/logger";
+import { updateYouTubeQuota, updateGeminiQuota } from "@/lib/apiQuota";
 import {
     getCachedReportsForChannel,
     setCachedReport,
@@ -131,11 +132,21 @@ export default function Home() {
                 channelUrl,
                 youtubeApiKey: userSettings.youtubeApiKey,
                 geminiApiKey: userSettings.geminiApiKey,
+                geminiModel: userSettings.geminiModel,
             });
 
             if (response.data.success && response.data.data) {
                 const newReport = response.data.data;
                 setReport(newReport);
+
+                // Update API quota usage
+                try {
+                    updateYouTubeQuota(103); // YouTube API cost per analysis
+                    updateGeminiQuota(); // Gemini API request count
+                    logger.log("API quota updated");
+                } catch (quotaError) {
+                    logger.error("Failed to update quota:", quotaError);
+                }
 
                 // Cache the report using actual channel ID
                 const actualChannelId =

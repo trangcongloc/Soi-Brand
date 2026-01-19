@@ -2,10 +2,13 @@
 
 import { isBrowser } from "./utils";
 import { logger } from "./logger";
+import { ApiQuotaUsage, GeminiModel } from "./types";
 
 export interface UserSettings {
     youtubeApiKey?: string;
     geminiApiKey?: string;
+    geminiModel?: GeminiModel;
+    quotaUsage?: ApiQuotaUsage;
 }
 
 const SETTINGS_KEY = "ourtube_user_settings";

@@ -50,9 +50,9 @@ THÔNG TIN KÊNH:
 - Lượt xem trung bình/video: ${avgViews.toLocaleString()}
 - Video hiệu suất cao nhất: ${topVideoViews.toLocaleString()} lượt xem
 
-PHÂN TÍCH THỜI GIAN ĐĂNG:
-- Các ngày đăng phổ biến: ${topPostingDays.join(", ")}
-- Các giờ đăng phổ biến: ${topPostingHours.join(", ")}
+PHÂN TÍCH THỜI GIAN ĐĂNG (ĐÃ SẮP XẾP THEO THỨ TỰ THỜI GIAN):
+- Các ngày đã đăng bài (từ Thứ 2 đến Chủ nhật): ${topPostingDays.join(", ")}
+- Các giờ đã đăng bài (từ sớm đến muộn): ${topPostingHours.join(", ")}
 
 DANH SÁCH VIDEO GẦN ĐÂY (${videosData.length} videos):
 ${videosData
@@ -89,6 +89,19 @@ QUAN TRỌNG:
 - Phân tích sâu sắc, chi tiết dựa trên dữ liệu thực tế
 - Sử dụng tiếng Việt
 - Đảm bảo tất cả các trường đều có giá trị hợp lệ
+- FORMAT NGÀY: Chuyển đổi tên ngày từ tiếng Anh sang tiếng Việt theo bảng sau:
+  * Monday → Thứ 2
+  * Tuesday → Thứ 3
+  * Wednesday → Thứ 4
+  * Thursday → Thứ 5
+  * Friday → Thứ 6
+  * Saturday → Thứ 7
+  * Sunday → Chủ nhật
+- THỨ TỰ NGÀY/GIỜ: Dữ liệu "Các ngày đã đăng bài" và "Các giờ đã đăng bài" đã được sắp xếp theo thứ tự thời gian (Thứ 2→Chủ nhật, 0:00→23:00).
+  Khi điền vào peak_viewing_days, peak_viewing_hours, best_posting_days, best_posting_times:
+  - Sắp xếp các ngày theo thứ tự từ Thứ 2 đến Chủ nhật
+  - Sắp xếp các giờ theo thứ tự từ 0:00 đến 23:00
+  - Chuyển đổi tên ngày từ tiếng Anh sang tiếng Việt
 - content_niche_analysis: Phân tích CHÍNH XÁC niche dựa trên nội dung video, xác định thể loại và tỷ lệ phần trăm
 - audience_analysis: ƯỚC TÍNH demographics dựa trên nội dung, ngôn ngữ, chủ đề của kênh (global, không giới hạn quốc gia cụ thể)
 - Tạo ÍT NHẤT 2 audience segments (NHÓM khán giả, không phải cá nhân) với ĐẦY ĐỦ thông tin
@@ -98,9 +111,21 @@ QUAN TRỌNG:
   * Ví dụ kênh bánh: "Rainbow Cake", "KitKat Cake", "Chocolate Cake" - KHÔNG phải "Baking tutorials"
   * Ví dụ kênh factory: "Car Manufacturing", "Papaya Processing", "Chocolate Factory" - KHÔNG phải "Industrial videos"
   * Liệt kê specific_topics là những CHỦ ĐỀ THỰC SỰ kênh đang làm từ video data
-- all_channel_tags: LIỆT KÊ TẤT CẢ tags THỰC TẾ từ video data đã cung cấp (không bỏ sót)
-- tag_categories: PHẢI phân loại tags từ all_channel_tags vào 7 nhóm (Core, Sub-Niche, Branded, Topic, SEO/Discovery, Trending, Long-tail) - KHÔNG được tự nghĩ ra tags mới
-- tag_analysis: Phân tích THỰC SỰ các tags từ video data, liệt kê most_used_tags với frequency THỰC TẾ
+- all_channel_tags: LIỆT KÊ TẤT CẢ tags THỰC TẾ từ video data đã cung cấp (không bỏ sót, không thêm tags mới)
+- tag_categories: CỰC KỲ QUAN TRỌNG - PHÂN TÍCH CHUYÊN NGHIỆP:
+  * CHỈ được phân loại tags từ all_channel_tags. TUYỆT ĐỐI KHÔNG được tự nghĩ ra hay thêm tags mới.
+  * Tạo TÊN CATEGORY CHUYÊN NGHIỆP dựa trên phân tích SEO thực tế:
+    - "Core Content Keywords" (Từ khóa nội dung cốt lõi) - Tags mô tả chủ đề chính của kênh
+    - "Brand & Channel Identity" (Nhận diện thương hiệu) - Tags về tên kênh, thương hiệu
+    - "Content Format Tags" (Định dạng nội dung) - Tags về loại video (tutorial, review, vlog...)
+    - "Audience Target Keywords" (Từ khóa đối tượng mục tiêu) - Tags thu hút đối tượng cụ thể
+    - "Trending & Viral Tags" (Thẻ xu hướng) - Tags theo trend, hashtag phổ biến
+    - "SEO Long-tail Keywords" (Từ khóa dài SEO) - Tags cụ thể, chi tiết để tối ưu tìm kiếm
+    - "Niche-Specific Tags" (Thẻ chuyên ngành) - Tags đặc thù của lĩnh vực
+    - "Geographic/Language Tags" (Thẻ địa lý/ngôn ngữ) - Tags về vị trí, ngôn ngữ
+  * Mỗi category PHẢI có PURPOSE (mục đích) giải thích TẠI SAO nhóm tags này quan trọng cho SEO
+  * Phân loại TẤT CẢ tags vào các category phù hợp (1 tag có thể thuộc nhiều category nếu hợp lý)
+- tag_analysis: Phân tích THỰC SỰ các tags từ video data, liệt kê most_used_tags với frequency THỰC TẾ (đếm số lần xuất hiện)
 - SEO analysis phải phân tích từ khóa và tags THỰC TẾ từ dữ liệu video
 - Optimization opportunities phải CỤ THỂ và THỰC TIỄN, không chung chung
 - Action plan phải có ÍT NHẤT 2 hành động cho mỗi giai đoạn (30/60/90 ngày)
@@ -208,16 +233,14 @@ function JSON_STRUCTURE_TEMPLATE(
           {"country": "Quốc gia 2", "percentage": 20},
           {"country": "Khác", "percentage": 10}
         ],
-        "primary_languages": ["Ngôn ngữ chính của kênh", "Ngôn ngữ phụ nếu có"],
-        "income_level": "Ước tính mức thu nhập chung (VD: 'Low', 'Medium', 'Medium-High', 'High')",
-        "education_level": "Ước tính trình độ học vấn (VD: 'High School', 'College', 'University')"
+        "primary_languages": ["Ngôn ngữ chính của kênh", "Ngôn ngữ phụ nếu có"]
       },
       "behavior": {
         "estimated_watch_time": "Ước tính thời gian xem trung bình (VD: '5-8 phút/video')",
         "returning_vs_new_ratio": "Tỷ lệ người xem quay lại vs mới (VD: '60% quay lại, 40% mới')",
         "subscriber_growth_trend": "Xu hướng tăng trưởng subscriber (VD: 'Tăng đều 2-3%/tháng', 'Đang chậm lại')",
-        "peak_viewing_days": ["Thứ 7", "Chủ nhật"],
-        "peak_viewing_hours": ["20:00", "21:00", "22:00"],
+        "peak_viewing_days": ["Sử dụng dữ liệu từ 'Các ngày đã đăng bài' ở trên, sắp xếp theo thứ tự từ Thứ 2 đến Chủ nhật (VD: 'Thứ 2', 'Thứ 4', 'Thứ 7', 'Chủ nhật')"],
+        "peak_viewing_hours": ["Sử dụng dữ liệu từ 'Các giờ đã đăng bài' ở trên, sắp xếp theo thứ tự từ 0:00 đến 23:00 (VD: '8:00', '14:00', '20:00')"],
         "engagement_patterns": "Mô tả cách khán giả tương tác (VD: 'Comment nhiều ở video hướng dẫn', 'Like cao ở video giải trí')",
         "device_preferences": "Thiết bị xem chủ yếu (VD: '70% Mobile, 25% Desktop, 5% TV')"
       },
@@ -264,8 +287,8 @@ function JSON_STRUCTURE_TEMPLATE(
       }
     ],
     "content_calendar": {
-      "best_posting_days": ["Ngày tốt nhất 1", "Ngày tốt nhất 2"],
-      "best_posting_times": ["Giờ tốt nhất 1", "Giờ tốt nhất 2"],
+      "best_posting_days": ["Sử dụng dữ liệu từ 'Các ngày đã đăng bài' ở trên, sắp xếp theo thứ tự từ Thứ 2 đến Chủ nhật (VD: 'Thứ 2', 'Thứ 4', 'Thứ 7', 'Chủ nhật')"],
+      "best_posting_times": ["Sử dụng dữ liệu từ 'Các giờ đã đăng bài' ở trên, sắp xếp theo thứ tự từ 0:00 đến 23:00 (VD: '8:00', '14:00', '20:00')"],
       "recommended_frequency": "Tần suất đăng đề xuất (VD: '3-4 video/tuần')",
       "content_mix": [
         {
@@ -326,39 +349,22 @@ function JSON_STRUCTURE_TEMPLATE(
         ],
         "tag_categories": [
           {
-            "category": "Core Tags (Tags cốt lõi)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags chính định nghĩa niche kênh, dùng cho hầu hết video", "core tag 2", "core tag 3"],
-            "effectiveness": "Hiệu quả của nhóm tag này (VD: 'Cao - là foundation của kênh')"
+            "category": "TÊN CATEGORY CHUYÊN NGHIỆP (VD: 'Core Content Keywords', 'Brand & Channel Identity', 'Content Format Tags', 'Audience Target Keywords', 'Trending & Viral Tags', 'SEO Long-tail Keywords'...)",
+            "purpose": "MỤC ĐÍCH CỤ THỂ của category này trong chiến lược SEO (VD: 'Giúp video xuất hiện trong tìm kiếm chủ đề chính, tăng khả năng phát hiện bởi đối tượng mục tiêu', 'Xây dựng nhận diện thương hiệu và tăng tỷ lệ người xem quay lại kênh'...)",
+            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags thuộc category này", "tag 2", "tag 3"],
+            "effectiveness": "Đánh giá hiệu quả SEO của nhóm tag này dựa trên hiệu suất video (VD: 'Cao - Video có tags này có view trung bình cao hơn 35%', 'Trung bình - Đang hoạt động tốt nhưng cần tối ưu thêm', 'Thấp - Cần xem xét lại hoặc thay thế')"
           },
           {
-            "category": "Sub-Niche Tags (Tags niche phụ)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags cho các chủ đề phụ trong kênh", "sub tag 2"],
-            "effectiveness": "Hiệu quả (VD: 'Tốt - giúp phân loại nội dung chi tiết hơn')"
+            "category": "Category thứ 2 - Tên chuyên nghiệp phản ánh đúng nhóm tags",
+            "purpose": "Giải thích rõ ràng vai trò của nhóm tags này trong việc thu hút và giữ chân khán giả",
+            "tags": ["Tags từ all_channel_tags thuộc category này"],
+            "effectiveness": "Đánh giá hiệu quả với số liệu cụ thể nếu có"
           },
           {
-            "category": "Branded Tags (Tags thương hiệu)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags có tên kênh, thương hiệu", "branded tag 2"],
-            "effectiveness": "Hiệu quả (VD: 'Trung bình - tốt cho branding dài hạn')"
-          },
-          {
-            "category": "Topic Tags (Tags chủ đề)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags mô tả topic cụ thể của video", "topic tag 2", "topic tag 3"],
-            "effectiveness": "Hiệu quả (VD: 'Cao - giúp tìm kiếm chính xác')"
-          },
-          {
-            "category": "SEO/Discovery Tags (Tags tìm kiếm)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags dùng để SEO và giúp khám phá", "seo tag 2"],
-            "effectiveness": "Hiệu quả (VD: 'Cao - tăng reach organically')"
-          },
-          {
-            "category": "Trending/Viral Tags (Tags xu hướng)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags về xu hướng hiện tại nếu có"],
-            "effectiveness": "Hiệu quả (VD: 'Cao khi có, không thường xuyên')"
-          },
-          {
-            "category": "Long-tail Tags (Tags dài)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags - tags dạng cụm từ dài, specific hơn"],
-            "effectiveness": "Hiệu quả (VD: 'Tốt - ít cạnh tranh, targeted traffic')"
+            "category": "Category thứ 3 - Tên phản ánh mục đích SEO cụ thể",
+            "purpose": "Mô tả tác động của nhóm tags này lên khả năng tìm kiếm và tương tác",
+            "tags": ["Tags từ all_channel_tags"],
+            "effectiveness": "Đánh giá dựa trên phân tích thực tế"
           }
         ],
         "competitor_tags": ["Tag mà đối thủ sử dụng nhưng kênh này chưa dùng 1", "Competitor tag 2", "Competitor tag 3"],

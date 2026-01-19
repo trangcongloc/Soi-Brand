@@ -5,10 +5,12 @@ import {
     YouTubeVideo,
     MarketingReport,
     APIError,
+    GeminiModel,
 } from "./types";
 import { generateUUID } from "./utils";
 import { buildMarketingReportPrompt } from "./prompts/marketing-report";
 import { logger } from "./logger";
+import { DEFAULT_MODEL } from "./geminiModels";
 
 /**
  * Validate that the AI response has the required structure
@@ -141,11 +143,12 @@ function initGemini(customApiKey?: string) {
 export async function generateMarketingReport(
     channelInfo: YouTubeChannel,
     videos: YouTubeVideo[],
-    customApiKey?: string
+    customApiKey?: string,
+    modelId?: GeminiModel
 ): Promise<MarketingReport> {
     const genAI = initGemini(customApiKey);
     const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-lite",
+        model: modelId || DEFAULT_MODEL,
         generationConfig: { responseMimeType: "application/json" },
     });
 
@@ -189,15 +192,17 @@ export async function generateMarketingReport(
         postingHours[hour] = (postingHours[hour] || 0) + 1;
     });
 
-    const topPostingDays = Object.entries(postingDays)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([day]) => day);
+    // Sort days chronologically (Monday to Sunday)
+    const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const topPostingDays = Object.keys(postingDays)
+        .filter(day => postingDays[day] > 0)
+        .sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
 
-    const topPostingHours = Object.entries(postingHours)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([hour]) => `${hour}:00`);
+    // Sort hours chronologically (0:00 to 23:00)
+    const topPostingHours = Object.keys(postingHours)
+        .filter(hour => postingHours[hour] > 0)
+        .sort((a, b) => parseInt(a) - parseInt(b))
+        .map(hour => `${hour}:00`);
 
     // Calculate average engagement for video idea estimates
     const avgViews = Math.round(

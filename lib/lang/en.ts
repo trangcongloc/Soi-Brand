@@ -289,6 +289,20 @@ export const en = {
         vietnamese: "Vietnamese",
         english: "English",
     },
+
+    quota: {
+        used: "used",
+        checking: "checking...",
+        noKey: "not configured",
+    },
+
+    settings: {
+        validating: "Verifying...",
+        valid: "Valid",
+        invalid: "Invalid",
+        apiKeyVerified: "API key verified",
+        apiKeyInvalid: "API key invalid",
+    },
 } as const;
 
 export type EnLanguage = typeof en;

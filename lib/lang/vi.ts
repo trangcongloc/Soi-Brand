@@ -286,6 +286,20 @@ export const vi = {
         vietnamese: "Tiếng Việt",
         english: "Tiếng Anh",
     },
+
+    quota: {
+        used: "đã dùng",
+        checking: "đang kiểm tra...",
+        noKey: "chưa cấu hình",
+    },
+
+    settings: {
+        validating: "Đang xác thực...",
+        valid: "Hợp lệ",
+        invalid: "Không hợp lệ",
+        apiKeyVerified: "API key đã được xác thực",
+        apiKeyInvalid: "API key không hợp lệ",
+    },
 } as const;
 
 export type ViLanguage = typeof vi;

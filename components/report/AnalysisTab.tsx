@@ -1982,7 +1982,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                     <div
                                                         key={i}
                                                         style={{
-                                                            padding: "0.5rem",
+                                                            padding: "0.75rem",
                                                             background:
                                                                 i % 2 === 0
                                                                     ? "#fef3c7"
@@ -1993,13 +1993,31 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                         <div
                                                             style={{
                                                                 fontWeight:
-                                                                    "600",
+                                                                    "700",
+                                                                fontSize: "13px",
                                                                 marginBottom:
-                                                                    "0.25rem",
+                                                                    "0.4rem",
+                                                                color: "#111",
                                                             }}
                                                         >
                                                             {cat.category}
                                                         </div>
+                                                        {cat.purpose && (
+                                                            <div
+                                                                style={{
+                                                                    fontSize:
+                                                                        "11px",
+                                                                    color: "#444",
+                                                                    marginBottom:
+                                                                        "0.5rem",
+                                                                    fontStyle: "italic",
+                                                                    paddingLeft: "0.5rem",
+                                                                    borderLeft: "2px solid rgba(0,0,0,0.2)",
+                                                                }}
+                                                            >
+                                                                <strong>Mục đích:</strong> {cat.purpose}
+                                                            </div>
+                                                        )}
                                                         <div
                                                             style={{
                                                                 display: "flex",
@@ -2007,7 +2025,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                                                     "wrap",
                                                                 gap: "0.25rem",
                                                                 marginBottom:
-                                                                    "0.25rem",
+                                                                    "0.4rem",
                                                             }}
                                                         >
                                                             {cat.tags.map(

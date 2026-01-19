@@ -1,5 +1,48 @@
 // TypeScript types for YouTube Marketing Analysis
 
+// AI Model Types
+export type GeminiModel =
+    | "gemini-2.5-flash-lite"
+    | "gemini-2.5-flash"
+    | "gemini-2.5-pro"
+    | "gemini-3-flash-preview"
+    | "gemini-3-pro-preview";
+
+export interface GeminiModelInfo {
+    id: GeminiModel;
+    name: string;
+    description: string;
+    descriptionVi: string;
+    speed: "fastest" | "fast" | "balanced" | "slow";
+    cost: "lowest" | "low" | "medium" | "high";
+    quality: "good" | "better" | "best";
+    tier: "free" | "paid";
+    rpmFree?: number;    // Requests per minute (free tier)
+    rpmPaid?: number;    // Requests per minute (paid tier)
+    rpdFree?: number;    // Requests per day (free tier)
+    rpdPaid?: number;    // Requests per day (paid tier)
+}
+
+// API Quota Usage Types
+export interface ApiQuotaUsage {
+  youtube: {
+    used: number;        // Units used today
+    total: number;       // 10,000 daily quota
+    lastReset: string;   // ISO timestamp
+  };
+  gemini: {
+    requestsUsed: number;   // Requests in current minute
+    requestsTotal: number;  // RPM limit (model-specific)
+    requestsUsedDaily?: number;  // Requests today (optional for backward compatibility)
+    requestsTotalDaily?: number; // RPD limit (model-specific)
+    lastReset: string;      // ISO timestamp (for RPM)
+    lastResetDaily?: string; // ISO timestamp (for RPD)
+    model?: GeminiModel;    // Currently selected model
+    tier?: "free" | "paid"; // API key tier
+  };
+  lastUpdated: string;
+}
+
 export interface YouTubeChannel {
     id: string;
     title: string;
@@ -288,6 +331,7 @@ export interface TagAnalysis {
     }[];
     tag_categories: {
         category: string;
+        purpose: string;
         tags: string[];
         effectiveness: string;
     }[];
@@ -369,6 +413,7 @@ export interface AnalyzeRequest {
     channelUrl: string;
     youtubeApiKey?: string;
     geminiApiKey?: string;
+    geminiModel?: GeminiModel;
 }
 
 export interface AnalyzeResponse {

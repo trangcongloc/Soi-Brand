@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         // Parse request body
         const body: AnalyzeRequest = await request.json();
-        const { channelUrl, youtubeApiKey, geminiApiKey } = body;
+        const { channelUrl, youtubeApiKey, geminiApiKey, geminiModel } = body;
 
         // Validate input
         if (!channelUrl) {
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         // Generate marketing report using Gemini AI with retry
         logger.log("Generating marketing report with Gemini AI...");
         const report = await withRetry(
-            () => generateMarketingReport(channelInfo, videos, geminiApiKey),
+            () => generateMarketingReport(channelInfo, videos, geminiApiKey, geminiModel),
             {
                 maxAttempts: 2,
                 initialDelayMs: 2000,
