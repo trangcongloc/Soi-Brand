@@ -110,6 +110,9 @@ export const en = {
         noDescription: "No description",
         videoUrl: "Video URL",
         openLink: "Open Link",
+        sortBy: "Sort by:",
+        sortLatest: "Latest",
+        sortRating: "Top Rated",
     },
 
     analysis: {

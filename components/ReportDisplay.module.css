@@ -414,9 +414,10 @@
 }
 
 .postIndex {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #8e8e8e;
+    white-space: nowrap;
 }
 
 .postThumbnail {
@@ -436,6 +437,12 @@
     text-overflow: ellipsis;
     flex: 1;
     padding-right: 1rem;
+}
+
+.relativeTime {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
 }
 
 .videoBadge {
@@ -796,14 +803,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 32px;
+    min-width: 70px;
     flex-shrink: 0;
+    gap: 2px;
 }
 
 .ratingScore {
-    font-size: 10px;
-    font-weight: 800;
-    color: rgb(250, 145, 145);
-    margin-top: -2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgb(250, 125, 125);
     font-family: monospace;
 }

@@ -83,3 +83,44 @@ export const calculateHackerNewsScore = (
 
 export type TabType = "data" | "analysis" | "evaluation";
 export type ActionPlanPhase = "30" | "60" | "90";
+
+// Format relative time from a date string (e.g., "3 hours ago", "2 days ago")
+export const formatRelativeTime = (
+    dateString: string,
+    langCode: "vi" | "en" = "vi"
+): string => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    const units = {
+        vi: {
+            hours: "giờ trước",
+            days: "ngày trước",
+            weeks: "tuần trước",
+            months: "tháng trước",
+        },
+        en: {
+            hours: "hours ago",
+            days: "days ago",
+            weeks: "weeks ago",
+            months: "months ago",
+        },
+    };
+
+    const u = units[langCode];
+
+    if (diffHours < 24) {
+        return `${Math.max(1, diffHours)} ${u.hours}`;
+    } else if (diffDays < 30) {
+        return `${diffDays} ${u.days}`;
+    } else if (diffWeeks < 8) {
+        return `${diffWeeks} ${u.weeks}`;
+    } else {
+        return `${diffMonths} ${u.months}`;
+    }
+};

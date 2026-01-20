@@ -107,6 +107,9 @@ export const vi = {
         noDescription: "Không có mô tả",
         videoUrl: "Video URL",
         openLink: "Mở link",
+        sortBy: "Sắp xếp:",
+        sortLatest: "Mới nhất",
+        sortRating: "Điểm cao",
     },
 
     analysis: {

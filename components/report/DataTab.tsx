@@ -9,6 +9,7 @@ import {
     formatDuration,
     truncateText,
     calculateHackerNewsScore,
+    formatRelativeTime,
 } from "./report-utils";
 
 const VideoPerformanceChart = dynamic(
@@ -36,12 +37,15 @@ interface DataTabProps {
     channelInfo?: ChannelInfo;
 }
 
+type SortOrder = "latest" | "rating";
+
 const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
     const lang = useLang();
     const { langCode } = useLanguage();
     const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
     const [copyStatus, setCopyStatus] = useState<string | null>(null);
     const [isChannelHovered, setIsChannelHovered] = useState(false);
+    const [sortOrder, setSortOrder] = useState<SortOrder>("latest");
 
     const handleCopyTags = (tags: string[]) => {
         const text = tags.join(", ");
@@ -61,9 +65,10 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
         }
     };
 
-    // Calculate top 10 posts by rating score
-    const postsWithScores = posts.map((post, index) => ({
-        index,
+    // Calculate scores for all posts
+    const postsWithScores = posts.map((post, originalIndex) => ({
+        post,
+        originalIndex,
         score: parseFloat(
             calculateHackerNewsScore(
                 post.statistics.play_count,
@@ -72,12 +77,18 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
         ),
     }));
 
-    const sortedByScore = [...postsWithScores].sort(
+    // Get top 10 indices for fire emoji
+    const sortedByScoreOnly = [...postsWithScores].sort(
         (a, b) => b.score - a.score,
     );
     const topIndices = new Set(
-        sortedByScore.slice(0, 10).map((item) => item.index),
+        sortedByScoreOnly.slice(0, 10).map((item) => item.originalIndex),
     );
+
+    // Sort posts based on selected order
+    const sortedPosts = sortOrder === "rating"
+        ? [...postsWithScores].sort((a, b) => b.score - a.score)
+        : postsWithScores; // "latest" keeps original order (already sorted by date from API)
 
     return (
         <div
@@ -218,38 +229,76 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
 
             {/* Posts Accordion */}
             <section>
-                <h3 className={styles.sectionTitle}>
-                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    {lang.posts.sectionTitle}
-                </h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                    <h3 className={styles.sectionTitle} style={{ marginBottom: 0 }}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        {lang.posts.sectionTitle}
+                    </h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{ fontSize: "11px", color: "#666", fontWeight: 500 }}>
+                            {lang.posts.sortBy}
+                        </span>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                            <button
+                                onClick={() => setSortOrder("latest")}
+                                style={{
+                                    padding: "4px 10px",
+                                    fontSize: "11px",
+                                    fontWeight: 600,
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                    background: sortOrder === "latest" ? "#000" : "#f1f5f9",
+                                    color: sortOrder === "latest" ? "#fff" : "#64748b",
+                                }}
+                            >
+                                {lang.posts.sortLatest}
+                            </button>
+                            <button
+                                onClick={() => setSortOrder("rating")}
+                                style={{
+                                    padding: "4px 10px",
+                                    fontSize: "11px",
+                                    fontWeight: 600,
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                    background: sortOrder === "rating" ? "#000" : "#f1f5f9",
+                                    color: sortOrder === "rating" ? "#fff" : "#64748b",
+                                }}
+                            >
+                                {lang.posts.sortRating}
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div className={styles.postList}>
-                    {posts.map((post, index) => (
-                        <div key={index} className={styles.postCard}>
+                    {sortedPosts.map(({ post, originalIndex, score }, displayIndex) => (
+                        <div key={originalIndex} className={styles.postCard}>
                             <div
                                 className={`${styles.accordionHeader} ${
-                                    activeAccordion === index
+                                    activeAccordion === displayIndex
                                         ? styles.accordionHeaderActive
                                         : ""
                                 }`}
-                                onClick={() => toggleAccordion(index)}
+                                onClick={() => toggleAccordion(displayIndex)}
                             >
                                 <div className={styles.postMeta}>
                                     <div className={styles.ratingBox}>
-                                        <span className={styles.postIndex}>
-                                            #{index + 1}
-                                        </span>
                                         <span className={styles.ratingScore}>
-                                            {calculateHackerNewsScore(
-                                                post.statistics.play_count,
-                                                post.published_at,
-                                            )}
-                                            {topIndices.has(index) && " 🔥"}
+                                            {score.toFixed(1)}
+                                            {topIndices.has(originalIndex) && " 🔥"}
+                                        </span>
+                                        <span className={styles.relativeTime}>
+                                            {formatRelativeTime(post.published_at, langCode)}
                                         </span>
                                     </div>
                                     {post.thumbnail && (
@@ -262,7 +311,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                     <div style={{ flex: 1 }}>
                                         <p className={styles.postTitle}>
                                             {post.title ||
-                                                `Bài đăng ${index + 1}`}
+                                                `Bài đăng ${displayIndex + 1}`}
                                         </p>
                                     </div>
                                 </div>
@@ -277,7 +326,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                     stroke="currentColor"
                                     strokeWidth="2"
                                     className={`${styles.accordionIcon} ${
-                                        activeAccordion === index
+                                        activeAccordion === displayIndex
                                             ? styles.rotate180
                                             : ""
                                     }`}
@@ -286,7 +335,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                 </svg>
                             </div>
 
-                            {activeAccordion === index && (
+                            {activeAccordion === displayIndex && (
                                 <div className={styles.accordionBody}>
                                     <div className={styles.postStats}>
                                         <div>
