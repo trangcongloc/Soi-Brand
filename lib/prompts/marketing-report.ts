@@ -10,6 +10,7 @@ export interface PromptData {
     topVideoViews: number;
     topPostingDays: string[];
     topPostingHours: string[];
+    allUniqueTags: string[];
     videosData: {
         title: string;
         views: number;
@@ -41,6 +42,7 @@ function buildVietnamesePrompt(data: PromptData): string {
         topVideoViews,
         topPostingDays,
         topPostingHours,
+        allUniqueTags,
         videosData,
     } = data;
 
@@ -59,6 +61,9 @@ THÔNG TIN KÊNH:
 PHÂN TÍCH THỜI GIAN ĐĂNG (ĐÃ SẮP XẾP THEO THỨ TỰ THỜI GIAN):
 - Các ngày đã đăng bài (từ Thứ 2 đến Chủ nhật): ${topPostingDays.join(", ")}
 - Các giờ đã đăng bài (từ sớm đến muộn): ${topPostingHours.join(", ")}
+
+TẤT CẢ TAGS ĐỘC NHẤT CỦA KÊNH (${allUniqueTags.length} tags - SỬ DỤNG CHÍNH XÁC DANH SÁCH NÀY CHO all_channel_tags):
+${allUniqueTags.join(", ")}
 
 DANH SÁCH VIDEO GẦN ĐÂY (${videosData.length} videos):
 ${videosData
@@ -120,9 +125,10 @@ QUAN TRỌNG:
   * Ví dụ kênh bánh: "Bánh cầu vồng", "Bánh KitKat", "Bánh Socola" - KHÔNG phải "Hướng dẫn làm bánh"
   * Ví dụ kênh nhà máy: "Sản xuất ô tô", "Chế biến đu đủ", "Nhà máy chocolate" - KHÔNG phải "Video công nghiệp"
   * Liệt kê specific_topics là những CHỦ ĐỀ THỰC SỰ kênh đang làm từ video data
-- all_channel_tags: LIỆT KÊ TẤT CẢ tags THỰC TẾ từ video data đã cung cấp (không bỏ sót, không thêm tags mới)
+- all_channel_tags: SAO CHÉP CHÍNH XÁC danh sách "TẤT CẢ TAGS ĐỘC NHẤT CỦA KÊNH" ở trên vào đây (đã được trích xuất sẵn, KHÔNG được bỏ sót hoặc thêm mới)
 - tag_categories: CỰC KỲ QUAN TRỌNG - PHÂN TÍCH CHUYÊN NGHIỆP:
-  * CHỈ được phân loại tags từ all_channel_tags. TUYỆT ĐỐI KHÔNG được tự nghĩ ra hay thêm tags mới.
+  * PHẢI phân loại TẤT CẢ tags từ all_channel_tags vào các category phù hợp. Mỗi tag chỉ thuộc 1 category.
+  * TUYỆT ĐỐI KHÔNG được tự nghĩ ra hay thêm tags mới - chỉ dùng tags đã có.
   * Tạo TÊN CATEGORY CHUYÊN NGHIỆP dựa trên phân tích SEO thực tế:
     - "Từ khóa nội dung cốt lõi" - Tags mô tả chủ đề chính của kênh
     - "Nhận diện thương hiệu" - Tags về tên kênh, thương hiệu
@@ -153,6 +159,7 @@ function buildEnglishPrompt(data: PromptData): string {
         topVideoViews,
         topPostingDays,
         topPostingHours,
+        allUniqueTags,
         videosData,
     } = data;
 
@@ -171,6 +178,9 @@ CHANNEL INFORMATION:
 POSTING TIME ANALYSIS (SORTED CHRONOLOGICALLY):
 - Days Posted (Monday to Sunday): ${topPostingDays.join(", ")}
 - Hours Posted (Early to Late): ${topPostingHours.join(", ")}
+
+ALL UNIQUE CHANNEL TAGS (${allUniqueTags.length} tags - USE THIS EXACT LIST FOR all_channel_tags):
+${allUniqueTags.join(", ")}
 
 RECENT VIDEO LIST (${videosData.length} videos):
 ${videosData
@@ -225,9 +235,10 @@ IMPORTANT:
   * Example for baking channel: "Rainbow Cake", "KitKat Cake", "Chocolate Cake" - NOT "Baking tutorials"
   * Example for factory channel: "Car Manufacturing", "Papaya Processing", "Chocolate Factory" - NOT "Industrial videos"
   * List specific_topics as ACTUAL TOPICS the channel is making from video data
-- all_channel_tags: LIST ALL ACTUAL tags from video data provided (don't miss any, don't add new ones)
+- all_channel_tags: COPY EXACTLY the "ALL UNIQUE CHANNEL TAGS" list above (already extracted, DO NOT miss any or add new ones)
 - tag_categories: EXTREMELY IMPORTANT - PROFESSIONAL ANALYSIS:
-  * ONLY categorize tags from all_channel_tags. ABSOLUTELY DO NOT make up or add new tags.
+  * MUST categorize ALL tags from all_channel_tags into appropriate categories. Each tag belongs to only 1 category.
+  * ABSOLUTELY DO NOT make up or add new tags - only use existing tags.
   * Create PROFESSIONAL CATEGORY NAMES based on actual SEO analysis:
     - "Core Content Keywords" - Tags describing the main topics of the channel
     - "Brand & Channel Identity" - Tags about channel name, brand
@@ -450,22 +461,40 @@ function JSON_STRUCTURE_TEMPLATE(
         ],
         "tag_categories": [
           {
-            "category": "TÊN CATEGORY CHUYÊN NGHIỆP (VD: 'Từ khóa nội dung cốt lõi', 'Nhận diện thương hiệu', 'Định dạng nội dung', 'Từ khóa đối tượng mục tiêu', 'Thẻ xu hướng', 'Từ khóa dài SEO'...)",
-            "purpose": "MỤC ĐÍCH CỤ THỂ của category này trong chiến lược SEO (VD: 'Giúp video xuất hiện trong tìm kiếm chủ đề chính, tăng khả năng phát hiện bởi đối tượng mục tiêu', 'Xây dựng nhận diện thương hiệu và tăng tỷ lệ người xem quay lại kênh'...)",
-            "tags": ["CHỈ sử dụng tags THỰC TẾ từ all_channel_tags thuộc category này", "tag 2", "tag 3"],
-            "effectiveness": "Đánh giá hiệu quả SEO của nhóm tag này dựa trên hiệu suất video (VD: 'Cao - Video có tags này có view trung bình cao hơn 35%', 'Trung bình - Đang hoạt động tốt nhưng cần tối ưu thêm', 'Thấp - Cần xem xét lại hoặc thay thế')"
+            "category": "Nhận diện thương hiệu",
+            "purpose": "Xây dựng nhận diện và tăng tỷ lệ người xem quay lại kênh",
+            "tags": ["Tên kênh", "brand tag 1", "brand tag 2"],
+            "effectiveness": "Cao - Giúp khán giả nhận diện kênh"
           },
           {
-            "category": "Category thứ 2 - Tên chuyên nghiệp phản ánh đúng nhóm tags",
-            "purpose": "Giải thích rõ ràng vai trò của nhóm tags này trong việc thu hút và giữ chân khán giả",
-            "tags": ["Tags từ all_channel_tags thuộc category này"],
-            "effectiveness": "Đánh giá hiệu quả với số liệu cụ thể nếu có"
+            "category": "Từ khóa nội dung cốt lõi",
+            "purpose": "Giúp video xuất hiện trong tìm kiếm chủ đề chính",
+            "tags": ["main topic 1", "main topic 2", "main topic 3", "main topic 4", "main topic 5"],
+            "effectiveness": "Cao - Video có tags này có view trung bình cao hơn"
           },
           {
-            "category": "Category thứ 3 - Tên phản ánh mục đích SEO cụ thể",
-            "purpose": "Mô tả tác động của nhóm tags này lên khả năng tìm kiếm và tương tác",
-            "tags": ["Tags từ all_channel_tags"],
-            "effectiveness": "Đánh giá dựa trên phân tích thực tế"
+            "category": "Từ khóa phong cách/thể loại",
+            "purpose": "Định vị phong cách nội dung của kênh",
+            "tags": ["style tag 1", "style tag 2", "style tag 3"],
+            "effectiveness": "Trung bình - Đang hoạt động tốt"
+          },
+          {
+            "category": "Từ khóa sản phẩm/nguyên liệu",
+            "purpose": "Thu hút người tìm kiếm sản phẩm cụ thể",
+            "tags": ["product 1", "product 2", "product 3", "product 4"],
+            "effectiveness": "Cao - Tags cụ thể có tỷ lệ chuyển đổi tốt"
+          },
+          {
+            "category": "Từ khóa hành động/hướng dẫn",
+            "purpose": "Thu hút người muốn học hoặc làm theo",
+            "tags": ["how to...", "tutorial tag", "recipe tag"],
+            "effectiveness": "Trung bình - Cạnh tranh cao"
+          },
+          {
+            "category": "Thẻ xu hướng/cảm xúc",
+            "purpose": "Tăng khả năng viral và thu hút click",
+            "tags": ["trending tag 1", "satisfying", "asmr"],
+            "effectiveness": "Cao - Tags có ảnh hưởng đến CTR"
           }
         ],
         "competitor_tags": ["Tag mà đối thủ sử dụng nhưng kênh này chưa dùng 1", "Competitor tag 2", "Competitor tag 3"],
@@ -783,21 +812,39 @@ function JSON_STRUCTURE_TEMPLATE_EN(
         ],
         "tag_categories": [
           {
-            "category": "PROFESSIONAL CATEGORY NAME (e.g., 'Core Content Keywords', 'Brand & Channel Identity', 'Content Format Tags', 'Audience Target Keywords', 'Trending & Viral Tags', 'SEO Long-tail Keywords'...)",
-            "purpose": "SPECIFIC PURPOSE of this category in SEO strategy (e.g., 'Helps videos appear in main topic searches, increases discoverability by target audience', 'Builds brand recognition and increases viewer return rate to channel'...)",
-            "tags": ["ONLY use ACTUAL tags from all_channel_tags belonging to this category", "tag 2", "tag 3"],
-            "effectiveness": "SEO effectiveness assessment of this tag group based on video performance (e.g., 'High - Videos with these tags have 35% higher average views', 'Medium - Working well but needs more optimization', 'Low - Needs review or replacement')"
+            "category": "Brand & Channel Identity",
+            "purpose": "Builds brand recognition and increases viewer return rate",
+            "tags": ["Channel Name", "brand tag 1", "brand tag 2"],
+            "effectiveness": "High - Helps audience recognize channel"
           },
           {
-            "category": "Category 2 - Professional name reflecting tag group correctly",
-            "purpose": "Clear explanation of this tag group's role in attracting and retaining audience",
-            "tags": ["Tags from all_channel_tags belonging to this category"],
-            "effectiveness": "Effectiveness assessment with specific metrics if available"
+            "category": "Core Content Keywords",
+            "purpose": "Helps videos appear in main topic searches",
+            "tags": ["main topic 1", "main topic 2", "main topic 3", "main topic 4", "main topic 5"],
+            "effectiveness": "High - Videos with these tags have higher average views"
           },
           {
-            "category": "Category 3 - Name reflecting specific SEO purpose",
-            "purpose": "Description of this tag group's impact on search and engagement capabilities",
-            "tags": ["Tags from all_channel_tags"],
+            "category": "Style/Format Keywords",
+            "purpose": "Defines the content style and format of the channel",
+            "tags": ["style tag 1", "style tag 2", "style tag 3"],
+            "effectiveness": "Medium - Working well"
+          },
+          {
+            "category": "Product/Ingredient Keywords",
+            "purpose": "Attracts viewers searching for specific products",
+            "tags": ["product 1", "product 2", "product 3", "product 4"],
+            "effectiveness": "High - Specific tags have good conversion rate"
+          },
+          {
+            "category": "Action/Tutorial Keywords",
+            "purpose": "Attracts viewers who want to learn or follow along",
+            "tags": ["how to...", "tutorial tag", "recipe tag"],
+            "effectiveness": "Medium - High competition"
+          },
+          {
+            "category": "Trending/Emotional Tags",
+            "purpose": "Increases viral potential and click-through rate",
+            "tags": ["trending tag 1", "satisfying", "asmr"],
             "effectiveness": "Assessment based on actual analysis"
           }
         ],

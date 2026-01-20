@@ -210,6 +210,11 @@ export async function generateMarketingReport(
     );
     const topVideoViews = Math.max(...videosData.map((v) => v.views));
 
+    // Extract all unique tags from all videos
+    const allUniqueTags = Array.from(new Set(
+        videosData.flatMap((v) => v.tags)
+    )).filter(tag => tag && tag.trim() !== "");
+
     // Build prompt using extracted template
     const prompt = buildMarketingReportPrompt({
         channelName: channelData.name,
@@ -221,6 +226,7 @@ export async function generateMarketingReport(
         topVideoViews,
         topPostingDays,
         topPostingHours,
+        allUniqueTags,
         videosData: videosData.map((v) => ({
             title: v.title,
             views: v.views,

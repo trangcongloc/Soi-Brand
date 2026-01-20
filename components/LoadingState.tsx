@@ -12,7 +12,7 @@ const DEFAULT_STEPS = [
     { label: "Đang tạo báo cáo", subLabel: "Tổng hợp insight, đề xuất chiến lược marketing và ý tưởng video mới..." },
 ];
 
-const STEP_DURATIONS = [1000, 3000, 5000, 15000, 25000];
+const STEP_DURATIONS = [2500, 3500, 5000, 12000, 20000];
 
 const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
