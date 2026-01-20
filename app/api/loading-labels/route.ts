@@ -1,55 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const PROMPT_VI = `Bạn là một copywriter sáng tạo. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và sub-label chi tiết.
+const PROMPT_VI = `Bạn là một copywriter sáng tạo. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và nhiều sub-labels chi tiết.
 
 Các bước:
-1. Kiểm tra URL - xác thực link, trích xuất ID kênh
-2. Tải thông tin kênh - kết nối API, lấy subscriber, view, mô tả
-3. Tải danh sách video - thu thập video gần nhất, thống kê engagement
-4. Phân tích nội dung - phân tích xu hướng, tần suất, hiệu suất
-5. Tạo báo cáo - tổng hợp insight, đề xuất chiến lược
+1. Kiểm tra URL (3 sub-labels) - xác thực link, trích xuất ID, kiểm tra tồn tại
+2. Tải thông tin kênh (4 sub-labels) - kết nối API, subscriber, view, mô tả
+3. Tải danh sách video (5 sub-labels) - thu thập video, tiêu đề, view, like, tags
+4. Phân tích nội dung (7 sub-labels) - xu hướng, tần suất, hiệu suất, chủ đề, pillars, khán giả, SEO
+5. Tạo báo cáo (7 sub-labels) - tổng hợp, điểm mạnh, cơ hội, chiến lược, ý tưởng, kế hoạch, hoàn thiện
 
 Yêu cầu:
 - Label chính: ngắn gọn (tối đa 25 ký tự), dùng động từ mạnh
-- Sub-label: chi tiết hơn (50-80 ký tự), mô tả cụ thể đang làm gì
+- Sub-labels: số lượng theo yêu cầu trên, mỗi mục 20-40 ký tự
 - Sáng tạo, chuyên nghiệp
-- KHÔNG đề cập đến AI, Gemini, machine learning, hoặc công nghệ nào
+- KHÔNG đề cập đến AI, Gemini, machine learning
 
 Trả về JSON theo format:
 {
   "steps": [
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." }
+    { "label": "...", "subLabels": ["...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "...", "...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "...", "...", "...", "..."] }
   ]
 }`;
 
-const PROMPT_EN = `You are a creative copywriter. Create 5 label pairs (in English) for loading steps when analyzing a YouTube channel. Each step has a main label and a detailed sub-label.
+const PROMPT_EN = `You are a creative copywriter. Create 5 label pairs (in English) for loading steps when analyzing a YouTube channel. Each step has a main label and multiple detailed sub-labels.
 
 Steps:
-1. Validate URL - verify link, extract channel ID
-2. Load channel info - connect API, get subscribers, views, description
-3. Load video list - collect recent videos, gather engagement stats
-4. Analyze content - analyze trends, frequency, performance
-5. Generate report - compile insights, suggest strategies
+1. Validate URL (3 sub-labels) - verify link, extract ID, check exists
+2. Load channel info (4 sub-labels) - connect API, subscribers, views, description
+3. Load video list (5 sub-labels) - collect videos, titles, views, likes, tags
+4. Analyze content (7 sub-labels) - trends, frequency, performance, topics, pillars, audience, SEO
+5. Generate report (7 sub-labels) - compile, strengths, opportunities, strategy, ideas, plan, finalize
 
 Requirements:
 - Main label: concise (max 25 characters), use strong action verbs
-- Sub-label: more detailed (50-80 characters), describe what's happening
+- Sub-labels: count as specified above, each 20-40 characters
 - Creative, professional tone
-- Do NOT mention AI, Gemini, machine learning, or any technology
+- Do NOT mention AI, Gemini, machine learning
 
 Return JSON in this format:
 {
   "steps": [
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." },
-    { "label": "...", "subLabel": "..." }
+    { "label": "...", "subLabels": ["...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "...", "...", "...", "..."] },
+    { "label": "...", "subLabels": ["...", "...", "...", "...", "...", "...", "..."] }
   ]
 }`;
 

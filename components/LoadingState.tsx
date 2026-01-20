@@ -6,28 +6,28 @@ import { useLanguage } from "@/lib/lang";
 import styles from "./LoadingState.module.css";
 
 const DEFAULT_STEPS_VI = [
-    { label: "Đang kiểm tra URL", subLabel: "Xác thực định dạng link YouTube và trích xuất ID kênh..." },
-    { label: "Đang tải thông tin kênh", subLabel: "Kết nối YouTube API, lấy số subscriber, lượt xem tổng và mô tả kênh..." },
-    { label: "Đang tải danh sách video", subLabel: "Thu thập 50 video gần nhất, thống kê view, like, comment từng video..." },
-    { label: "Đang phân tích nội dung", subLabel: "Phân tích xu hướng nội dung, tần suất đăng, hiệu suất theo thời gian..." },
-    { label: "Đang tạo báo cáo", subLabel: "Tổng hợp insight, đề xuất chiến lược marketing và ý tưởng video mới..." },
+    { label: "Đang kiểm tra URL", subLabels: ["Xác thực định dạng link YouTube", "Trích xuất ID kênh", "Kiểm tra kênh tồn tại..."] },
+    { label: "Đang tải thông tin kênh", subLabels: ["Kết nối YouTube API", "Lấy số subscriber", "Đếm tổng lượt xem", "Đọc mô tả kênh..."] },
+    { label: "Đang tải danh sách video", subLabels: ["Thu thập 50 video gần nhất", "Lấy tiêu đề và mô tả", "Thống kê lượt xem", "Đếm like và comment", "Trích xuất tags SEO..."] },
+    { label: "Đang phân tích nội dung", subLabels: ["Phân tích xu hướng nội dung", "Đánh giá tần suất đăng", "Đo hiệu suất video", "Phân loại chủ đề", "Xác định content pillars", "Phân tích đối tượng khán giả", "Đánh giá chiến lược SEO..."] },
+    { label: "Đang tạo báo cáo", subLabels: ["Tổng hợp dữ liệu kênh", "Phân tích điểm mạnh", "Xác định cơ hội cải thiện", "Đề xuất chiến lược marketing", "Lên ý tưởng video mới", "Tạo kế hoạch hành động", "Hoàn thiện báo cáo chi tiết..."] },
 ];
 
 const DEFAULT_STEPS_EN = [
-    { label: "Validating URL", subLabel: "Checking YouTube link format and extracting channel ID..." },
-    { label: "Loading channel info", subLabel: "Connecting to YouTube API, fetching subscribers, views, and description..." },
-    { label: "Loading video list", subLabel: "Collecting recent 50 videos, gathering views, likes, comments stats..." },
-    { label: "Analyzing content", subLabel: "Analyzing content trends, posting frequency, performance over time..." },
-    { label: "Generating report", subLabel: "Compiling insights, marketing strategy recommendations and video ideas..." },
+    { label: "Validating URL", subLabels: ["Checking YouTube link format", "Extracting channel ID", "Verifying channel exists..."] },
+    { label: "Loading channel info", subLabels: ["Connecting to YouTube API", "Fetching subscriber count", "Getting total views", "Reading channel description..."] },
+    { label: "Loading video list", subLabels: ["Collecting recent 50 videos", "Fetching titles and descriptions", "Counting view statistics", "Gathering likes and comments", "Extracting SEO tags..."] },
+    { label: "Analyzing content", subLabels: ["Analyzing content trends", "Evaluating posting frequency", "Measuring video performance", "Categorizing topics", "Identifying content pillars", "Analyzing target audience", "Evaluating SEO strategy..."] },
+    { label: "Generating report", subLabels: ["Compiling channel data", "Analyzing strengths", "Identifying improvement areas", "Crafting marketing strategy", "Generating video ideas", "Creating action plan", "Finalizing detailed report..."] },
 ];
 
-const STEP_DURATIONS = [2500, 3500, 5000, 12000, 20000];
+const STEP_DURATIONS = [3000, 4000, 5000, 12000, 25000];
 
 const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 interface StepLabel {
     label: string;
-    subLabel: string;
+    subLabels: string[];
 }
 
 interface LoadingStateProps {
@@ -39,6 +39,7 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
     const defaultSteps = langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
 
     const [currentStep, setCurrentStep] = useState(0);
+    const [visibleSubLabelIndex, setVisibleSubLabelIndex] = useState(0);
     const [spinnerFrame, setSpinnerFrame] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [steps, setSteps] = useState<StepLabel[]>(defaultSteps);
@@ -81,6 +82,7 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
         const stepTimers = STEP_DURATIONS.map((_, index) => {
             return setTimeout(() => {
                 setCurrentStep(index);
+                setVisibleSubLabelIndex(0); // Reset sub-label index when step changes
             }, STEP_DURATIONS.slice(0, index).reduce((acc, d) => acc + d, 0));
         });
 
@@ -88,6 +90,19 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
             stepTimers.forEach((t) => clearTimeout(t));
         };
     }, []);
+
+    // Progress through sub-labels one at a time, stop at last one
+    useEffect(() => {
+        const currentSubLabels = steps[currentStep]?.subLabels || [];
+        if (visibleSubLabelIndex >= currentSubLabels.length - 1) return;
+
+        const delay = Math.min(2000, STEP_DURATIONS[currentStep] / currentSubLabels.length);
+        const timer = setTimeout(() => {
+            setVisibleSubLabelIndex((prev) => prev + 1);
+        }, delay);
+
+        return () => clearTimeout(timer);
+    }, [currentStep, visibleSubLabelIndex, steps]);
 
     // Braille spinner animation
     useEffect(() => {
@@ -146,9 +161,18 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
                             </div>
                             <div className={styles.subLine}>
                                 <span className={styles.connector}>└</span>
-                                <span className={styles.subLabel}>
-                                    {currentTask.subLabel}
-                                </span>
+                                <AnimatePresence mode="wait">
+                                    <motion.span
+                                        key={visibleSubLabelIndex}
+                                        className={styles.subLabel}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.15 }}
+                                    >
+                                        {currentTask.subLabels[visibleSubLabelIndex]}
+                                    </motion.span>
+                                </AnimatePresence>
                             </div>
                         </motion.div>
                     </AnimatePresence>

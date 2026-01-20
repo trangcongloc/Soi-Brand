@@ -347,11 +347,11 @@ export default function SettingsButton() {
             return langCode === "vi" ? "Vừa xong" : "just now";
         } else if (diffMins < 60) {
             return langCode === "vi"
-                ? `${diffMins} Phút`
+                ? `${diffMins} Phút trước`
                 : `${diffMins} Min ago`;
         } else if (diffHours < 24) {
             return langCode === "vi"
-                ? `${diffHours} Giờ`
+                ? `${diffHours} Giờ trước`
                 : `${diffHours} Hours ago`;
         } else {
             return date.toLocaleDateString(
