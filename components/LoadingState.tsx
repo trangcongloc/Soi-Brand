@@ -137,27 +137,29 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
     const [elapsedTime, setElapsedTime] = useState(0);
     const [steps, setSteps] = useState<StepLabel[]>(defaultSteps);
     const pendingLabelsRef = useRef<StepLabel[] | null>(null);
-    const initialLangRef = useRef(langCode);
+    // TEMPORARILY DISABLED - AI labels fetch
+    // const initialLangRef = useRef(langCode);
 
     // Fetch AI-generated labels once on mount, store in pending ref
-    useEffect(() => {
-        const fetchLabels = async () => {
-            try {
-                const response = await fetch(
-                    `/api/loading-labels?lang=${initialLangRef.current}`,
-                );
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.steps && data.steps.length === 5) {
-                        pendingLabelsRef.current = data.steps;
-                    }
-                }
-            } catch {
-                // Keep default labels on error
-            }
-        };
-        fetchLabels();
-    }, []);
+    // TEMPORARILY DISABLED - using default labels only
+    // useEffect(() => {
+    //     const fetchLabels = async () => {
+    //         try {
+    //             const response = await fetch(
+    //                 `/api/loading-labels?lang=${initialLangRef.current}`,
+    //             );
+    //             if (response.ok) {
+    //                 const data = await response.json();
+    //                 if (data.steps && data.steps.length === 5) {
+    //                     pendingLabelsRef.current = data.steps;
+    //                 }
+    //             }
+    //         } catch {
+    //             // Keep default labels on error
+    //         }
+    //     };
+    //     fetchLabels();
+    // }, []);
 
     // Step progression - apply pending labels only at step transitions
     useEffect(() => {
