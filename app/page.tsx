@@ -7,6 +7,7 @@ import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
 import ReportDisplay from "@/components/ReportDisplay";
 import AnalysisHistory from "@/components/AnalysisHistory";
+import SplashScreen from "@/components/SplashScreen";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLanguage } from "@/lib/lang";
 import { getUserSettings } from "@/lib/userSettings";
@@ -59,6 +60,7 @@ interface FilterState {
 
 export default function Home() {
     const { lang, langCode } = useLanguage();
+    const [showSplash, setShowSplash] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -225,12 +227,18 @@ export default function Home() {
 
     return (
         <main id="main-content" className="min-h-screen flex flex-col">
+            <AnimatePresence>
+                {showSplash && (
+                    <SplashScreen onComplete={() => setShowSplash(false)} />
+                )}
+            </AnimatePresence>
+
             <div
                 className={`flex-1 ${!report ? "center-screen" : ""}`}
                 role="main"
             >
                 <AnimatePresence mode="wait">
-                    {!report && !isLoading && (
+                    {!report && !isLoading && !showSplash && (
                         <motion.div
                             key="home"
                             initial="initial"
@@ -292,7 +300,7 @@ export default function Home() {
                         </motion.div>
                     )}
 
-                    {isLoading && (
+                    {isLoading && !showSplash && (
                         <motion.div
                             key="loading"
                             className="container py-8"
@@ -307,7 +315,7 @@ export default function Home() {
                         </motion.div>
                     )}
 
-                    {report && !isLoading && (
+                    {report && !isLoading && !showSplash && (
                         <motion.div
                             key="report"
                             className="container py-8"

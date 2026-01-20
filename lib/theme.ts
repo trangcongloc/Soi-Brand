@@ -1,4 +1,4 @@
-// OurTube Theme Colors
+// Soi'Brand Theme Colors
 // This file contains all color constants used throughout the application
 // to ensure consistency and easy theming
 

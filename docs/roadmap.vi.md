@@ -1,4 +1,4 @@
-# OurTube - Lộ trình Sản phẩm
+# Soi'Brand - Lộ trình Sản phẩm
 
 ## Phiên bản Hiện tại: v1.0
 
@@ -497,7 +497,7 @@ Lộ trình này có thể thay đổi dựa trên:
 
 ## 📄 Giấy phép & Ghi nhận
 
-- **Dự án**: Công cụ Phân tích Marketing YouTube OurTube
+- **Dự án**: Công cụ Phân tích Marketing YouTube Soi'Brand
 - **Mô hình AI**: Google Gemini 2.5 Flash Lite
 - **APIs**: YouTube Data API v3
 - **Framework**: Next.js 14
@@ -506,4 +506,4 @@ Lộ trình này có thể thay đổi dựa trên:
 ---
 
 *Cập nhật Lần cuối: 19 tháng 1, 2026*
-*Lộ trình được duy trì bởi: Đội Phát triển OurTube*
+*Lộ trình được duy trì bởi: Đội Phát triển Soi'Brand*

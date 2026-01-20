@@ -1,4 +1,4 @@
-# OurTube
+# Soi'Brand
 
 Website phân tích chiến lược marketing cho kênh YouTube sử dụng AI (Google Gemini).
 
@@ -21,7 +21,7 @@ Website phân tích chiến lược marketing cho kênh YouTube sử dụng AI (
 1.  Clone project và di chuyển vào thư mục:
 
     ```bash
-    cd OurTube
+    cd Soi-Brand
     ```
 
 2.  Cài đặt dependencies:

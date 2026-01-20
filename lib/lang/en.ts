@@ -1,10 +1,10 @@
 export const en = {
     metadata: {
-        title: "OurTube",
+        title: "Soi'Brand",
         description:
             "Professional YouTube marketing strategy analysis tool, using AI to generate detailed reports about your YouTube channel.",
         keywords:
-            "OurTube, YouTube, marketing, analysis, AI, strategy, insights",
+            "Soi'Brand, YouTube, marketing, analysis, AI, strategy, insights",
     },
 
     home: {

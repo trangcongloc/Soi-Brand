@@ -1,4 +1,4 @@
-# OurTube - Product Roadmap
+# Soi'Brand - Product Roadmap
 
 ## Current Version: v1.0
 
@@ -497,7 +497,7 @@ To suggest features or report issues:
 
 ## 📄 License & Credits
 
-- **Project**: OurTube YouTube Marketing Analysis Tool
+- **Project**: Soi'Brand YouTube Marketing Analysis Tool
 - **AI Model**: Google Gemini 2.5 Flash Lite
 - **APIs**: YouTube Data API v3
 - **Framework**: Next.js 14
@@ -506,4 +506,4 @@ To suggest features or report issues:
 ---
 
 *Last Updated: January 19, 2026*
-*Roadmap maintained by: OurTube Development Team*
+*Roadmap maintained by: Soi'Brand Development Team*

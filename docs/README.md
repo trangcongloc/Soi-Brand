@@ -1,6 +1,6 @@
 # Documentation
 
-This directory contains technical documentation and guides for the OurTube project.
+This directory contains technical documentation and guides for the Soi'Brand project.
 
 ## Contents
 

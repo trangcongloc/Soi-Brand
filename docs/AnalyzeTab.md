@@ -611,4 +611,4 @@ InsightsTab.tsx (displays report_part_3)
 ---
 
 *Last Updated: 2026-01-19*
-*Created for OurTube YouTube Marketing Analysis Tool*
+*Created for Soi'Brand YouTube Marketing Analysis Tool*

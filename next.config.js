@@ -24,7 +24,7 @@ const nextConfig = {
 
     // Environment variable prefixes for client-side
     env: {
-        NEXT_PUBLIC_APP_NAME: "OurTube",
+        NEXT_PUBLIC_APP_NAME: "Soi'Brand",
     },
 };
 

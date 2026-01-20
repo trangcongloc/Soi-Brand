@@ -1,6 +1,6 @@
-# Contributing to OurTube
+# Contributing to Soi'Brand
 
-Thank you for your interest in contributing to OurTube! This document provides guidelines and workflows for development.
+Thank you for your interest in contributing to Soi'Brand! This document provides guidelines and workflows for development.
 
 ## Development Workflow
 
@@ -14,7 +14,7 @@ Thank you for your interest in contributing to OurTube! This document provides g
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd OurTube
+   cd Soi-Brand
    ```
 
 2. **Install dependencies**
@@ -97,7 +97,7 @@ This will:
 ## Project Structure
 
 ```
-OurTube/
+Soi-Brand/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
 │   ├── layout.tsx         # Root layout

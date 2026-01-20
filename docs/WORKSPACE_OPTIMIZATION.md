@@ -1,6 +1,6 @@
 # Workspace Optimization Summary
 
-This document summarizes all workspace and workflow optimizations applied to the OurTube project.
+This document summarizes all workspace and workflow optimizations applied to the Soi'Brand project.
 
 ## Files Created
 
@@ -212,7 +212,7 @@ make build          # or npm run build
 ### File Structure
 
 ```
-OurTube/
+Soi-Brand/
 ├── .editorconfig          # Code style config
 ├── .nvmrc                 # Node version
 ├── .env.example           # Environment template

@@ -1,10 +1,10 @@
 export const vi = {
     metadata: {
-        title: "OurTube",
+        title: "Soi'Brand",
         description:
             "Công cụ phân tích chiến lược marketing YouTube chuyên nghiệp, sử dụng AI để tạo báo cáo chi tiết về kênh YouTube của bạn.",
         keywords:
-            "OurTube, YouTube, marketing, analysis, AI, phân tích, chiến lược",
+            "Soi'Brand, YouTube, marketing, analysis, AI, phân tích, chiến lược",
     },
 
     home: {

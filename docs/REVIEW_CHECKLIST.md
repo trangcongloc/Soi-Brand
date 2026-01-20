@@ -1,6 +1,6 @@
-# Danh Sách Kiểm Tra Website OurTube
+# Danh Sách Kiểm Tra Website Soi'Brand
 
-Sử dụng danh sách này để đánh giá hệ thống website OurTube về chất lượng, chức năng và trải nghiệm người dùng.
+Sử dụng danh sách này để đánh giá hệ thống website Soi'Brand về chất lượng, chức năng và trải nghiệm người dùng.
 
 ## 1. Kiểm Tra Chức Năng
 
@@ -389,7 +389,7 @@ Sử dụng danh sách này để đánh giá hệ thống website OurTube về 
 
 ---
 
-## Các Điểm Kiểm Tra Bổ Sung Theo Dự Án OurTube
+## Các Điểm Kiểm Tra Bổ Sung Theo Dự Án Soi'Brand
 
 ### Kiểm Tra Đặc Thù Chức Năng
 

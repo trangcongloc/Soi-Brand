@@ -611,4 +611,4 @@ InsightsTab.tsx (hiển thị report_part_3)
 ---
 
 *Cập nhật Lần cuối: 2026-01-19*
-*Được tạo cho Công cụ Phân tích Marketing YouTube OurTube*
+*Được tạo cho Công cụ Phân tích Marketing YouTube Soi'Brand*

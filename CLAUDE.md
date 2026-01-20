@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OurTube is a YouTube marketing strategy analysis tool powered by AI (Google Gemini). It analyzes YouTube channels by fetching channel data and videos via the YouTube Data API v3, then generates comprehensive marketing reports including brand positioning, marketing funnel analysis, and content strategy insights.
+Soi'Brand is a YouTube marketing strategy analysis tool powered by AI (Google Gemini). It analyzes YouTube channels by fetching channel data and videos via the YouTube Data API v3, then generates comprehensive marketing reports including brand positioning, marketing funnel analysis, and content strategy insights.
 
 ## Essential Commands
 
