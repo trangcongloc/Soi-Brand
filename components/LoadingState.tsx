@@ -127,8 +127,8 @@ export default function LoadingState() {
                         <motion.div
                             key={`completed-${index}`}
                             className={`${styles.step} ${styles.completed}`}
-                            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                            animate={{ opacity: 0.5, height: "auto", marginTop: 8 }}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 0.5, height: "auto" }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
                         >
                             <div className={styles.mainLine}>

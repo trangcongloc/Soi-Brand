@@ -66,4 +66,4 @@ lerna-debug.log*
 .agent/
 .claude/
 
-progressDemo/progressDemo/
+progress/
