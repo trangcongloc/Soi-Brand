@@ -95,6 +95,7 @@ export default function AnalysisForm({
                                             onClick={onClearFilter}
                                             className={styles.backButton}
                                             aria-label="Go back"
+                                            title="Back"
                                         >
                                             <svg
                                                 width="16"
@@ -118,6 +119,7 @@ export default function AnalysisForm({
                                             className={styles.arrowButton}
                                             disabled={isLoading}
                                             aria-label={isLoading ? lang.form.submitButtonLoading : lang.form.submitButton}
+                                            title="Reanalyze"
                                         >
                                             {isLoading ? (
                                                 <svg
@@ -183,6 +185,7 @@ export default function AnalysisForm({
                                                     disabled={isLoading}
                                                     aria-label={isLoading ? lang.form.submitButtonLoading : lang.form.submitButton}
                                                     aria-busy={isLoading}
+                                                    title="Analyze"
                                                     initial={{ opacity: 0, scale: 0.8 }}
                                                     animate={{ opacity: 1, scale: 1 }}
                                                     exit={{ opacity: 0, scale: 0.8 }}
