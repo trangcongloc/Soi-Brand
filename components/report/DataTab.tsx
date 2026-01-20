@@ -295,9 +295,6 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                     <span className={styles.postIndex}>
                                         #{originalIndex + 1}
                                     </span>
-                                    <span className={styles.videoBadge}>
-                                        {formatDuration(post.duration)}
-                                    </span>
                                     {post.thumbnail && (
                                         <img
                                             src={post.thumbnail}
@@ -305,6 +302,9 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                             className={styles.postThumbnail}
                                         />
                                     )}
+                                    <span className={styles.videoBadge}>
+                                        {formatDuration(post.duration)}
+                                    </span>
                                     <div style={{ flex: 1 }}>
                                         <p className={styles.postTitle}>
                                             {post.title ||
