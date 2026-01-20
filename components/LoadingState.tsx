@@ -4,52 +4,54 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import styles from "./LoadingState.module.css";
 
-const STEPS = [
-    {
-        key: "validating",
-        duration: 1000,
-        label: "Đang kiểm tra URL",
-        subLabel: "Xác thực định dạng...",
-    },
-    {
-        key: "fetchingChannel",
-        duration: 3000,
-        label: "Đang tải thông tin kênh",
-        subLabel: "Lấy dữ liệu kênh...",
-    },
-    {
-        key: "fetchingVideos",
-        duration: 5000,
-        label: "Đang tải danh sách video",
-        subLabel: "Lấy metadata video...",
-    },
-    {
-        key: "analyzingContent",
-        duration: 15000,
-        label: "Đang phân tích nội dung",
-        subLabel: "Xử lý dữ liệu...",
-    },
-    {
-        key: "generatingReport",
-        duration: 25000,
-        label: "Đang tạo báo cáo",
-        subLabel: "Tổng hợp thông tin...",
-    },
+const DEFAULT_STEPS = [
+    { label: "Đang kiểm tra URL", subLabel: "Xác thực định dạng..." },
+    { label: "Đang tải thông tin kênh", subLabel: "Lấy dữ liệu kênh..." },
+    { label: "Đang tải danh sách video", subLabel: "Lấy metadata video..." },
+    { label: "Đang phân tích nội dung", subLabel: "Xử lý dữ liệu..." },
+    { label: "Đang tạo báo cáo", subLabel: "Tổng hợp thông tin..." },
 ];
 
+const STEP_DURATIONS = [1000, 3000, 5000, 15000, 25000];
+
 const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+interface StepLabel {
+    label: string;
+    subLabel: string;
+}
 
 export default function LoadingState() {
     const [currentStep, setCurrentStep] = useState(0);
     const [spinnerFrame, setSpinnerFrame] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [steps, setSteps] = useState<StepLabel[]>(DEFAULT_STEPS);
+
+    // Fetch AI-generated labels
+    useEffect(() => {
+        const fetchLabels = async () => {
+            try {
+                const response = await fetch("/api/loading-labels");
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.steps && data.steps.length === 5) {
+                        setSteps(data.steps);
+                    }
+                }
+            } catch {
+                // Keep default labels on error
+            }
+        };
+
+        fetchLabels();
+    }, []);
 
     // Step progression
     useEffect(() => {
-        const stepTimers = STEPS.map((_, index) => {
+        const stepTimers = STEP_DURATIONS.map((_, index) => {
             return setTimeout(() => {
                 setCurrentStep(index);
-            }, STEPS.slice(0, index).reduce((acc, s) => acc + s.duration, 0));
+            }, STEP_DURATIONS.slice(0, index).reduce((acc, d) => acc + d, 0));
         });
 
         return () => {
@@ -81,7 +83,7 @@ export default function LoadingState() {
         return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
-    const currentTask = STEPS[currentStep];
+    const currentTask = steps[currentStep];
 
     return (
         <motion.div
@@ -92,7 +94,7 @@ export default function LoadingState() {
         >
             <div className={styles.terminal}>
                 <motion.div
-                    key={currentTask.key}
+                    key={currentStep}
                     className={styles.step}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
