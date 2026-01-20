@@ -273,33 +273,13 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                         <div style={{ display: "flex", gap: "4px" }}>
                             <button
                                 onClick={() => setSortOrder("latest")}
-                                style={{
-                                    padding: "4px 10px",
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                    background: sortOrder === "latest" ? "#000" : "#f1f5f9",
-                                    color: sortOrder === "latest" ? "#fff" : "#64748b",
-                                }}
+                                className={`${styles.sortButton} ${sortOrder === "latest" ? styles.sortButtonActive : ""}`}
                             >
                                 {lang.posts.sortLatest}
                             </button>
                             <button
                                 onClick={() => setSortOrder("rating")}
-                                style={{
-                                    padding: "4px 10px",
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                    background: sortOrder === "rating" ? "#000" : "#f1f5f9",
-                                    color: sortOrder === "rating" ? "#fff" : "#64748b",
-                                }}
+                                className={`${styles.sortButton} ${sortOrder === "rating" ? styles.sortButtonActive : ""}`}
                             >
                                 {lang.posts.sortRating}
                             </button>

@@ -606,19 +606,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                         {/* Current Posting Stats */}
                         {currentStats && (
                             <div className={styles.card}>
-                                <h4
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: "700",
-                                        color: "#e53935",
-                                        marginBottom: "1rem",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "0.5rem",
-                                        borderBottom: "2px solid #fecaca",
-                                        paddingBottom: "0.5rem",
-                                    }}
-                                >
+                                <h4 className={styles.cardHeaderBrand}>
                                     <svg
                                         width="16"
                                         height="16"
@@ -641,75 +629,33 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                     }}
                                 >
                                     <div>
-                                        <p
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "#6b7280",
-                                                marginBottom: "0.25rem",
-                                                fontWeight: "600",
-                                            }}
-                                        >
+                                        <p className={styles.statLabelSmall}>
                                             {langCode === "vi"
                                                 ? "TẦN SUẤT ĐĂNG"
                                                 : "POSTING FREQUENCY"}
                                         </p>
-                                        <p
-                                            style={{
-                                                fontSize: "13px",
-                                                fontWeight: "600",
-                                                color: "#e53935",
-                                                margin: 0,
-                                            }}
-                                        >
+                                        <p className={styles.statValueBrand}>
                                             {currentStats.frequency}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "#6b7280",
-                                                marginBottom: "0.25rem",
-                                                fontWeight: "600",
-                                            }}
-                                        >
+                                        <p className={styles.statLabelSmall}>
                                             {langCode === "vi"
                                                 ? "NGÀY HAY ĐĂNG NHẤT"
                                                 : "MOST ACTIVE DAYS"}
                                         </p>
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                fontWeight: "500",
-                                                color: "#1f2937",
-                                                margin: 0,
-                                            }}
-                                        >
+                                        <p className={styles.statValueDefault}>
                                             {currentStats.bestDays.join(", ") ||
                                                 "N/A"}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "#6b7280",
-                                                marginBottom: "0.25rem",
-                                                fontWeight: "600",
-                                            }}
-                                        >
+                                        <p className={styles.statLabelSmall}>
                                             {langCode === "vi"
                                                 ? "GIỜ HAY ĐĂNG NHẤT"
                                                 : "MOST ACTIVE TIMES"}
                                         </p>
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                fontWeight: "500",
-                                                color: "#1f2937",
-                                                margin: 0,
-                                            }}
-                                        >
+                                        <p className={styles.statValueDefault}>
                                             {currentStats.bestTimes.join(
                                                 ", "
                                             ) || "N/A"}
@@ -742,19 +688,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                         {/* Recommended Posting Schedule */}
                         {report_part_2.content_calendar && (
                             <div className={styles.card}>
-                                <h4
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: "700",
-                                        color: "#10b981",
-                                        marginBottom: "1rem",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "0.5rem",
-                                        borderBottom: "2px solid #bbf7d0",
-                                        paddingBottom: "0.5rem",
-                                    }}
-                                >
+                                <h4 className={styles.cardHeaderSuccess}>
                                     <svg
                                         width="16"
                                         height="16"
@@ -777,26 +711,12 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                     }}
                                 >
                                     <div>
-                                        <p
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "#6b7280",
-                                                marginBottom: "0.25rem",
-                                                fontWeight: "600",
-                                            }}
-                                        >
+                                        <p className={styles.statLabelSmall}>
                                             {langCode === "vi"
                                                 ? "TẦN SUẤT TỐI ƯU"
                                                 : "OPTIMAL FREQUENCY"}
                                         </p>
-                                        <p
-                                            style={{
-                                                fontSize: "13px",
-                                                fontWeight: "600",
-                                                color: "#10b981",
-                                                margin: 0,
-                                            }}
-                                        >
+                                        <p className={styles.statValueSuccess}>
                                             {
                                                 report_part_2.content_calendar
                                                     .recommended_frequency
@@ -804,52 +724,24 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "#6b7280",
-                                                marginBottom: "0.25rem",
-                                                fontWeight: "600",
-                                            }}
-                                        >
+                                        <p className={styles.statLabelSmall}>
                                             {langCode === "vi"
                                                 ? "NGÀY TỐT NHẤT"
                                                 : "BEST DAYS TO POST"}
                                         </p>
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                fontWeight: "500",
-                                                color: "#1f2937",
-                                                margin: 0,
-                                            }}
-                                        >
+                                        <p className={styles.statValueDefault}>
                                             {report_part_2.content_calendar.best_posting_days.join(
                                                 ", "
                                             )}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            style={{
-                                                fontSize: "10px",
-                                                color: "#6b7280",
-                                                marginBottom: "0.25rem",
-                                                fontWeight: "600",
-                                            }}
-                                        >
+                                        <p className={styles.statLabelSmall}>
                                             {langCode === "vi"
                                                 ? "KHUNG GIỜ VÀNG"
                                                 : "BEST TIMES TO POST"}
                                         </p>
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                fontWeight: "500",
-                                                color: "#1f2937",
-                                                margin: 0,
-                                            }}
-                                        >
+                                        <p className={styles.statValueDefault}>
                                             {report_part_2.content_calendar.best_posting_times.join(
                                                 ", "
                                             )}

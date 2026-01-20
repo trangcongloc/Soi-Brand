@@ -31,17 +31,33 @@
     --warning-light: #fef3c7;
     --error: #ef4444;
     --error-light: #fef2f2;
+    --info: #3b82f6;
+    --info-light: #dbeafe;
 
     /* Brand colors */
     --brand: #e53935;
+
+    /* Link/Accent colors */
+    --color-link: #2563eb;
+    --color-link-hover: #1e40af;
+    --color-purple: #8b5cf6;
+    --color-pink: #ec4899;
+    --color-indigo: #6366f1;
+
+    /* Extended text colors */
+    --text-tertiary: #666666;
 
     /* Ultracompact font sizes (scaled down another 20%) */
     --fs-xs: 10px;
     --fs-sm: 11px;
     --fs-base: 12px;
+    --fs-md: 13px;
     --fs-lg: 14px;
     --fs-xl: 16px;
+    --fs-xl-plus: 18px;
     --fs-2xl: 22px;
+    --fs-3xl: 20px;
+    --fs-4xl: 24px;
 }
 
 * {

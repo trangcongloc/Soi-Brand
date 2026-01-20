@@ -322,6 +322,11 @@ export const vi = {
             phase60: "60 Ngày",
             phase90: "90 Ngày",
             priority: "Ưu tiên:",
+            priorityLevels: {
+                high: "HIGH",
+                medium: "MEDIUM",
+                low: "LOW",
+            },
             expectedImpact: "Tác động dự kiến:",
             resourcesNeeded: "Nguồn lực cần thiết:",
         },

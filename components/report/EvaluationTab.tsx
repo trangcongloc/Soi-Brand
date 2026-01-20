@@ -174,17 +174,7 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
                             <button
                                 key={phase}
                                 onClick={() => setActionPlanPhase(phase)}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    fontSize: "11px",
-                                    fontWeight: "600",
-                                    border: "none",
-                                    borderRadius: "0.375rem",
-                                    cursor: "pointer",
-                                    background: actionPlanPhase === phase ? "#3b82f6" : "#f3f4f6",
-                                    color: actionPlanPhase === phase ? "white" : "#666",
-                                    transition: "all 0.2s",
-                                }}
+                                className={`${styles.actionPlanTab} ${actionPlanPhase === phase ? styles.actionPlanTabActive : ""}`}
                             >
                                 {phase === "30"
                                     ? lang.evaluation.actionPlan.phase30
@@ -277,7 +267,7 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
                                                         textTransform: "uppercase",
                                                     }}
                                                 >
-                                                    {task.priority}
+                                                    {lang.evaluation.actionPlan.priorityLevels[task.priority]}
                                                 </span>
                                             </p>
                                             <p style={{ marginBottom: "0.25rem", color: "#666" }}>

@@ -325,6 +325,11 @@ export const en = {
             phase60: "60 Days",
             phase90: "90 Days",
             priority: "Priority:",
+            priorityLevels: {
+                high: "HIGH",
+                medium: "MEDIUM",
+                low: "LOW",
+            },
             expectedImpact: "Expected Impact:",
             resourcesNeeded: "Resources Needed:",
         },

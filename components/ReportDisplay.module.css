@@ -56,7 +56,7 @@
   font-weight: 500;
   transition: all 0.2s;
   background: transparent;
-  color: #8e8e8e; /* text-muted */
+  color: var(--text-muted);
   border: none;
   cursor: pointer;
   width: 100%;
@@ -64,12 +64,12 @@
 
 .tabButton:hover {
   background: rgba(0, 0, 0, 0.1);
-  color: #8e8e8e;
+  color: var(--text-muted);
 }
 
 .activeTab {
-  background: #000000;
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--bg-card);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -82,7 +82,7 @@
 .sectionNavLabel {
   font-size: 10px;
   font-weight: 600;
-  color: #8e8e8e;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
@@ -102,7 +102,7 @@
   font-weight: 500;
   transition: all 0.15s ease;
   background: transparent;
-  color: #666;
+  color: var(--text-tertiary);
   border: none;
   cursor: pointer;
   width: 100%;
@@ -110,13 +110,13 @@
 
 .sectionNavItem:hover {
   background: rgba(0, 0, 0, 0.05);
-  color: #000;
+  color: var(--primary);
 }
 
 /* Download Box */
 .downloadBox {
   padding: 0.75rem;
-  background: #f7f7f7;
+  background: var(--bg-main);
   border-radius: 0.5rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
   margin-bottom: 1rem;
@@ -124,7 +124,7 @@
 
 .downloadText {
   font-size: 10px;
-  color: #8e8e8e;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
   line-height: 1.5;
   opacity: 0.7;
@@ -133,7 +133,7 @@
 .downloadBtn {
   width: 100%;
   padding: 0.375rem 0;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   font-size: 10px;
@@ -167,7 +167,7 @@
 
 .description {
   font-size: 12px;
-  color: #8e8e8e;
+  color: var(--text-muted);
 }
 
 /* Sections */
@@ -175,7 +175,7 @@
   font-size: 10px;
   text-transform: uppercase;
   font-weight: 700;
-  color: #8e8e8e;
+  color: var(--text-muted);
   letter-spacing: 0.05em;
   margin-bottom: 1rem;
   display: flex;
@@ -191,7 +191,7 @@
 
 /* Channel New Layout */
 .channelCard {
-  background: #ffffff;
+  background: var(--bg-card);
   padding: 1.5rem;
   border-radius: 1rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -222,7 +222,7 @@
 .channelNickname {
   font-size: 16px;
   font-weight: 700;
-  color: #000;
+  color: var(--primary);
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -233,7 +233,7 @@
 
 .channelSubscribers {
   font-size: 12px;
-  color: #8e8e8e;
+  color: var(--text-muted);
 }
 
 .channelStatsGrid {
@@ -244,7 +244,7 @@
 
 .channelJoinedDate {
   font-size: 11px;
-  color: #8e8e8e;
+  color: var(--text-muted);
   margin-top: 0.25rem;
   padding-left: 0.25rem;
 }
@@ -259,13 +259,13 @@
 .channelStatValue {
   font-size: 20px;
   font-weight: 700;
-  color: #000;
+  color: var(--primary);
 }
 
 .channelStatLabel {
   font-size: 10px;
   font-weight: 700;
-  color: #8e8e8e;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -277,7 +277,7 @@
 
 .channelDescText {
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
   line-height: 1.5;
   margin: 0;
 }
@@ -285,7 +285,7 @@
 .expandBtn {
   background: none;
   border: none;
-  color: #2563eb;
+  color: var(--color-link);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
@@ -295,7 +295,7 @@
 }
 
 .expandBtn:hover {
-  color: #1e40af;
+  color: var(--color-link-hover);
   text-decoration: underline;
 }
 
@@ -305,7 +305,7 @@
   justify-content: center;
   width: auto;
   height: auto;
-  color: #000;
+  color: var(--primary);
   font-size: 12px;
   font-weight: 400;
   margin-left: 0.25rem;
@@ -356,7 +356,7 @@
 }
 
 .statsBox {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 0.75rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
   padding: 1.25rem;
@@ -395,7 +395,7 @@
 
 .statLabel {
   font-size: 10px;
-  color: #8e8e8e;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -411,7 +411,7 @@
 }
 
 .mutedText {
-  color: #8e8e8e;
+  color: var(--text-muted);
 }
 
 /* Posts List */
@@ -422,7 +422,7 @@
 }
 
 .postCard {
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 0.5rem;
   overflow: hidden;
@@ -439,11 +439,11 @@
   justify-content: space-between;
   padding: 0.75rem;
   cursor: pointer;
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 .accordionHeaderActive {
-  background: #f7f7f7;
+  background: var(--bg-main);
 }
 
 .postMeta {
@@ -457,7 +457,7 @@
 .postIndex {
   font-size: 11px;
   font-weight: 600;
-  color: #666;
+  color: var(--text-tertiary);
   white-space: nowrap;
 }
 
@@ -491,7 +491,7 @@
   padding: 0.125rem 0.375rem;
   background: rgba(0, 0, 0, 0.05);
   border-radius: 0.25rem;
-  color: #8e8e8e;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -506,7 +506,7 @@
 .accordionBody {
   padding: 1rem;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
-  background: #ffffff;
+  background: var(--bg-card);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -530,7 +530,7 @@
 .seoTitle {
   font-size: 10px;
   font-weight: 700;
-  color: #1e40af;
+  color: var(--color-link-hover);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
@@ -547,8 +547,8 @@
 
 .tag {
   font-size: 11px;
-  color: #2563eb;
-  background: #ffffff;
+  color: var(--color-link);
+  background: var(--bg-card);
   padding: 0.125rem 0.5rem;
   border-radius: 0.25rem;
   border: 1px solid rgba(191, 219, 254, 0.5);
@@ -559,7 +559,7 @@
 .descLabel {
   font-size: 10px;
   font-weight: 700;
-  color: #8e8e8e;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
@@ -589,7 +589,7 @@
 }
 
 .card {
-  background: #ffffff;
+  background: var(--bg-card);
   padding: 1.25rem;
   border-radius: 0.75rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -640,7 +640,7 @@
 
 /* Pillars */
 .pillarCard {
-  background: #ffffff;
+  background: var(--bg-card);
   padding: 1rem;
   border-radius: 0.5rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -662,8 +662,8 @@
   width: 1.25rem;
   height: 1.25rem;
   border-radius: 9999px;
-  background: #000000;
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -678,7 +678,7 @@
 
 .pillarDesc {
   font-size: 12px;
-  color: #8e8e8e;
+  color: var(--text-muted);
   padding-left: 1.75rem;
 }
 
@@ -688,7 +688,7 @@
 }
 
 .textBlue {
-  color: #2563eb;
+  color: var(--color-link);
 }
 .textGreen {
   color: #15803d;
@@ -734,10 +734,10 @@
 
 /* Ideas */
 .ideaCard {
-  background: #ffffff;
+  background: var(--bg-card);
   padding: 1rem;
   border-radius: 0.5rem;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--info-light, #dbeafe);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
   display: flex;
   gap: 0.75rem;
@@ -758,9 +758,9 @@
 .heatmapSection {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 12px;
-  border: 1px solid #eee;
+  border: 1px solid var(--border);
 }
 
 .heatmapContainer {
@@ -873,4 +873,109 @@
   font-weight: 700;
   color: rgb(250, 125, 125);
   font-family: monospace;
+}
+
+/* Missing classes - Phase 1 */
+.ideaDesc {
+  font-size: 12px;
+  color: var(--text-tertiary, #666);
+  line-height: 1.5;
+}
+
+.textPurple {
+  color: var(--color-purple, #8b5cf6);
+}
+
+.textPink {
+  color: var(--color-pink, #ec4899);
+}
+
+/* Sort Button Styles - DataTab */
+.sortButton {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.sortButtonActive {
+  background: var(--primary);
+  color: var(--bg-card);
+}
+
+/* Action Plan Tab Styles - EvaluationTab */
+.actionPlanTab {
+  padding: 0.5rem 1rem;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  background: #f3f4f6;
+  color: var(--text-tertiary);
+  transition: all 0.2s;
+}
+
+.actionPlanTabActive {
+  background: var(--info);
+  color: white;
+}
+
+/* Card Header Variants - AnalysisTab */
+.cardHeaderBrand {
+  font-size: var(--fs-md, 13px);
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid #fecaca;
+  padding-bottom: 0.5rem;
+}
+
+.cardHeaderSuccess {
+  font-size: var(--fs-md, 13px);
+  font-weight: 700;
+  color: var(--success);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--success-light);
+  padding-bottom: 0.5rem;
+}
+
+/* Stat Label/Value Styles - AnalysisTab */
+.statLabelSmall {
+  font-size: 10px;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.statValueBrand {
+  font-size: var(--fs-md, 13px);
+  font-weight: 600;
+  color: var(--brand);
+  margin: 0;
+}
+
+.statValueDefault {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0;
+}
+
+.statValueSuccess {
+  font-size: var(--fs-md, 13px);
+  font-weight: 600;
+  color: var(--success);
+  margin: 0;
 }
