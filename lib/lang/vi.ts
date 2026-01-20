@@ -109,7 +109,7 @@ export const vi = {
         openLink: "Mở link",
         sortBy: "Sắp xếp:",
         sortLatest: "Mới nhất",
-        sortRating: "Điểm cao",
+        sortRating: "Đánh giá",
     },
 
     analysis: {

@@ -12,7 +12,7 @@ import {
     ReferenceLine,
 } from "recharts";
 import { Post } from "@/lib/types";
-import { useLang } from "@/lib/lang";
+import { useLanguage } from "@/lib/lang";
 
 interface VideoPerformanceChartProps {
     posts: Post[];
@@ -47,7 +47,7 @@ const getLocalDateStr = (d: Date) => {
 };
 
 // Format relative time (e.g., "1 day ago", "3 hours ago")
-const formatRelativeTime = (publishedAt: string): string => {
+const formatRelativeTime = (publishedAt: string, langCode: string): string => {
     const now = new Date();
     const published = new Date(publishedAt);
     const diffMs = now.getTime() - published.getTime();
@@ -57,6 +57,15 @@ const formatRelativeTime = (publishedAt: string): string => {
     const diffDays = Math.floor(diffHours / 24);
     const diffMonths = Math.floor(diffDays / 30);
     const diffYears = Math.floor(diffDays / 365);
+
+    if (langCode === "vi") {
+        if (diffYears > 0) return `${diffYears} năm trước`;
+        if (diffMonths > 0) return `${diffMonths} tháng trước`;
+        if (diffDays > 0) return `${diffDays} ngày trước`;
+        if (diffHours > 0) return `${diffHours} giờ trước`;
+        if (diffMinutes > 0) return `${diffMinutes} phút trước`;
+        return `${diffSeconds} giây trước`;
+    }
 
     if (diffYears > 0)
         return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
@@ -76,7 +85,7 @@ function VideoPerformanceChart({
     selectedDate,
     onDateClick,
 }: VideoPerformanceChartProps) {
-    const lang = useLang();
+    const { lang, langCode } = useLanguage();
 
     // Sort by date: oldest on left, latest on right, preserve original index
     const chartData = useMemo(() =>
@@ -98,9 +107,9 @@ function VideoPerformanceChart({
                 thumbnail: post.thumbnail,
                 publishedAt: post.published_at,
                 dateIso: getLocalDateStr(new Date(post.published_at)),
-                relativeTime: formatRelativeTime(post.published_at),
+                relativeTime: formatRelativeTime(post.published_at, langCode),
             })),
-        [posts, maxItems]
+        [posts, maxItems, langCode]
     );
 
     // Find x-axis names for selected date
