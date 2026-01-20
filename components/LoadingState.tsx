@@ -124,10 +124,11 @@ interface StepLabel {
 
 interface LoadingStateProps {
     onCancel?: () => void;
+    onRetry?: () => void;
     error?: string | null;
 }
 
-export default function LoadingState({ onCancel, error }: LoadingStateProps) {
+export default function LoadingState({ onCancel, onRetry, error }: LoadingStateProps) {
     const { langCode } = useLanguage();
     const defaultSteps =
         langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
@@ -327,24 +328,37 @@ export default function LoadingState({ onCancel, error }: LoadingStateProps) {
                     ))}
                 </div>
 
-                {/* Cancel/Dismiss button */}
-                {onCancel && (
-                    <motion.button
-                        className={styles.cancelLink}
-                        onClick={onCancel}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5, duration: 0.3 }}
-                    >
-                        {error
-                            ? langCode === "en"
-                                ? "Dismiss"
-                                : "Đóng"
-                            : langCode === "en"
-                              ? "Cancel"
-                              : "Hủy"}
-                    </motion.button>
-                )}
+                {/* Action buttons */}
+                <div className={styles.actionButtons}>
+                    {error && onRetry && (
+                        <motion.button
+                            className={styles.retryLink}
+                            onClick={onRetry}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3, duration: 0.3 }}
+                        >
+                            {langCode === "en" ? "Retry" : "Thử lại"}
+                        </motion.button>
+                    )}
+                    {onCancel && (
+                        <motion.button
+                            className={styles.cancelLink}
+                            onClick={onCancel}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5, duration: 0.3 }}
+                        >
+                            {error
+                                ? langCode === "en"
+                                    ? "Dismiss"
+                                    : "Đóng"
+                                : langCode === "en"
+                                  ? "Cancel"
+                                  : "Hủy"}
+                        </motion.button>
+                    )}
+                </div>
             </div>
         </motion.div>
     );

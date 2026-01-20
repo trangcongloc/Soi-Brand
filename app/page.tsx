@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import AnalysisForm from "@/components/AnalysisForm";
@@ -65,6 +65,7 @@ export default function Home() {
     const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterState | null>(null);
+    const lastAnalysisRef = useRef<{ channelUrl: string; urlExtractedId: string | null } | null>(null);
 
     // Clear expired cache on mount
     useEffect(() => {
@@ -166,6 +167,7 @@ export default function Home() {
         setError(null);
         setReport(null);
         setFilter(null);
+        lastAnalysisRef.current = { channelUrl, urlExtractedId };
 
         try {
             // Get user settings for API keys
@@ -330,6 +332,15 @@ export default function Home() {
                         >
                             <LoadingState
                                 error={error}
+                                onRetry={
+                                    lastAnalysisRef.current
+                                        ? () => {
+                                              const { channelUrl, urlExtractedId } =
+                                                  lastAnalysisRef.current!;
+                                              performAnalysis(channelUrl, urlExtractedId);
+                                          }
+                                        : undefined
+                                }
                                 onCancel={() => {
                                     setIsLoading(false);
                                     setError(null);
