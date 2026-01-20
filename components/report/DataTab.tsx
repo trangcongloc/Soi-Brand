@@ -292,15 +292,12 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                 onClick={() => toggleAccordion(displayIndex)}
                             >
                                 <div className={styles.postMeta}>
-                                    <div className={styles.ratingBox}>
-                                        <span className={styles.ratingScore}>
-                                            {score.toFixed(1)}
-                                            {topIndices.has(originalIndex) && " 🔥"}
-                                        </span>
-                                        <span className={styles.relativeTime}>
-                                            {formatRelativeTime(post.published_at, langCode)}
-                                        </span>
-                                    </div>
+                                    <span className={styles.postIndex}>
+                                        #{originalIndex + 1}
+                                    </span>
+                                    <span className={styles.videoBadge}>
+                                        {formatDuration(post.duration)}
+                                    </span>
                                     {post.thumbnail && (
                                         <img
                                             src={post.thumbnail}
@@ -315,9 +312,15 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                         </p>
                                     </div>
                                 </div>
-                                <span className={styles.videoBadge}>
-                                    {formatDuration(post.duration)}
-                                </span>
+                                <div className={styles.ratingBox}>
+                                    <span className={styles.ratingScore}>
+                                        {score.toFixed(1)}
+                                        {topIndices.has(originalIndex) && " 🔥"}
+                                    </span>
+                                    <span className={styles.relativeTime}>
+                                        {formatRelativeTime(post.published_at, langCode)}
+                                    </span>
+                                </div>
                                 <svg
                                     width="12"
                                     height="12"

@@ -67,14 +67,14 @@ export const getVideoTypeBadge = (videoType: string) => {
 // Only uses views and published time - likes/comments excluded due to market manipulation
 export const calculateHackerNewsScore = (
     views: number,
-    publishedAt: string
+    publishedAt: string,
 ) => {
     const points = views + 1; // Views as points
     const now = new Date();
     const published = new Date(publishedAt);
     const hours = Math.max(
         1,
-        (now.getTime() - published.getTime()) / (1000 * 60 * 60)
+        (now.getTime() - published.getTime()) / (1000 * 60 * 60),
     );
     const gravity = 1.8;
     const score = points / Math.pow(hours + 2, gravity);
@@ -87,7 +87,7 @@ export type ActionPlanPhase = "30" | "60" | "90";
 // Format relative time from a date string (e.g., "3 hours ago", "2 days ago")
 export const formatRelativeTime = (
     dateString: string,
-    langCode: "vi" | "en" = "vi"
+    langCode: "vi" | "en" = "vi",
 ): string => {
     const now = new Date();
     const date = new Date(dateString);
@@ -99,16 +99,16 @@ export const formatRelativeTime = (
 
     const units = {
         vi: {
-            hours: "giờ trước",
-            days: "ngày trước",
-            weeks: "tuần trước",
-            months: "tháng trước",
+            hours: "Giờ",
+            days: "Ngày",
+            weeks: "Tuần",
+            months: "Tháng",
         },
         en: {
-            hours: "hours ago",
-            days: "days ago",
-            weeks: "weeks ago",
-            months: "months ago",
+            hours: "Hours",
+            days: "Days",
+            weeks: "Weeks",
+            months: "Months",
         },
     };
 

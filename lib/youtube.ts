@@ -338,7 +338,7 @@ export async function getChannelVideos(
             }
         }
 
-        // If no videos in last 30 days, get the 10 most recent
+        // If no videos in last 30 days, get the 30 most recent
         if (allVideoIds.length === 0) {
             const fallbackResponse = await axios.get(
                 `${YOUTUBE_API_BASE}/playlistItems`,
@@ -346,7 +346,7 @@ export async function getChannelVideos(
                     params: {
                         part: "snippet,contentDetails",
                         playlistId: uploadsPlaylistId,
-                        maxResults: 10,
+                        maxResults: 30,
                         key: apiKey,
                     },
                 }
@@ -409,7 +409,7 @@ export async function getChannelVideos(
 
 /**
  * Get full channel data (info + videos)
- * Videos are filtered to last 30 days (or 10 most recent if none in 30 days)
+ * Videos are filtered to last 30 days (or 30 most recent if none in 30 days)
  */
 export async function getFullChannelData(
     channelUrl: string,
