@@ -122,6 +122,14 @@ interface StepLabel {
     subLabels: string[];
 }
 
+// localStorage cache for AI-generated labels
+const LABELS_CACHE_KEY = 'soibrand_loading_labels';
+
+interface CachedLabels {
+    labels: StepLabel[];
+    lang: string;
+}
+
 interface LoadingStateProps {
     onCancel?: () => void;
     onRetry?: () => void;
@@ -193,26 +201,64 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
     const errorTitle = errorType ? (errorTitles[errorType] || errorTitles.UNKNOWN) : errorTitles.UNKNOWN;
     const initialLangRef = useRef(langCode);
 
-    // Fetch AI-generated labels once on mount, store in pending ref
+    // Load labels: use cache if available, fetch if not. Refresh cache on unmount.
     useEffect(() => {
         if (disableAILabels) return;
 
-        const fetchLabels = async () => {
-            try {
-                const response = await fetch(
-                    `/api/loading-labels?lang=${initialLangRef.current}`,
-                );
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.steps && data.steps.length === 5) {
-                        pendingLabelsRef.current = data.steps;
-                    }
+        let hasCache = false;
+
+        // Try to use cached labels
+        try {
+            const cached = localStorage.getItem(LABELS_CACHE_KEY);
+            if (cached) {
+                const data: CachedLabels = JSON.parse(cached);
+                if (data.lang === initialLangRef.current && data.labels?.length === 5) {
+                    pendingLabelsRef.current = data.labels;
+                    hasCache = true;
                 }
-            } catch {
-                // Keep default labels on error
             }
+        } catch {
+            // Cache read failed
+        }
+
+        // No cache - fetch for first use
+        if (!hasCache) {
+            fetch(`/api/loading-labels?lang=${initialLangRef.current}`)
+                .then(response => response.ok ? response.json() : null)
+                .then(data => {
+                    if (data?.steps?.length === 5) {
+                        pendingLabelsRef.current = data.steps;
+                        try {
+                            localStorage.setItem(LABELS_CACHE_KEY, JSON.stringify({
+                                labels: data.steps,
+                                lang: initialLangRef.current,
+                            }));
+                        } catch {
+                            // Cache write failed
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Refresh cache in background when component unmounts (analysis done)
+        return () => {
+            fetch(`/api/loading-labels?lang=${initialLangRef.current}`)
+                .then(response => response.ok ? response.json() : null)
+                .then(data => {
+                    if (data?.steps?.length === 5) {
+                        try {
+                            localStorage.setItem(LABELS_CACHE_KEY, JSON.stringify({
+                                labels: data.steps,
+                                lang: initialLangRef.current,
+                            }));
+                        } catch {
+                            // Cache write failed
+                        }
+                    }
+                })
+                .catch(() => {});
         };
-        fetchLabels();
     }, [disableAILabels]);
 
     // Save current step when error occurs (don't add to history until retry)

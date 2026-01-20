@@ -12,6 +12,14 @@ export interface ValidationResult {
     tier?: "free" | "paid";
 }
 
+// Cache for validation results to avoid redundant API calls
+interface CachedValidation {
+    result: ValidationResult;
+    timestamp: number;
+}
+const validationCache: Record<string, CachedValidation> = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Validate YouTube API key by making a test request
  */
@@ -20,6 +28,13 @@ export async function validateYouTubeApiKey(
 ): Promise<ValidationResult> {
     if (!apiKey || apiKey.trim().length === 0) {
         return { valid: false, error: "API key is empty" };
+    }
+
+    // Check cache first
+    const cacheKey = `youtube:${apiKey}`;
+    const cached = validationCache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.result;
     }
 
     try {
@@ -38,38 +53,49 @@ export async function validateYouTubeApiKey(
         );
 
         if (response.status === 200 && response.data) {
-            return { valid: true };
+            const result = { valid: true };
+            validationCache[cacheKey] = { result, timestamp: Date.now() };
+            return result;
         }
 
-        return { valid: false, error: "Invalid response from YouTube API" };
+        const result = { valid: false, error: "Invalid response from YouTube API" };
+        validationCache[cacheKey] = { result, timestamp: Date.now() };
+        return result;
     } catch (error: any) {
         const errorMessage =
             error.response?.data?.error?.message || error.message;
 
+        let result: ValidationResult;
         if (error.response?.status === 400) {
             if (errorMessage.includes("API key")) {
-                return { valid: false, error: "Invalid API key format" };
-            }
-            if (errorMessage.includes("quota")) {
+                result = { valid: false, error: "Invalid API key format" };
+            } else if (errorMessage.includes("quota")) {
                 // Key is valid but quota exceeded
-                return { valid: true };
+                result = { valid: true };
+            } else {
+                result = { valid: false, error: `Verification failed: ${errorMessage}` };
             }
-        }
-
-        if (error.response?.status === 403) {
-            return {
+        } else if (error.response?.status === 403) {
+            result = {
                 valid: false,
                 error: "API key not authorized for YouTube Data API",
             };
+        } else {
+            result = { valid: false, error: `Verification failed: ${errorMessage}` };
         }
 
-        return { valid: false, error: `Verification failed: ${errorMessage}` };
+        validationCache[cacheKey] = { result, timestamp: Date.now() };
+        return result;
     }
 }
 
 /**
- * Validate Gemini API key by making a test request
- * Detects tier by testing with a paid-only model
+ * Validate Gemini API key by making a single test request
+ * Uses paid model to detect both validity and tier in one request:
+ * - Success → valid, paid tier
+ * - 429 with "free_tier" → valid, free tier
+ * - 429 without "free_tier" → valid, paid tier (quota exhausted)
+ * - Invalid key error → invalid
  */
 export async function validateGeminiApiKey(
     apiKey: string,
@@ -78,92 +104,82 @@ export async function validateGeminiApiKey(
         return { valid: false, error: "API key is empty" };
     }
 
+    // Check cache first
+    const cacheKey = `gemini:${apiKey}`;
+    const cached = validationCache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.result;
+    }
+
     try {
-        // First, validate the key works with a free model
+        // Single request to paid model - determines both validity and tier
         const genAI = new GoogleGenerativeAI(apiKey);
-        const freeModel = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-lite",
+        const paidModel = genAI.getGenerativeModel({
+            model: "gemini-2.5-pro",
         });
 
-        const freeResult = await freeModel.generateContent("Hi");
-        const freeResponse = await freeResult.response;
-        const freeText = freeResponse.text();
+        const paidResult = await paidModel.generateContent("Hi");
+        const paidResponse = await paidResult.response;
+        const paidText = paidResponse.text();
 
-        if (!freeText || freeText.length === 0) {
-            return { valid: false, error: "Invalid response from Gemini API" };
+        if (paidText && paidText.length > 0) {
+            // Paid model works = valid key, paid tier
+            const result = { valid: true, tier: "paid" as const };
+            validationCache[cacheKey] = { result, timestamp: Date.now() };
+            return result;
         }
 
-        // Key is valid, now detect tier by testing with a paid-only model
-        try {
-            const paidModel = genAI.getGenerativeModel({
-                model: "gemini-2.5-pro",
-            });
-            const paidResult = await paidModel.generateContent("Hi");
-            const paidResponse = await paidResult.response;
-            const paidText = paidResponse.text();
-
-            if (paidText && paidText.length > 0) {
-                // Paid model works = paid tier
-                return { valid: true, tier: "paid" };
-            }
-        } catch (paidError: any) {
-            const paidErrorMessage = paidError.message || String(paidError);
-
-            // If permission denied or model not available, it's a free tier key
-            if (
-                paidErrorMessage.includes("PERMISSION_DENIED") ||
-                paidErrorMessage.includes("not available") ||
-                paidErrorMessage.includes("not supported")
-            ) {
-                return { valid: true, tier: "free" };
-            }
-
-            // If quota error with "free_tier" in message, it's a free tier key
-            // Free tier keys get 429 errors with "free_tier" quota metrics when accessing paid models
-            if (paidErrorMessage.includes("free_tier")) {
-                return { valid: true, tier: "free" };
-            }
-
-            // If quota exhausted WITHOUT "free_tier", it's a paid tier key that ran out of quota
-            if (
-                paidErrorMessage.includes("RESOURCE_EXHAUSTED") ||
-                paidErrorMessage.includes("quota")
-            ) {
-                return { valid: true, tier: "paid" };
-            }
-
-            // Other errors on paid model don't necessarily mean free tier
-            // Could be temporary issues, so we'll assume free tier as default
-        }
-
-        // Default to free tier if paid model test was inconclusive
-        return { valid: true, tier: "free" };
+        // Empty response but no error - assume valid, paid tier
+        const result = { valid: true, tier: "paid" as const };
+        validationCache[cacheKey] = { result, timestamp: Date.now() };
+        return result;
     } catch (error: any) {
         const errorMessage = error.message || String(error);
 
+        let result: ValidationResult;
+
+        // Check for invalid key errors first
         if (
             errorMessage.includes("API_KEY_INVALID") ||
-            errorMessage.includes("API key")
+            errorMessage.includes("API key not valid")
         ) {
-            return { valid: false, error: "Invalid API key" };
+            result = { valid: false, error: "Invalid API key" };
         }
-
-        if (
-            errorMessage.includes("RESOURCE_EXHAUSTED") ||
-            errorMessage.includes("quota")
-        ) {
-            // Key is valid but quota exceeded (assume free tier)
-            return { valid: true, tier: "free" };
-        }
-
-        if (errorMessage.includes("PERMISSION_DENIED")) {
-            return {
+        // Permission denied = key not authorized
+        else if (errorMessage.includes("PERMISSION_DENIED")) {
+            result = {
                 valid: false,
                 error: "API key not authorized for Gemini API",
             };
         }
+        // Quota/rate limit errors - key is valid, determine tier from error message
+        else if (
+            errorMessage.includes("RESOURCE_EXHAUSTED") ||
+            errorMessage.includes("quota") ||
+            errorMessage.includes("429")
+        ) {
+            // Free tier keys have "free_tier" in quota error messages
+            if (errorMessage.includes("free_tier")) {
+                result = { valid: true, tier: "free" };
+            } else {
+                // Paid tier key with exhausted quota
+                result = { valid: true, tier: "paid" };
+            }
+        }
+        // Model not available/supported = valid key, free tier
+        else if (
+            errorMessage.includes("not available") ||
+            errorMessage.includes("not supported")
+        ) {
+            result = { valid: true, tier: "free" };
+        }
+        // Unknown error
+        else {
+            result = { valid: false, error: `Verification failed: ${errorMessage}` };
+        }
 
-        return { valid: false, error: `Verification failed: ${errorMessage}` };
+        validationCache[cacheKey] = { result, timestamp: Date.now() };
+        return result;
     }
 }
 

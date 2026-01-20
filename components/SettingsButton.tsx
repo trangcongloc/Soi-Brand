@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useLanguage, useLang, LanguageCode } from "@/lib/lang";
-import { getUserSettings, saveUserSettings } from "@/lib/userSettings";
+import { getUserSettingsAsync, saveUserSettingsAsync } from "@/lib/userSettings";
 import { getQuotaUsage, updateGeminiQuotaLimits } from "@/lib/apiQuota";
 import { GEMINI_MODELS, DEFAULT_MODEL } from "@/lib/geminiModels";
 import { GeminiModel } from "@/lib/types";
@@ -39,25 +39,29 @@ export default function SettingsButton() {
 
     // Load saved keys from localStorage
     useEffect(() => {
-        // Migrate old keys to new format if they exist
-        const oldGemini = localStorage.getItem("gemini_api_key");
-        const oldYoutube = localStorage.getItem("youtube_api_key");
+        const loadSettings = async () => {
+            // Migrate old keys to new format if they exist
+            const oldGemini = localStorage.getItem("gemini_api_key");
+            const oldYoutube = localStorage.getItem("youtube_api_key");
 
-        if (oldGemini || oldYoutube) {
-            // Migrate to new format
-            saveUserSettings({
-                geminiApiKey: oldGemini || undefined,
-                youtubeApiKey: oldYoutube || undefined,
-            });
-            // Remove old keys
-            localStorage.removeItem("gemini_api_key");
-            localStorage.removeItem("youtube_api_key");
-        }
+            if (oldGemini || oldYoutube) {
+                // Migrate to new format
+                await saveUserSettingsAsync({
+                    geminiApiKey: oldGemini || undefined,
+                    youtubeApiKey: oldYoutube || undefined,
+                });
+                // Remove old keys
+                localStorage.removeItem("gemini_api_key");
+                localStorage.removeItem("youtube_api_key");
+            }
 
-        const settings = getUserSettings();
-        setGeminiKey(settings.geminiApiKey || "");
-        setYoutubeKey(settings.youtubeApiKey || "");
-        setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
+            const settings = await getUserSettingsAsync();
+            setGeminiKey(settings.geminiApiKey || "");
+            setYoutubeKey(settings.youtubeApiKey || "");
+            setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
+        };
+
+        loadSettings();
     }, []);
 
     // Load tier from storage when panel opens
@@ -72,6 +76,21 @@ export default function SettingsButton() {
             }
         }
     }, [isOpen]);
+
+    // Cross-tab synchronization for settings changes
+    useEffect(() => {
+        const handleStorageChange = async (e: StorageEvent) => {
+            if (e.key === 'soibrand_user_settings') {
+                const settings = await getUserSettingsAsync();
+                setGeminiKey(settings.geminiApiKey || "");
+                setYoutubeKey(settings.youtubeApiKey || "");
+                setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
     // Close panel when clicking outside
     useEffect(() => {
@@ -156,11 +175,11 @@ export default function SettingsButton() {
         key: string,
     ) => {
         // Save immediately
-        const settings = getUserSettings();
+        const settings = await getUserSettingsAsync();
         if (provider === "youtube") {
-            saveUserSettings({ ...settings, youtubeApiKey: key || undefined });
+            await saveUserSettingsAsync({ ...settings, youtubeApiKey: key || undefined });
         } else {
-            saveUserSettings({ ...settings, geminiApiKey: key || undefined });
+            await saveUserSettingsAsync({ ...settings, geminiApiKey: key || undefined });
         }
 
         // Validate if key is present
@@ -400,7 +419,7 @@ export default function SettingsButton() {
                                     <button
                                         key={model.id}
                                         className={`${styles.dropdownItem} ${model.id === selectedModel ? styles.dropdownItemSelected : ""}`}
-                                        onClick={() => {
+                                        onClick={async () => {
                                             setSelectedModel(model.id);
                                             setModelDropdownOpen(false);
 
@@ -415,8 +434,8 @@ export default function SettingsButton() {
                                             }
 
                                             // Auto-save model selection
-                                            const settings = getUserSettings();
-                                            saveUserSettings({
+                                            const settings = await getUserSettingsAsync();
+                                            await saveUserSettingsAsync({
                                                 ...settings,
                                                 geminiModel: model.id,
                                             });

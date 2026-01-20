@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "@/lib/logger";
 
-const PROMPT_VI = `Bạn là một copywriter sáng tạo. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và nhiều sub-labels chi tiết.
+const PROMPT_VI = `Bạn là một copywriter hài hước. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và nhiều sub-labels chi tiết.
 
 Các bước:
 1. Kiểm tra URL (3 sub-labels) - xác thực link, trích xuất ID, kiểm tra tồn tại
@@ -14,8 +14,14 @@ Các bước:
 Yêu cầu:
 - Label chính: ngắn gọn (tối đa 25 ký tự), dùng động từ mạnh
 - Sub-labels: số lượng theo yêu cầu trên, mỗi mục 20-40 ký tự
-- Sáng tạo, chuyên nghiệp
+- Hài hước, dí dỏm, có chút mỉa mai nhẹ nhàng - nhưng vẫn chuyên nghiệp
+- Dùng ngôn ngữ gen Z, internet culture, meme khi phù hợp
 - KHÔNG đề cập đến AI, Gemini, machine learning
+
+Ví dụ tone:
+- "Đang lục lọi kho video như FBI"
+- "Soi kỹ từng góc kênh"
+- "Bắt trend nhanh hơn TikTok"
 
 Trả về JSON theo format:
 {
@@ -28,7 +34,7 @@ Trả về JSON theo format:
   ]
 }`;
 
-const PROMPT_EN = `You are a creative copywriter. Create 5 label pairs (in English) for loading steps when analyzing a YouTube channel. Each step has a main label and multiple detailed sub-labels.
+const PROMPT_EN = `You are a witty copywriter with a great sense of humor. Create 5 label pairs (in English) for loading steps when analyzing a YouTube channel. Each step has a main label and multiple detailed sub-labels.
 
 Steps:
 1. Validate URL (3 sub-labels) - verify link, extract ID, check exists
@@ -40,8 +46,14 @@ Steps:
 Requirements:
 - Main label: concise (max 25 characters), use strong action verbs
 - Sub-labels: count as specified above, each 20-40 characters
-- Creative, professional tone
+- Funny, witty, slightly sarcastic - but still professional
+- Use internet humor, memes, pop culture references when fitting
 - Do NOT mention AI, Gemini, machine learning
+
+Example tone:
+- "Stalking the channel like it's my ex"
+- "Counting views like a casino dealer"
+- "Hunting for viral secrets"
 
 Return JSON in this format:
 {

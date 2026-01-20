@@ -131,12 +131,24 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
 
             if (settings.youtubeApiKey) {
                 const encrypted = await encrypt(settings.youtubeApiKey);
-                if (encrypted) stored.youtubeApiKey = encrypted;
+                if (encrypted) {
+                    stored.youtubeApiKey = encrypted;
+                } else {
+                    logger.warn("[UserSettings] Encryption failed for YouTube key, storing unencrypted");
+                    stored.youtubeApiKey = settings.youtubeApiKey;
+                    stored.encrypted = false;
+                }
             }
 
             if (settings.geminiApiKey) {
                 const encrypted = await encrypt(settings.geminiApiKey);
-                if (encrypted) stored.geminiApiKey = encrypted;
+                if (encrypted) {
+                    stored.geminiApiKey = encrypted;
+                } else {
+                    logger.warn("[UserSettings] Encryption failed for Gemini key, storing unencrypted");
+                    stored.geminiApiKey = settings.geminiApiKey;
+                    stored.encrypted = false;
+                }
             }
         } else {
             // Fallback: store unencrypted (less secure)
