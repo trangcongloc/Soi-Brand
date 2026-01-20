@@ -29,15 +29,14 @@
 .completedList {
     position: fixed;
     left: 50%;
-    bottom: calc(50% + 45px);
+    bottom: calc(50% + 30px);
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    gap: 0.5rem;
     width: 100%;
     max-width: 380px;
     z-index: 5;
-    padding-bottom: 8px;
 }
 
 .step {

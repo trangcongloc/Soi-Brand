@@ -65,3 +65,5 @@ lerna-debug.log*
 # Agent directories (Claude Code specific)
 .agent/
 .claude/
+
+progressDemo/progressDemo/
