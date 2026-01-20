@@ -1,20 +1,30 @@
 // YouTube Data API Service
-import axios from "axios";
+import { apiClient } from "./axios";
 import { YouTubeChannel, YouTubeVideo, APIError } from "./types";
 import { extractChannelId, extractUsername } from "./utils";
 import { logger } from "./logger";
+import {
+    YOUTUBE_ERROR_MAPPINGS,
+    matchAndThrowError,
+    isNetworkError,
+} from "./errorMappings";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
 /**
  * Parse YouTube API error and throw appropriate APIError
- * Reference: https://developers.google.com/youtube/v3/docs/errors
  */
-function handleYouTubeError(error: any, context: string): never {
-    const statusCode = error?.response?.status || error?.status;
-    const errorData = error?.response?.data?.error;
-    const errorMessage =
-        errorData?.message || error?.message || "Unknown YouTube API error";
+function handleYouTubeError(error: unknown, context: string): never {
+    const err = error as {
+        response?: { status?: number; data?: { error?: { message?: string; errors?: Array<{ reason?: string }> } } };
+        status?: number;
+        message?: string;
+        code?: string;
+    };
+
+    const statusCode = err?.response?.status || err?.status;
+    const errorData = err?.response?.data?.error;
+    const errorMessage = errorData?.message || err?.message || "Unknown YouTube API error";
     const errorReason = errorData?.errors?.[0]?.reason || "";
 
     logger.error(`YouTube API Error (${context}):`, {
@@ -23,95 +33,8 @@ function handleYouTubeError(error: any, context: string): never {
         reason: errorReason,
     });
 
-    // Error mapping based on official YouTube Data API documentation
-    const errorMappings: Array<{
-        reasons?: string[];
-        status?: number[];
-        patterns?: string[];
-        type: NonNullable<import("./types").AnalyzeResponse["errorType"]>;
-        message: string;
-        statusCode: number;
-    }> = [
-        // Quota exceeded (403 quotaExceeded, dailyLimitExceeded)
-        {
-            reasons: ["quotaExceeded", "dailyLimitExceeded"],
-            patterns: ["quota", "Quota exceeded"],
-            type: "YOUTUBE_QUOTA",
-            message:
-                "YouTube API quota exceeded for today. Please try again tomorrow.",
-            statusCode: 429,
-        },
-        // Rate limit (429 rateLimitExceeded)
-        {
-            reasons: ["rateLimitExceeded"],
-            status: [429],
-            type: "RATE_LIMIT",
-            message:
-                "YouTube API rate limit exceeded. Please wait a moment and try again.",
-            statusCode: 429,
-        },
-        // Invalid API key (400/401 keyInvalid)
-        {
-            reasons: ["keyInvalid"],
-            status: [401],
-            patterns: ["API key"],
-            type: "API_CONFIG",
-            message: "Invalid YouTube API key configuration.",
-            statusCode: 401,
-        },
-        // Channel not found (404 channelNotFound)
-        {
-            reasons: ["channelNotFound"],
-            status: [404],
-            type: "CHANNEL_NOT_FOUND",
-            message: "YouTube channel not found.",
-            statusCode: 404,
-        },
-        // Channel forbidden (403 channelForbidden)
-        {
-            reasons: ["channelForbidden", "forbidden"],
-            status: [403],
-            type: "YOUTUBE_API_ERROR",
-            message: "Access to this YouTube channel is forbidden.",
-            statusCode: 403,
-        },
-        // Bad request (400 - various reasons)
-        {
-            reasons: [
-                "badRequest",
-                "invalidFilters",
-                "missingRequiredParameter",
-            ],
-            status: [400],
-            type: "YOUTUBE_API_ERROR",
-            message: "Invalid YouTube API request parameters.",
-            statusCode: 400,
-        },
-    ];
-
-    // Find matching error
-    for (const mapping of errorMappings) {
-        const reasonMatch = mapping.reasons?.includes(errorReason);
-        const statusMatch = mapping.status?.includes(statusCode);
-        const patternMatch = mapping.patterns?.some((p) =>
-            errorMessage.toLowerCase().includes(p.toLowerCase())
-        );
-
-        if (reasonMatch || statusMatch || patternMatch) {
-            throw new APIError(
-                mapping.message,
-                mapping.type,
-                mapping.statusCode
-            );
-        }
-    }
-
-    // Network errors
-    if (
-        error?.code === "ECONNREFUSED" ||
-        error?.code === "ETIMEDOUT" ||
-        error?.code === "ENOTFOUND"
-    ) {
+    // Check for network errors
+    if (isNetworkError(err?.code)) {
         throw new APIError(
             "Network error while connecting to YouTube API.",
             "NETWORK_ERROR",
@@ -119,11 +42,13 @@ function handleYouTubeError(error: any, context: string): never {
         );
     }
 
-    // Generic YouTube API error
-    throw new APIError(
-        `YouTube API error: ${errorMessage}`,
-        "YOUTUBE_API_ERROR",
-        statusCode || 500
+    // Match against error mappings
+    matchAndThrowError(
+        YOUTUBE_ERROR_MAPPINGS,
+        errorMessage,
+        statusCode,
+        errorReason,
+        "YouTube API"
     );
 }
 
@@ -153,7 +78,7 @@ export async function resolveChannelId(
 
     try {
         // Search for channel by username
-        const response = await axios.get(`${YOUTUBE_API_BASE}/search`, {
+        const response = await apiClient.get(`${YOUTUBE_API_BASE}/search`, {
             params: {
                 part: "snippet",
                 q: username,
@@ -206,7 +131,7 @@ export async function getChannelInfo(
     }
 
     try {
-        const response = await axios.get(`${YOUTUBE_API_BASE}/channels`, {
+        const response = await apiClient.get(`${YOUTUBE_API_BASE}/channels`, {
             params: {
                 part: "snippet,statistics,contentDetails",
                 id: channelId,
@@ -255,7 +180,7 @@ export async function getChannelVideos(
 
     try {
         // First, get the uploads playlist ID
-        const channelResponse = await axios.get(
+        const channelResponse = await apiClient.get(
             `${YOUTUBE_API_BASE}/channels`,
             {
                 params: {
@@ -283,7 +208,7 @@ export async function getChannelVideos(
 
         // Helper function to fetch playlist page
         const fetchPlaylistPage = async (pageToken?: string) => {
-            const response = await axios.get(
+            const response = await apiClient.get(
                 `${YOUTUBE_API_BASE}/playlistItems`,
                 {
                     params: {
@@ -340,7 +265,7 @@ export async function getChannelVideos(
 
         // If no videos in last 30 days, get the 30 most recent
         if (allVideoIds.length === 0) {
-            const fallbackResponse = await axios.get(
+            const fallbackResponse = await apiClient.get(
                 `${YOUTUBE_API_BASE}/playlistItems`,
                 {
                     params: {
@@ -369,7 +294,7 @@ export async function getChannelVideos(
         for (let i = 0; i < allVideoIds.length; i += 50) {
             const batchIds = allVideoIds.slice(i, i + 50);
 
-            const videosResponse = await axios.get(`${YOUTUBE_API_BASE}/videos`, {
+            const videosResponse = await apiClient.get(`${YOUTUBE_API_BASE}/videos`, {
                 params: {
                     part: "snippet,statistics,contentDetails",
                     id: batchIds.join(","),

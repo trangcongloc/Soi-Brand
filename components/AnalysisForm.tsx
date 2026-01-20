@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { isValidYouTubeUrl } from "@/lib/utils";
 import styles from "./AnalysisForm.module.css";
@@ -23,7 +23,7 @@ interface AnalysisFormProps {
     onReanalyze?: () => void;
 }
 
-export default function AnalysisForm({
+function AnalysisForm({
     onSubmit,
     onError,
     isLoading,
@@ -37,7 +37,7 @@ export default function AnalysisForm({
     // Display channel name when filter is active
     const isFilterMode = !!filteredChannelName;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
 
         if (!url.trim()) {
@@ -54,7 +54,11 @@ export default function AnalysisForm({
         }
 
         onSubmit(url);
-    };
+    }, [url, onError, onSubmit, lang.form.errors.emptyUrl, lang.form.errors.invalidUrl]);
+
+    const handleUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setUrl(e.target.value);
+    }, []);
 
     return (
         <LayoutGroup>
@@ -162,7 +166,7 @@ export default function AnalysisForm({
                                             id="channel-url"
                                             type="text"
                                             value={url}
-                                            onChange={(e) => setUrl(e.target.value)}
+                                            onChange={handleUrlChange}
                                             placeholder={lang.form.placeholder}
                                             className="input"
                                             disabled={isLoading}
@@ -233,3 +237,5 @@ export default function AnalysisForm({
         </LayoutGroup>
     );
 }
+
+export default memo(AnalysisForm);

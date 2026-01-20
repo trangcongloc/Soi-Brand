@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/lang";
 import styles from "./LoadingState.module.css";
@@ -30,7 +30,11 @@ interface StepLabel {
     subLabel: string;
 }
 
-export default function LoadingState() {
+interface LoadingStateProps {
+    onCancel?: () => void;
+}
+
+export default function LoadingState({ onCancel }: LoadingStateProps) {
     const { langCode } = useLanguage();
     const defaultSteps = langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
 
@@ -38,21 +42,29 @@ export default function LoadingState() {
     const [spinnerFrame, setSpinnerFrame] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [steps, setSteps] = useState<StepLabel[]>(defaultSteps);
+    const hasFetchedRef = useRef(false);
+    const initialLangRef = useRef(langCode);
 
-    // Update default steps when language changes
+    // Update default steps when language changes (only if not yet fetched AI labels)
     useEffect(() => {
-        setSteps(langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI);
+        if (!hasFetchedRef.current) {
+            setSteps(langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI);
+        }
     }, [langCode]);
 
-    // Fetch AI-generated labels
+    // Fetch AI-generated labels once on mount
     // Delay fetch until after step 0 completes to prevent mid-step text jump
     useEffect(() => {
         const fetchTimer = setTimeout(async () => {
+            // Only fetch once, using the language at mount time
+            if (hasFetchedRef.current) return;
+
             try {
-                const response = await fetch(`/api/loading-labels?lang=${langCode}`);
+                const response = await fetch(`/api/loading-labels?lang=${initialLangRef.current}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.steps && data.steps.length === 5) {
+                        hasFetchedRef.current = true;
                         setSteps(data.steps);
                     }
                 }
@@ -62,7 +74,7 @@ export default function LoadingState() {
         }, STEP_DURATIONS[0]); // Wait for step 0 duration (2500ms)
 
         return () => clearTimeout(fetchTimer);
-    }, [langCode]);
+    }, []); // Empty deps - only run once on mount
 
     // Step progression
     useEffect(() => {
@@ -161,6 +173,19 @@ export default function LoadingState() {
                         </motion.div>
                     ))}
                 </div>
+
+                {/* Cancel link */}
+                {onCancel && (
+                    <motion.button
+                        className={styles.cancelLink}
+                        onClick={onCancel}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5, duration: 0.3 }}
+                    >
+                        {langCode === "en" ? "Cancel" : "Hủy"}
+                    </motion.button>
+                )}
             </div>
         </motion.div>
     );

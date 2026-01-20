@@ -83,6 +83,9 @@ export default function Home() {
 
     // Update document title and favicon based on report
     useEffect(() => {
+        const defaultTitle = lang.metadata.title;
+        let addedFaviconLink: HTMLLinkElement | null = null;
+
         if (report) {
             // When report is loaded, show channel name
             document.title = report.brand_name;
@@ -95,20 +98,28 @@ export default function Home() {
                 existingLinks.forEach(link => link.remove());
 
                 // Add new favicon with channel avatar
-                const link = document.createElement('link');
-                link.rel = 'icon';
-                link.type = 'image/png';
-                link.href = channelAvatar;
-                document.head.appendChild(link);
+                addedFaviconLink = document.createElement('link');
+                addedFaviconLink.rel = 'icon';
+                addedFaviconLink.type = 'image/png';
+                addedFaviconLink.href = channelAvatar;
+                document.head.appendChild(addedFaviconLink);
             }
         } else {
             // When no report, show default title
-            document.title = lang.metadata.title;
+            document.title = defaultTitle;
 
-            // Reset favicon to default (Next.js will handle it)
+            // Reset favicon to default
             const existingLinks = document.querySelectorAll("link[rel*='icon']");
             existingLinks.forEach(link => link.remove());
         }
+
+        // Cleanup function to restore default state
+        return () => {
+            document.title = defaultTitle;
+            if (addedFaviconLink && addedFaviconLink.parentNode) {
+                addedFaviconLink.parentNode.removeChild(addedFaviconLink);
+            }
+        };
     }, [report, lang.metadata.title]);
 
     const handleAnalyze = async (channelUrl: string) => {
@@ -316,7 +327,7 @@ export default function Home() {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.25 }}
                         >
-                            <LoadingState />
+                            <LoadingState onCancel={() => setIsLoading(false)} />
                         </motion.div>
                     )}
 

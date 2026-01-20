@@ -11,49 +11,8 @@ import { generateUUID } from "./utils";
 import { buildMarketingReportPrompt } from "./prompts/marketing-report";
 import { logger } from "./logger";
 import { DEFAULT_MODEL } from "./geminiModels";
-
-/**
- * Validate that the AI response has the required structure
- */
-function validateAIResponse(data: any): void {
-    if (!data || typeof data !== "object") {
-        throw new Error("AI response is not an object");
-    }
-
-    if (!data.report_part_2 || typeof data.report_part_2 !== "object") {
-        throw new Error("Missing or invalid report_part_2 in AI response");
-    }
-
-    if (!data.report_part_3 || typeof data.report_part_3 !== "object") {
-        throw new Error("Missing or invalid report_part_3 in AI response");
-    }
-
-    // Check for required sections in report_part_2
-    const requiredPart2Sections = [
-        "ad_strategy",
-        "funnel_analysis",
-        "strategy_analysis",
-    ];
-
-    for (const section of requiredPart2Sections) {
-        if (!data.report_part_2[section]) {
-            logger.log(
-                `Warning: Missing section '${section}' in report_part_2`
-            );
-        }
-    }
-
-    // Check for required sections in report_part_3
-    const requiredPart3Sections = ["strengths", "actionable_insights"];
-
-    for (const section of requiredPart3Sections) {
-        if (!data.report_part_3[section]) {
-            logger.log(
-                `Warning: Missing section '${section}' in report_part_3`
-            );
-        }
-    }
-}
+import { GEMINI_ERROR_MAPPINGS, matchAndThrowError } from "./errorMappings";
+import { validateAIResponseSchema, AIResponse } from "./schemas";
 
 /**
  * Extract and parse JSON from AI response
@@ -244,10 +203,10 @@ export async function generateMarketingReport(
         const text = response.text();
 
         // Parse JSON with automatic repair attempts
-        const aiAnalysis = extractAndParseJSON(text);
+        const rawAnalysis = extractAndParseJSON(text);
 
-        // Validate response structure
-        validateAIResponse(aiAnalysis);
+        // Validate response structure using zod schema
+        const aiAnalysis: AIResponse = validateAIResponseSchema(rawAnalysis);
 
         // Construct full report
         const report: MarketingReport = {
@@ -333,125 +292,17 @@ export async function generateMarketingReport(
             );
         }
 
-        // Check for validation errors
+        // Check for validation errors (including zod schema validation)
         if (
             errorMessage.includes("Missing or invalid") ||
-            errorMessage.includes("AI response is not")
+            errorMessage.includes("AI response is not") ||
+            errorMessage.includes("validation failed")
         ) {
             throw new APIError(
                 "The AI response is missing required information. Please try again.",
                 "AI_PARSE_ERROR",
                 500
             );
-        }
-
-        // Error mapping based on official Gemini API documentation
-        // Reference: https://ai.google.dev/gemini-api/docs/troubleshooting
-        const errorMappings: Array<{
-            status?: number[];
-            patterns?: string[];
-            type: NonNullable<import("./types").AnalyzeResponse["errorType"]>;
-            message: string;
-            statusCode: number;
-        }> = [
-            // 400 Bad Request - Invalid parameters (INVALID_ARGUMENT)
-            {
-                status: [400],
-                patterns: ["INVALID_ARGUMENT", "Bad Request", "invalid"],
-                type: "GEMINI_API_ERROR",
-                message:
-                    "Invalid request parameters: The model parameters or request format is incorrect.",
-                statusCode: 400,
-            },
-            // 401/403 Unauthorized/Forbidden - API key issues (PERMISSION_DENIED)
-            {
-                status: [401, 403],
-                patterns: [
-                    "PERMISSION_DENIED",
-                    "Unauthorized",
-                    "Forbidden",
-                    "API key",
-                ],
-                type: "API_CONFIG",
-                message:
-                    "Gemini API authentication failed: Invalid or missing API key.",
-                statusCode: 401,
-            },
-            // 404 Not Found - Model not found
-            {
-                status: [404],
-                patterns: ["NOT_FOUND", "Not Found"],
-                type: "GEMINI_API_ERROR",
-                message:
-                    "Gemini model not found. The requested model may not exist or be unavailable.",
-                statusCode: 404,
-            },
-            // 429 Resource Exhausted - Rate limit or quota exceeded
-            {
-                status: [429],
-                patterns: ["RESOURCE_EXHAUSTED", "quota", "rate limit"],
-                type: "GEMINI_QUOTA",
-                message:
-                    "Gemini API quota exceeded. Please wait a few minutes before retrying.",
-                statusCode: 429,
-            },
-            // 500 Internal Server Error
-            {
-                status: [500],
-                patterns: ["INTERNAL", "Internal Server Error"],
-                type: "GEMINI_API_ERROR",
-                message:
-                    "Gemini API internal server error. Please try again in a moment.",
-                statusCode: 500,
-            },
-            // 503 Service Unavailable / Model Overload (UNAVAILABLE)
-            {
-                status: [503],
-                patterns: ["UNAVAILABLE", "Service Unavailable", "overloaded"],
-                type: "MODEL_OVERLOAD",
-                message:
-                    "Gemini AI model is currently overloaded. Please try again in 1-2 minutes.",
-                statusCode: 503,
-            },
-            // 504 Gateway Timeout / Deadline Exceeded
-            {
-                status: [504],
-                patterns: ["Deadline Exceeded", "timeout"],
-                type: "NETWORK_ERROR",
-                message:
-                    "Request timeout: The analysis took too long. Try with fewer videos.",
-                statusCode: 504,
-            },
-            // Safety/Content filtering (BlockedReason)
-            {
-                patterns: ["SAFETY", "blocked", "BlockedReason"],
-                type: "GEMINI_API_ERROR",
-                message: "Content blocked by Gemini safety filters.",
-                statusCode: 400,
-            },
-            // Recitation issue
-            {
-                patterns: ["RECITATION", "recitation"],
-                type: "AI_PARSE_ERROR",
-                message: "AI response issue detected. Please try again.",
-                statusCode: 500,
-            },
-        ];
-
-        // Find matching error
-        for (const mapping of errorMappings) {
-            const statusMatch = mapping.status?.includes(errorStatus);
-            const patternMatch = mapping.patterns?.some((p) =>
-                errorMessage.toLowerCase().includes(p.toLowerCase())
-            );
-
-            if (statusMatch || patternMatch) {
-                throw new APIError(
-                    mapping.message,
-                    mapping.type,
-                    mapping.statusCode
-                );
-            }
         }
 
         // JSON parsing errors
@@ -463,13 +314,13 @@ export async function generateMarketingReport(
             );
         }
 
-        // Generic fallback error
-        throw new APIError(
-            `Failed to generate marketing analysis: ${
-                errorMessage || "Unknown error occurred"
-            }`,
-            "UNKNOWN",
-            500
+        // Match against error mappings (will throw or fall through to generic)
+        matchAndThrowError(
+            GEMINI_ERROR_MAPPINGS,
+            errorMessage,
+            errorStatus,
+            undefined,
+            "Failed to generate marketing analysis"
         );
     }
 }

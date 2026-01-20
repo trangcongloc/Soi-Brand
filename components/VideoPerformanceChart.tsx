@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo, useCallback } from "react";
 import {
     LineChart,
     Line,
@@ -18,6 +19,23 @@ interface VideoPerformanceChartProps {
     maxItems?: number;
     selectedDate?: string | null;
     onDateClick?: (dateIso: string) => void;
+}
+
+interface ChartDataPoint {
+    name: string;
+    rank: number;
+    fullTitle: string;
+    views: number;
+    likes: number;
+    comments: number;
+    thumbnail: string;
+    publishedAt: string;
+    dateIso: string;
+    relativeTime: string;
+}
+
+interface ChartClickPayload {
+    payload?: ChartDataPoint;
 }
 
 // Format date as yyyy-mm-dd using local timezone
@@ -52,7 +70,7 @@ const formatRelativeTime = (publishedAt: string): string => {
     return `${diffSeconds} second${diffSeconds > 1 ? "s" : ""} ago`;
 };
 
-export default function VideoPerformanceChart({
+function VideoPerformanceChart({
     posts,
     maxItems = 10,
     selectedDate,
@@ -61,37 +79,49 @@ export default function VideoPerformanceChart({
     const lang = useLang();
 
     // Sort by date: oldest on left, latest on right, preserve original index
-    const chartData = posts
-        .map((post, originalIndex) => ({ post, originalIndex }))
-        .sort(
-            (a, b) =>
-                new Date(a.post.published_at).getTime() -
-                new Date(b.post.published_at).getTime()
-        )
-        .slice(-maxItems)
-        .map(({ post, originalIndex }) => ({
-            name: `#${originalIndex + 1}`,
-            rank: originalIndex + 1,
-            fullTitle: post.title,
-            views: post.statistics.play_count,
-            likes: post.statistics.digg_count,
-            comments: post.statistics.comment_count,
-            thumbnail: post.thumbnail,
-            publishedAt: post.published_at,
-            dateIso: getLocalDateStr(new Date(post.published_at)),
-            relativeTime: formatRelativeTime(post.published_at),
-        }));
+    const chartData = useMemo(() =>
+        posts
+            .map((post, originalIndex) => ({ post, originalIndex }))
+            .sort(
+                (a, b) =>
+                    new Date(a.post.published_at).getTime() -
+                    new Date(b.post.published_at).getTime()
+            )
+            .slice(-maxItems)
+            .map(({ post, originalIndex }) => ({
+                name: `#${originalIndex + 1}`,
+                rank: originalIndex + 1,
+                fullTitle: post.title,
+                views: post.statistics.play_count,
+                likes: post.statistics.digg_count,
+                comments: post.statistics.comment_count,
+                thumbnail: post.thumbnail,
+                publishedAt: post.published_at,
+                dateIso: getLocalDateStr(new Date(post.published_at)),
+                relativeTime: formatRelativeTime(post.published_at),
+            })),
+        [posts, maxItems]
+    );
 
     // Find x-axis names for selected date
-    const selectedNames = selectedDate
-        ? chartData.filter(d => d.dateIso === selectedDate).map(d => d.name)
-        : [];
+    const selectedNames = useMemo(() =>
+        selectedDate
+            ? chartData.filter(d => d.dateIso === selectedDate).map(d => d.name)
+            : [],
+        [selectedDate, chartData]
+    );
 
-    const formatNumber = (num: number) => {
+    const formatNumber = useCallback((num: number) => {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
         if (num >= 1000) return (num / 1000).toFixed(0) + "K";
         return num.toString();
-    };
+    }, []);
+
+    const handleDotClick = useCallback((_props: unknown, payload: ChartClickPayload) => {
+        if (onDateClick && payload?.payload?.dateIso) {
+            onDateClick(payload.payload.dateIso);
+        }
+    }, [onDateClick]);
 
     return (
         <div style={{ width: "100%", height: 240 }}>
@@ -269,11 +299,7 @@ export default function VideoPerformanceChart({
                         activeDot={{
                             r: 6,
                             cursor: "pointer",
-                            onClick: (_e: any, payload: any) => {
-                                if (onDateClick && payload?.payload?.dateIso) {
-                                    onDateClick(payload.payload.dateIso);
-                                }
-                            }
+                            onClick: handleDotClick
                         }}
                     />
                     <Line
@@ -285,11 +311,7 @@ export default function VideoPerformanceChart({
                         activeDot={{
                             r: 6,
                             cursor: "pointer",
-                            onClick: (_e: any, payload: any) => {
-                                if (onDateClick && payload?.payload?.dateIso) {
-                                    onDateClick(payload.payload.dateIso);
-                                }
-                            }
+                            onClick: handleDotClick
                         }}
                     />
                     <Line
@@ -301,11 +323,7 @@ export default function VideoPerformanceChart({
                         activeDot={{
                             r: 6,
                             cursor: "pointer",
-                            onClick: (_e: any, payload: any) => {
-                                if (onDateClick && payload?.payload?.dateIso) {
-                                    onDateClick(payload.payload.dateIso);
-                                }
-                            }
+                            onClick: handleDotClick
                         }}
                     />
                 </LineChart>
@@ -313,3 +331,5 @@ export default function VideoPerformanceChart({
         </div>
     );
 }
+
+export default memo(VideoPerformanceChart);

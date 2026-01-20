@@ -4,19 +4,36 @@
     --bg-main: #f7f7f7;
     --bg-card: #ffffff;
     --bg-sidebar: rgba(242, 242, 242, 0.3);
+    --bg-hover: #f3f4f6;
     --text-main: #1a1a1a;
     --text-secondary: #808080;
     --text-muted: #8e8e8e;
     --border: #ebebeb;
+    --border-light: #e5e7eb;
     --pill-bg: #1a1a1a;
     --pill-text: #f7f7f7;
     --radius-xl: 10px;
     --radius-lg: 8px;
     --radius-md: 6px;
     --radius-sm: 4px;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-    --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.04);
+
+    /* Hierarchical shadow system */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.02);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.08);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Status colors */
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --error: #ef4444;
+    --error-light: #fef2f2;
+
+    /* Brand colors */
+    --brand: #e53935;
 
     /* Ultracompact font sizes (scaled down another 20%) */
     --fs-xs: 10px;

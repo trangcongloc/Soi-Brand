@@ -3,7 +3,7 @@
  * Validates YouTube and Gemini API keys by making test requests
  */
 
-import axios from "axios";
+import { apiClient } from "./axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface ValidationResult {
@@ -22,7 +22,7 @@ export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationR
 
     try {
         // Make a simple test request to YouTube API (search with minimal quota cost)
-        const response = await axios.get(
+        const response = await apiClient.get(
             "https://www.googleapis.com/youtube/v3/search",
             {
                 params: {
@@ -32,7 +32,6 @@ export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationR
                     type: "video",
                     key: apiKey,
                 },
-                timeout: 10000,
             }
         );
 
