@@ -12,7 +12,7 @@ import {
     ReferenceLine,
 } from "recharts";
 import { Post } from "@/lib/types";
-import { useLanguage } from "@/lib/lang";
+import { useLanguage, useLang } from "@/lib/lang";
 
 interface VideoPerformanceChartProps {
     posts: Post[];
@@ -46,8 +46,17 @@ const getLocalDateStr = (d: Date) => {
     return `${year}-${month}-${day}`;
 };
 
+interface TimeAgoStrings {
+    yearsAgo: string;
+    monthsAgo: string;
+    daysAgo: string;
+    hoursAgo: string;
+    minutesAgo: string;
+    secondsAgo: string;
+}
+
 // Format relative time (e.g., "1 day ago", "3 hours ago")
-const formatRelativeTime = (publishedAt: string, langCode: string): string => {
+const formatRelativeTime = (publishedAt: string, timeAgo: TimeAgoStrings): string => {
     const now = new Date();
     const published = new Date(publishedAt);
     const diffMs = now.getTime() - published.getTime();
@@ -58,25 +67,12 @@ const formatRelativeTime = (publishedAt: string, langCode: string): string => {
     const diffMonths = Math.floor(diffDays / 30);
     const diffYears = Math.floor(diffDays / 365);
 
-    if (langCode === "vi") {
-        if (diffYears > 0) return `${diffYears} năm trước`;
-        if (diffMonths > 0) return `${diffMonths} tháng trước`;
-        if (diffDays > 0) return `${diffDays} ngày trước`;
-        if (diffHours > 0) return `${diffHours} giờ trước`;
-        if (diffMinutes > 0) return `${diffMinutes} phút trước`;
-        return `${diffSeconds} giây trước`;
-    }
-
-    if (diffYears > 0)
-        return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
-    if (diffMonths > 0)
-        return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
-    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-    if (diffHours > 0)
-        return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    if (diffMinutes > 0)
-        return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
-    return `${diffSeconds} second${diffSeconds > 1 ? "s" : ""} ago`;
+    if (diffYears > 0) return timeAgo.yearsAgo.replace('{n}', String(diffYears));
+    if (diffMonths > 0) return timeAgo.monthsAgo.replace('{n}', String(diffMonths));
+    if (diffDays > 0) return timeAgo.daysAgo.replace('{n}', String(diffDays));
+    if (diffHours > 0) return timeAgo.hoursAgo.replace('{n}', String(diffHours));
+    if (diffMinutes > 0) return timeAgo.minutesAgo.replace('{n}', String(diffMinutes));
+    return timeAgo.secondsAgo.replace('{n}', String(diffSeconds));
 };
 
 function VideoPerformanceChart({
@@ -85,7 +81,8 @@ function VideoPerformanceChart({
     selectedDate,
     onDateClick,
 }: VideoPerformanceChartProps) {
-    const { lang, langCode } = useLanguage();
+    useLanguage(); // Keep provider connected
+    const lang = useLang();
 
     // Sort by date: oldest on left, latest on right, preserve original index
     const chartData = useMemo(() =>
@@ -107,9 +104,9 @@ function VideoPerformanceChart({
                 thumbnail: post.thumbnail,
                 publishedAt: post.published_at,
                 dateIso: getLocalDateStr(new Date(post.published_at)),
-                relativeTime: formatRelativeTime(post.published_at, langCode),
+                relativeTime: formatRelativeTime(post.published_at, lang.timeAgo),
             })),
-        [posts, maxItems, langCode]
+        [posts, maxItems, lang.timeAgo]
     );
 
     // Find x-axis names for selected date

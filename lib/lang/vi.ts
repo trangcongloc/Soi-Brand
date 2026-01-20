@@ -11,18 +11,6 @@ export const vi = {
         title: "Soi'Brand",
     },
 
-    common: {
-        days: {
-            0: "Chủ nhật",
-            1: "Thứ 2",
-            2: "Thứ 3",
-            3: "Thứ 4",
-            4: "Thứ 5",
-            5: "Thứ 6",
-            6: "Thứ 7",
-        },
-    },
-
     form: {
         placeholder: "Dán link kênh YouTube...",
         submitButton: "Phân tích ngay",
@@ -345,11 +333,79 @@ export const vi = {
     },
 
     settings: {
+        title: "Cài đặt",
+        aiModel: "Mô hình AI",
+        language: "Ngôn ngữ",
+        footerNote: "API keys được lưu trữ cục bộ trên trình duyệt của bạn.",
         validating: "Đang xác thực...",
-        valid: "Hợp lệ",
         invalid: "Không hợp lệ",
         apiKeyVerified: "API key đã được xác thực",
         apiKeyInvalid: "API key không hợp lệ",
+        // Badge states
+        verifying: "đang xác thực",
+        notConfigured: "chưa cấu hình",
+        configured: "đã cấu hình",
+        free: "miễn phí",
+        paid: "trả phí",
+    },
+
+    loadingState: {
+        retrying: "Đang thử lại...",
+        retryCount: "Thử lại lần {current}/{max} sau {seconds}s...",
+        maxRetriesReached: "Đã thử lại {max} lần. Vui lòng thử lại sau vài phút.",
+        retryNow: "Thử lại ngay",
+        cancel: "Hủy",
+        dismiss: "Đóng",
+    },
+
+    history: {
+        title: "Lịch sử phân tích",
+        savedReports: "Báo Cáo Đã Lưu",
+        noReports: "Không có báo cáo",
+        latest: "Mới nhất",
+        clearAll: "Xóa tất cả",
+        confirmDelete: "Xác nhận xóa",
+        cancelAction: "Hủy",
+        viewReport: "Xem báo cáo",
+        deleteReport: "Xóa",
+    },
+
+    errorBoundary: {
+        title: "Đã xảy ra lỗi",
+        description: "Ứng dụng gặp sự cố không mong muốn. Vui lòng thử lại.",
+        details: "Chi tiết lỗi (Development)",
+        retry: "Thử lại",
+        reload: "Tải lại trang",
+    },
+
+    timeAgo: {
+        yearsAgo: "{n} năm trước",
+        monthsAgo: "{n} tháng trước",
+        daysAgo: "{n} ngày trước",
+        hoursAgo: "{n} giờ trước",
+        minutesAgo: "{n} phút trước",
+        secondsAgo: "{n} giây trước",
+    },
+
+    dataTab: {
+        videoPerformance: "Hiệu suất Video",
+        loadingChart: "Đang tải biểu đồ...",
+        postFallback: "Bài đăng {n}",
+    },
+
+    common: {
+        days: {
+            0: "Chủ nhật",
+            1: "Thứ 2",
+            2: "Thứ 3",
+            3: "Thứ 4",
+            4: "Thứ 5",
+            5: "Thứ 6",
+            6: "Thứ 7",
+        },
+        back: "Quay lại",
+        analyze: "Phân tích",
+        skipToContent: "Chuyển đến nội dung",
     },
 } as const;
 

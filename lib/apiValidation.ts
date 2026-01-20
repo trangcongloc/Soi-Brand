@@ -15,7 +15,9 @@ export interface ValidationResult {
 /**
  * Validate YouTube API key by making a test request
  */
-export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationResult> {
+export async function validateYouTubeApiKey(
+    apiKey: string,
+): Promise<ValidationResult> {
     if (!apiKey || apiKey.trim().length === 0) {
         return { valid: false, error: "API key is empty" };
     }
@@ -32,7 +34,7 @@ export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationR
                     type: "video",
                     key: apiKey,
                 },
-            }
+            },
         );
 
         if (response.status === 200 && response.data) {
@@ -41,7 +43,8 @@ export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationR
 
         return { valid: false, error: "Invalid response from YouTube API" };
     } catch (error: any) {
-        const errorMessage = error.response?.data?.error?.message || error.message;
+        const errorMessage =
+            error.response?.data?.error?.message || error.message;
 
         if (error.response?.status === 400) {
             if (errorMessage.includes("API key")) {
@@ -54,7 +57,10 @@ export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationR
         }
 
         if (error.response?.status === 403) {
-            return { valid: false, error: "API key not authorized for YouTube Data API" };
+            return {
+                valid: false,
+                error: "API key not authorized for YouTube Data API",
+            };
         }
 
         return { valid: false, error: `Verification failed: ${errorMessage}` };
@@ -65,7 +71,9 @@ export async function validateYouTubeApiKey(apiKey: string): Promise<ValidationR
  * Validate Gemini API key by making a test request
  * Detects tier by testing with a paid-only model
  */
-export async function validateGeminiApiKey(apiKey: string): Promise<ValidationResult> {
+export async function validateGeminiApiKey(
+    apiKey: string,
+): Promise<ValidationResult> {
     if (!apiKey || apiKey.trim().length === 0) {
         return { valid: false, error: "API key is empty" };
     }
@@ -73,7 +81,9 @@ export async function validateGeminiApiKey(apiKey: string): Promise<ValidationRe
     try {
         // First, validate the key works with a free model
         const genAI = new GoogleGenerativeAI(apiKey);
-        const freeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        const freeModel = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-lite",
+        });
 
         const freeResult = await freeModel.generateContent("Hi");
         const freeResponse = await freeResult.response;
@@ -85,7 +95,9 @@ export async function validateGeminiApiKey(apiKey: string): Promise<ValidationRe
 
         // Key is valid, now detect tier by testing with a paid-only model
         try {
-            const paidModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+            const paidModel = genAI.getGenerativeModel({
+                model: "gemini-2.5-pro",
+            });
             const paidResult = await paidModel.generateContent("Hi");
             const paidResponse = await paidResult.response;
             const paidText = paidResponse.text();
@@ -113,7 +125,10 @@ export async function validateGeminiApiKey(apiKey: string): Promise<ValidationRe
             }
 
             // If quota exhausted WITHOUT "free_tier", it's a paid tier key that ran out of quota
-            if (paidErrorMessage.includes("RESOURCE_EXHAUSTED") || paidErrorMessage.includes("quota")) {
+            if (
+                paidErrorMessage.includes("RESOURCE_EXHAUSTED") ||
+                paidErrorMessage.includes("quota")
+            ) {
                 return { valid: true, tier: "paid" };
             }
 
@@ -126,17 +141,26 @@ export async function validateGeminiApiKey(apiKey: string): Promise<ValidationRe
     } catch (error: any) {
         const errorMessage = error.message || String(error);
 
-        if (errorMessage.includes("API_KEY_INVALID") || errorMessage.includes("API key")) {
+        if (
+            errorMessage.includes("API_KEY_INVALID") ||
+            errorMessage.includes("API key")
+        ) {
             return { valid: false, error: "Invalid API key" };
         }
 
-        if (errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("quota")) {
+        if (
+            errorMessage.includes("RESOURCE_EXHAUSTED") ||
+            errorMessage.includes("quota")
+        ) {
             // Key is valid but quota exceeded (assume free tier)
             return { valid: true, tier: "free" };
         }
 
         if (errorMessage.includes("PERMISSION_DENIED")) {
-            return { valid: false, error: "API key not authorized for Gemini API" };
+            return {
+                valid: false,
+                error: "API key not authorized for Gemini API",
+            };
         }
 
         return { valid: false, error: `Verification failed: ${errorMessage}` };
@@ -148,7 +172,9 @@ export async function validateGeminiApiKey(apiKey: string): Promise<ValidationRe
  * Returns the tier (free/paid) if detectable, otherwise undefined
  * Note: This is a best-effort detection and may not be 100% accurate
  */
-export async function detectGeminiTier(_apiKey: string): Promise<"free" | "paid" | undefined> {
+export async function detectGeminiTier(
+    _apiKey: string,
+): Promise<"free" | "paid" | undefined> {
     // Unfortunately, Google Gemini API doesn't provide a direct way to detect tier
     // The only reliable way is to monitor rate limits over time
     // For now, we return undefined and let the user assume free tier

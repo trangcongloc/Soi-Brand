@@ -58,7 +58,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
 }) => {
     // Note: filteredChannelName is kept in props for API compatibility but not used
     void _filteredChannelName;
-    const { langCode } = useLanguage();
+    useLanguage(); // Keep provider connected
     const lang = useLang();
     const [allHistory, setAllHistory] = useState<HistoryItem[]>(() =>
         getCachedChannelList()
@@ -237,12 +237,8 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                 }}
                             >
                                 {isFiltered
-                                    ? langCode === "vi"
-                                        ? "Báo Cáo Đã Lưu"
-                                        : "Saved Reports"
-                                    : langCode === "vi"
-                                    ? "Lịch sử phân tích"
-                                    : "Analysis History"}
+                                    ? lang.history.savedReports
+                                    : lang.history.title}
                             </h3>
                             <span
                                 style={{
@@ -349,11 +345,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                             fontSize: "10px",
                                             gap: "0.25rem",
                                         }}
-                                        title={
-                                            langCode === "vi"
-                                                ? "Xóa tất cả"
-                                                : "Clear all"
-                                        }
+                                        title={lang.history.clearAll}
                                     >
                                         <svg
                                             width="12"
@@ -382,9 +374,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                 fontSize: "12px",
                             }}
                         >
-                            {langCode === "vi"
-                                ? "Không có báo cáo"
-                                : "No reports"}
+                            {lang.history.noReports}
                         </div>
                     ) : (
                         <div
@@ -518,9 +508,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                             color: colors.textMuted,
                                                         }}
                                                     >
-                                                        {langCode === "vi"
-                                                            ? "Mới nhất"
-                                                            : "Latest"}
+                                                        {lang.history.latest}
                                                     </span>
                                                 )}
                                             </div>
@@ -601,11 +589,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                             borderRadius: "4px",
                                                             cursor: "pointer",
                                                         }}
-                                                        title={
-                                                            langCode === "vi"
-                                                                ? "Xác nhận xóa"
-                                                                : "Confirm delete"
-                                                        }
+                                                        title={lang.history.confirmDelete}
                                                     >
                                                         ✓
                                                     </button>
@@ -627,11 +611,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                             borderRadius: "4px",
                                                             cursor: "pointer",
                                                         }}
-                                                        title={
-                                                            langCode === "vi"
-                                                                ? "Hủy"
-                                                                : "Cancel"
-                                                        }
+                                                        title={lang.history.cancelAction}
                                                     >
                                                         ✕
                                                     </button>
@@ -661,11 +641,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                                 "center",
                                                             gap: "0.25rem",
                                                         }}
-                                                        title={
-                                                            langCode === "vi"
-                                                                ? "Xem báo cáo"
-                                                                : "View report"
-                                                        }
+                                                        title={lang.history.viewReport}
                                                     >
                                                         <svg
                                                             width="10"
@@ -699,11 +675,7 @@ const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
                                                             alignItems:
                                                                 "center",
                                                         }}
-                                                        title={
-                                                            langCode === "vi"
-                                                                ? "Xóa"
-                                                                : "Delete"
-                                                        }
+                                                        title={lang.history.deleteReport}
                                                     >
                                                         <svg
                                                             width="12"

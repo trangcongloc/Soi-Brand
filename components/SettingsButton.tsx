@@ -1,14 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useLanguage, LanguageCode } from "@/lib/lang";
+import { useLanguage, useLang, LanguageCode } from "@/lib/lang";
 import { getUserSettings, saveUserSettings } from "@/lib/userSettings";
-import {
-    getQuotaPercentage,
-    getQuotaColor,
-    getQuotaUsage,
-    updateGeminiQuotaLimits,
-} from "@/lib/apiQuota";
+import { getQuotaUsage, updateGeminiQuotaLimits } from "@/lib/apiQuota";
 import { GEMINI_MODELS, DEFAULT_MODEL } from "@/lib/geminiModels";
 import { GeminiModel } from "@/lib/types";
 import {
@@ -16,12 +11,6 @@ import {
     validateGeminiApiKey,
 } from "@/lib/apiValidation";
 import styles from "./SettingsButton.module.css";
-
-interface QuotaState {
-    youtube: number | null;
-    gemini: number | null;
-    loading: boolean;
-}
 
 interface ValidationState {
     youtube: "idle" | "validating" | "valid" | "invalid";
@@ -38,19 +27,12 @@ export default function SettingsButton() {
     const [selectedModel, setSelectedModel] =
         useState<GeminiModel>(DEFAULT_MODEL);
     const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
-        "idle",
-    );
     const [validation, setValidation] = useState<ValidationState>({
         youtube: "idle",
         gemini: "idle",
     });
-    const [quota, setQuota] = useState<QuotaState>({
-        youtube: null,
-        gemini: null,
-        loading: false,
-    });
     const { langCode, setLanguage } = useLanguage();
+    const lang = useLang();
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -78,21 +60,9 @@ export default function SettingsButton() {
         setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
     }, []);
 
-    // Fetch quota when panel opens
+    // Load tier from storage when panel opens
     useEffect(() => {
         if (isOpen) {
-            fetchQuota();
-        }
-    }, [isOpen]);
-
-    const fetchQuota = () => {
-        setQuota({ youtube: null, gemini: null, loading: true });
-
-        try {
-            const youtubePercentage = getQuotaPercentage("youtube");
-            const geminiPercentage = getQuotaPercentage("gemini");
-
-            // Get tier from quota storage to persist tier info
             const quotaUsage = getQuotaUsage();
             if (quotaUsage.gemini.tier) {
                 setValidation((prev) => ({
@@ -100,17 +70,8 @@ export default function SettingsButton() {
                     geminiTier: quotaUsage.gemini.tier,
                 }));
             }
-
-            setQuota({
-                youtube: youtubePercentage,
-                gemini: geminiPercentage,
-                loading: false,
-            });
-        } catch (error) {
-            console.error("Failed to fetch quota:", error);
-            setQuota({ youtube: null, gemini: null, loading: false });
         }
-    };
+    }, [isOpen]);
 
     // Close panel when clicking outside
     useEffect(() => {
@@ -189,66 +150,53 @@ export default function SettingsButton() {
         }
     }, [validation]);
 
-    const handleSave = async () => {
-        setSaveStatus("saving");
-
-        // Reset validation state
-        setValidation({
-            youtube: youtubeKey ? "validating" : "idle",
-            gemini: geminiKey ? "validating" : "idle",
-        });
-
-        // Validate API keys in parallel
-        const validationPromises: Promise<void>[] = [];
-        let detectedTier: "free" | "paid" | undefined;
-
-        if (youtubeKey) {
-            validationPromises.push(
-                validateYouTubeApiKey(youtubeKey).then((result) => {
-                    setValidation((prev) => ({
-                        ...prev,
-                        youtube: result.valid ? "valid" : "invalid",
-                        youtubeError: result.error,
-                    }));
-                }),
-            );
+    // Auto-save and validate API key
+    const saveAndValidateKey = async (
+        provider: "youtube" | "gemini",
+        key: string,
+    ) => {
+        // Save immediately
+        const settings = getUserSettings();
+        if (provider === "youtube") {
+            saveUserSettings({ ...settings, youtubeApiKey: key || undefined });
+        } else {
+            saveUserSettings({ ...settings, geminiApiKey: key || undefined });
         }
 
-        if (geminiKey) {
-            validationPromises.push(
-                validateGeminiApiKey(geminiKey).then((result) => {
-                    detectedTier = result.tier; // Store tier for quota update
-                    setValidation((prev) => ({
-                        ...prev,
-                        gemini: result.valid ? "valid" : "invalid",
-                        geminiError: result.error,
-                        geminiTier: result.tier,
-                    }));
-                }),
-            );
+        // Validate if key is present
+        if (!key) {
+            setValidation((prev) => ({
+                ...prev,
+                [provider]: "idle",
+                [`${provider}Error`]: undefined,
+                ...(provider === "gemini" ? { geminiTier: undefined } : {}),
+            }));
+            return;
         }
 
-        // Wait for all validations to complete
-        await Promise.all(validationPromises);
+        setValidation((prev) => ({ ...prev, [provider]: "validating" }));
 
-        // Update Gemini quota limits based on detected tier and selected model
-        if (detectedTier && selectedModel) {
-            updateGeminiQuotaLimits(selectedModel, detectedTier);
+        if (provider === "youtube") {
+            const result = await validateYouTubeApiKey(key);
+            setValidation((prev) => ({
+                ...prev,
+                youtube: result.valid ? "valid" : "invalid",
+                youtubeError: result.error,
+            }));
+        } else {
+            const result = await validateGeminiApiKey(key);
+            setValidation((prev) => ({
+                ...prev,
+                gemini: result.valid ? "valid" : "invalid",
+                geminiError: result.error,
+                geminiTier: result.tier,
+            }));
+
+            // Update quota limits based on tier
+            if (result.tier && selectedModel) {
+                updateGeminiQuotaLimits(selectedModel, result.tier);
+            }
         }
-
-        // Save settings regardless of validation (user might want to save invalid keys)
-        saveUserSettings({
-            geminiApiKey: geminiKey || undefined,
-            youtubeApiKey: youtubeKey || undefined,
-            geminiModel: selectedModel,
-        });
-
-        setSaveStatus("saved");
-        fetchQuota(); // Refresh quota after saving
-
-        setTimeout(() => {
-            setSaveStatus("idle");
-        }, 3000);
     };
 
     const handleLanguageSwitch = (code: LanguageCode) => {
@@ -264,380 +212,61 @@ export default function SettingsButton() {
         );
     };
 
-    const renderValidationBadge = (provider: "youtube" | "gemini") => {
-        const status =
-            provider === "youtube" ? validation.youtube : validation.gemini;
-        const error =
-            provider === "youtube"
-                ? validation.youtubeError
-                : validation.geminiError;
-
-        if (status === "idle") return null;
-
-        if (status === "validating") {
-            return (
-                <div className={styles.validationBadge}>
-                    <span className={styles.spinner} />
-                    <span className={styles.validationText}>
-                        {langCode === "vi"
-                            ? "Đang xác thực..."
-                            : "Verifying..."}
-                    </span>
-                </div>
-            );
-        }
-
-        if (status === "valid") {
-            return (
-                <div
-                    className={`${styles.validationBadge} ${styles.validationSuccess}`}
-                >
-                    <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                    >
-                        <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    <span className={styles.validationText}>
-                        {langCode === "vi" ? "Hợp lệ" : "Valid"}
-                    </span>
-                </div>
-            );
-        }
-
-        if (status === "invalid") {
-            return (
-                <div
-                    className={`${styles.validationBadge} ${styles.validationError}`}
-                >
-                    <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                    >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                    <span className={styles.validationText}>
-                        {error ||
-                            (langCode === "vi" ? "Không hợp lệ" : "Invalid")}
-                    </span>
-                </div>
-            );
-        }
-
-        return null;
-    };
-
-    const formatLastReset = (isoString: string) => {
-        const date = new Date(isoString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-
-        if (diffMins < 1) {
-            return langCode === "vi" ? "Vừa xong" : "just now";
-        } else if (diffMins < 60) {
-            return langCode === "vi"
-                ? `${diffMins} Phút trước`
-                : `${diffMins} Min ago`;
-        } else if (diffHours < 24) {
-            return langCode === "vi"
-                ? `${diffHours} Giờ trước`
-                : `${diffHours} Hours ago`;
-        } else {
-            return date.toLocaleDateString(
-                langCode === "vi" ? "vi-VN" : "en-US",
-                {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                },
-            );
-        }
-    };
-
-    const renderQuotaBadge = (
+    const renderApiKeyBadge = (
         provider: "youtube" | "gemini",
         hasKey: boolean,
     ) => {
+        const status =
+            provider === "youtube" ? validation.youtube : validation.gemini;
+
+        // Show spinner while validating
+        if (status === "validating") {
+            return (
+                <span className={`${styles.tierBadge} ${styles.tierBadgeValidating}`}>
+                    <span className={styles.spinnerSmall} />
+                    {lang.settings.verifying}
+                </span>
+            );
+        }
+
+        // Show error when invalid
+        if (status === "invalid") {
+            const error =
+                provider === "youtube"
+                    ? validation.youtubeError
+                    : validation.geminiError;
+            return (
+                <span className={`${styles.tierBadge} ${styles.tierBadgeInvalid}`}>
+                    {error || lang.settings.invalid.toLowerCase()}
+                </span>
+            );
+        }
+
+        // No key configured
         if (!hasKey) {
             return (
                 <span className={styles.quotaBadge}>
-                    {langCode === "vi" ? "chưa cấu hình" : "not configured"}
+                    {lang.settings.notConfigured}
                 </span>
             );
         }
 
-        if (quota.loading) {
-            return (
-                <span className={styles.quotaBadge}>
-                    {langCode === "vi" ? "đang kiểm tra..." : "checking..."}
-                </span>
-            );
-        }
-
-        const percentage =
-            provider === "youtube" ? quota.youtube : quota.gemini;
-        if (percentage === null) return null;
-
-        const color = getQuotaColor(percentage);
-        const quotaData = getQuotaUsage();
-
-        let used: number;
-        let total: number;
-        let lastReset: string;
-        let usedDaily: number | undefined;
-        let totalDaily: number | undefined;
-
-        if (provider === "youtube") {
-            used = quotaData.youtube.used;
-            total = quotaData.youtube.total;
-            lastReset = quotaData.youtube.lastReset;
-        } else {
-            used = quotaData.gemini.requestsUsed;
-            total = quotaData.gemini.requestsTotal;
-            usedDaily = quotaData.gemini.requestsUsedDaily;
-            totalDaily = quotaData.gemini.requestsTotalDaily;
-            lastReset = quotaData.gemini.lastReset;
-        }
-
-        const remaining = total - used;
-        const remainingDaily =
-            totalDaily !== undefined && usedDaily !== undefined
-                ? totalDaily - usedDaily
-                : undefined;
-        const formattedLastReset = formatLastReset(lastReset);
-
-        // Get model-specific rate limits for Gemini
-        let modelRateLimits = null;
-        if (provider === "gemini") {
-            const model = GEMINI_MODELS.find((m) => m.id === selectedModel);
-            const tier = validation.geminiTier || "free";
-            const rpm = tier === "free" ? model?.rpmFree : model?.rpmPaid;
-            const rpd = tier === "free" ? model?.rpdFree : model?.rpdPaid;
-
-            if (rpm !== undefined || rpd !== undefined) {
-                modelRateLimits = { rpm, rpd, modelName: model?.name, tier };
-            }
-        }
-
-        // Determine tier text
-        let tierText = "";
+        // Valid or idle with key: show tier badge for Gemini
         if (provider === "gemini" && validation.geminiTier) {
-            tierText =
-                validation.geminiTier === "free"
-                    ? langCode === "vi"
-                        ? " Miễn phí"
-                        : " Free"
-                    : langCode === "vi"
-                      ? " Trả phí"
-                      : " Paid";
+            const isFree = validation.geminiTier === "free";
+            return (
+                <span
+                    className={`${styles.tierBadge} ${styles[isFree ? "tierBadgeFree" : "tierBadgePaid"]}`}
+                >
+                    {isFree ? lang.settings.free : lang.settings.paid}
+                </span>
+            );
         }
 
+        // YouTube or Gemini without tier info: show configured
         return (
-            <span className={styles.quotaBadgeWrapper}>
-                <span
-                    className={styles.quotaBadge}
-                    style={{ backgroundColor: color }}
-                >
-                    {percentage}%{tierText}
-                </span>
-                <div className={styles.quotaTooltip}>
-                    {provider === "gemini" ? (
-                        <>
-                            <div className={styles.tooltipRow}>
-                                <span className={styles.tooltipLabel}>
-                                    {langCode === "vi"
-                                        ? "Đã dùng (RPM):"
-                                        : "Used (RPM):"}
-                                </span>
-                                <span className={styles.tooltipValue}>
-                                    {used.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className={styles.tooltipRow}>
-                                <span className={styles.tooltipLabel}>
-                                    {langCode === "vi"
-                                        ? "Tổng cộng (RPM):"
-                                        : "Total (RPM):"}
-                                </span>
-                                <span className={styles.tooltipValue}>
-                                    {total.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className={styles.tooltipRow}>
-                                <span className={styles.tooltipLabel}>
-                                    {langCode === "vi"
-                                        ? "Còn lại (RPM):"
-                                        : "Remaining (RPM):"}
-                                </span>
-                                <span className={styles.tooltipValue}>
-                                    {remaining.toLocaleString()}
-                                </span>
-                            </div>
-                            {usedDaily !== undefined &&
-                                totalDaily !== undefined &&
-                                remainingDaily !== undefined && (
-                                    <>
-                                        <div
-                                            className={styles.tooltipDivider}
-                                        />
-                                        <div className={styles.tooltipRow}>
-                                            <span
-                                                className={styles.tooltipLabel}
-                                            >
-                                                {langCode === "vi"
-                                                    ? "Đã dùng (RPD):"
-                                                    : "Used (RPD):"}
-                                            </span>
-                                            <span
-                                                className={styles.tooltipValue}
-                                            >
-                                                {usedDaily.toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <div className={styles.tooltipRow}>
-                                            <span
-                                                className={styles.tooltipLabel}
-                                            >
-                                                {langCode === "vi"
-                                                    ? "Tổng cộng (RPD):"
-                                                    : "Total (RPD):"}
-                                            </span>
-                                            <span
-                                                className={styles.tooltipValue}
-                                            >
-                                                {totalDaily.toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <div className={styles.tooltipRow}>
-                                            <span
-                                                className={styles.tooltipLabel}
-                                            >
-                                                {langCode === "vi"
-                                                    ? "Còn lại (RPD):"
-                                                    : "Remaining (RPD):"}
-                                            </span>
-                                            <span
-                                                className={styles.tooltipValue}
-                                            >
-                                                {remainingDaily.toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </>
-                                )}
-                        </>
-                    ) : (
-                        <>
-                            <div className={styles.tooltipRow}>
-                                <span className={styles.tooltipLabel}>
-                                    {langCode === "vi" ? "Đã dùng:" : "Used:"}
-                                </span>
-                                <span className={styles.tooltipValue}>
-                                    {used.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className={styles.tooltipRow}>
-                                <span className={styles.tooltipLabel}>
-                                    {langCode === "vi"
-                                        ? "Tổng cộng:"
-                                        : "Total:"}
-                                </span>
-                                <span className={styles.tooltipValue}>
-                                    {total.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className={styles.tooltipRow}>
-                                <span className={styles.tooltipLabel}>
-                                    {langCode === "vi"
-                                        ? "Còn lại:"
-                                        : "Remaining:"}
-                                </span>
-                                <span className={styles.tooltipValue}>
-                                    {remaining.toLocaleString()}
-                                </span>
-                            </div>
-                        </>
-                    )}
-                    <div className={styles.tooltipDivider} />
-                    <div className={styles.tooltipRow}>
-                        <span className={styles.tooltipLabel}>
-                            {langCode === "vi" ? "Làm mới:" : "Reset:"}
-                        </span>
-                        <span className={styles.tooltipValue}>
-                            {formattedLastReset}
-                        </span>
-                    </div>
-                    {provider === "youtube" && (
-                        <div className={styles.tooltipNote}>
-                            {langCode === "vi"
-                                ? "Làm mới hàng ngày lúc 12:00 AM PT"
-                                : "Resets daily at 12:00 AM PT"}
-                        </div>
-                    )}
-                    {provider === "gemini" && modelRateLimits && (
-                        <>
-                            <div className={styles.tooltipDivider} />
-                            <div className={styles.tooltipSection}>
-                                <div className={styles.tooltipSectionTitle}>
-                                    {modelRateLimits.modelName}
-                                    <span
-                                        className={`${styles.tierBadgeSmall} ${styles[`tierBadge${modelRateLimits.tier === "free" ? "Free" : "Paid"}`]}`}
-                                    >
-                                        {langCode === "vi"
-                                            ? modelRateLimits.tier === "free"
-                                                ? "miễn phí"
-                                                : "trả phí"
-                                            : modelRateLimits.tier}
-                                    </span>
-                                </div>
-                                {modelRateLimits.rpm !== undefined && (
-                                    <div className={styles.tooltipRow}>
-                                        <span className={styles.tooltipLabel}>
-                                            RPM:
-                                        </span>
-                                        <span className={styles.tooltipValue}>
-                                            {modelRateLimits.rpm}{" "}
-                                            {langCode === "vi"
-                                                ? "yêu cầu/phút"
-                                                : "req/min"}
-                                        </span>
-                                    </div>
-                                )}
-                                {modelRateLimits.rpd !== undefined && (
-                                    <div className={styles.tooltipRow}>
-                                        <span className={styles.tooltipLabel}>
-                                            RPD:
-                                        </span>
-                                        <span className={styles.tooltipValue}>
-                                            {modelRateLimits.rpd.toLocaleString()}{" "}
-                                            {langCode === "vi"
-                                                ? "yêu cầu/ngày"
-                                                : "req/day"}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                    {provider === "gemini" && !modelRateLimits && (
-                        <div className={styles.tooltipNote}>
-                            {langCode === "vi"
-                                ? "Làm mới mỗi phút"
-                                : "Resets every minute"}
-                        </div>
-                    )}
-                </div>
+            <span className={`${styles.tierBadge} ${styles.tierBadgeFree}`}>
+                {lang.settings.configured}
             </span>
         );
     };
@@ -687,7 +316,7 @@ export default function SettingsButton() {
                             <circle cx="12" cy="12" r="3" />
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                         </svg>
-                        {langCode === "vi" ? "Cài đặt" : "Settings"}
+                        {lang.settings.title}
                     </h3>
                     <button
                         className={styles.closeButton}
@@ -724,7 +353,7 @@ export default function SettingsButton() {
                                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
                             </svg>
                         </span>
-                        {langCode === "vi" ? "Mô hình AI" : "AI Model"}
+                        {lang.settings.aiModel}
                     </label>
                     <div
                         className={styles.customDropdown}
@@ -745,17 +374,9 @@ export default function SettingsButton() {
                             <span
                                 className={`${styles.tierBadge} ${styles[`tierBadge${GEMINI_MODELS.find((m) => m.id === selectedModel)?.tier === "free" ? "Free" : "Paid"}`]}`}
                             >
-                                {langCode === "vi"
-                                    ? GEMINI_MODELS.find(
-                                          (m) => m.id === selectedModel,
-                                      )?.tier === "free"
-                                        ? "miễn phí"
-                                        : "trả phí"
-                                    : GEMINI_MODELS.find(
-                                            (m) => m.id === selectedModel,
-                                        )?.tier === "free"
-                                      ? "free"
-                                      : "paid"}
+                                {GEMINI_MODELS.find((m) => m.id === selectedModel)?.tier === "free"
+                                    ? lang.settings.free
+                                    : lang.settings.paid}
                             </span>
                             <svg
                                 className={`${styles.dropdownIcon} ${modelDropdownOpen ? styles.dropdownIconOpen : ""}`}
@@ -791,7 +412,6 @@ export default function SettingsButton() {
                                                     model.id,
                                                     currentQuota.gemini.tier,
                                                 );
-                                                fetchQuota(); // Refresh quota display
                                             }
 
                                             // Auto-save model selection
@@ -818,13 +438,9 @@ export default function SettingsButton() {
                                             <span
                                                 className={`${styles.tierBadge} ${styles[`tierBadge${model.tier === "free" ? "Free" : "Paid"}`]}`}
                                             >
-                                                {langCode === "vi"
-                                                    ? model.tier === "free"
-                                                        ? "miễn phí"
-                                                        : "trả phí"
-                                                    : model.tier === "free"
-                                                      ? "free"
-                                                      : "paid"}
+                                                {model.tier === "free"
+                                                    ? lang.settings.free
+                                                    : lang.settings.paid}
                                             </span>
                                         </div>
                                         <div
@@ -859,7 +475,7 @@ export default function SettingsButton() {
                             </svg>
                         </span>
                         Gemini API Key
-                        {renderQuotaBadge("gemini", !!geminiKey)}
+                        {renderApiKeyBadge("gemini", !!geminiKey)}
                     </label>
                     <div className={styles.inputWrapper}>
                         <input
@@ -872,6 +488,9 @@ export default function SettingsButton() {
                                     gemini: "idle",
                                 }));
                             }}
+                            onBlur={(e) =>
+                                saveAndValidateKey("gemini", e.target.value)
+                            }
                             placeholder="AIza..."
                             className={styles.input}
                         />
@@ -881,7 +500,6 @@ export default function SettingsButton() {
                             </span>
                         )}
                     </div>
-                    {renderValidationBadge("gemini")}
                 </div>
 
                 <div className={styles.section}>
@@ -900,7 +518,7 @@ export default function SettingsButton() {
                             </svg>
                         </span>
                         YouTube API Key
-                        {renderQuotaBadge("youtube", !!youtubeKey)}
+                        {renderApiKeyBadge("youtube", !!youtubeKey)}
                     </label>
                     <div className={styles.inputWrapper}>
                         <input
@@ -913,6 +531,9 @@ export default function SettingsButton() {
                                     youtube: "idle",
                                 }));
                             }}
+                            onBlur={(e) =>
+                                saveAndValidateKey("youtube", e.target.value)
+                            }
                             placeholder="AIza..."
                             className={styles.input}
                         />
@@ -922,55 +543,11 @@ export default function SettingsButton() {
                             </span>
                         )}
                     </div>
-                    {renderValidationBadge("youtube")}
                 </div>
-
-                {/* Save Button */}
-                <button
-                    className={`${styles.saveButton} ${saveStatus === "saved" ? styles.saved : ""}`}
-                    onClick={handleSave}
-                    disabled={saveStatus === "saving"}
-                >
-                    {saveStatus === "saving" ? (
-                        <span className={styles.spinner} />
-                    ) : saveStatus === "saved" ? (
-                        <>
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                            >
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            {langCode === "vi" ? "Đã lưu!" : "Saved!"}
-                        </>
-                    ) : (
-                        <>
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                                <polyline points="17 21 17 13 7 13 7 21" />
-                                <polyline points="7 3 7 8 15 8" />
-                            </svg>
-                            {langCode === "vi"
-                                ? "Lưu cài đặt"
-                                : "Save Settings"}
-                        </>
-                    )}
-                </button>
 
                 {/* Divider */}
                 <div className={styles.divider}>
-                    <span>{langCode === "vi" ? "Ngôn ngữ" : "Language"}</span>
+                    <span>{lang.settings.language}</span>
                 </div>
 
                 {/* Language Toggle */}
@@ -998,9 +575,7 @@ export default function SettingsButton() {
 
                 {/* Footer Note */}
                 <p className={styles.footerNote}>
-                    {langCode === "vi"
-                        ? "API keys được lưu trữ cục bộ trên trình duyệt của bạn."
-                        : "API keys are stored locally in your browser."}
+                    {lang.settings.footerNote}
                 </p>
             </div>
 

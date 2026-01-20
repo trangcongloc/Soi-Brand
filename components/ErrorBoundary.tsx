@@ -1,10 +1,20 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import { useLang } from "@/lib/lang";
+
+interface ErrorBoundaryTexts {
+    title: string;
+    description: string;
+    details: string;
+    retry: string;
+    reload: string;
+}
 
 interface Props {
     children: ReactNode;
     fallback?: ReactNode;
+    texts?: ErrorBoundaryTexts;
 }
 
 interface State {
@@ -53,19 +63,25 @@ export class ErrorBoundary extends Component<Props, State> {
                 return this.props.fallback;
             }
 
+            // Default texts (Vietnamese) for SSR, will be overridden by wrapper
+            const texts = this.props.texts || {
+                title: "Đã xảy ra lỗi",
+                description: "Ứng dụng gặp sự cố không mong muốn. Vui lòng thử lại.",
+                details: "Chi tiết lỗi (Development)",
+                retry: "Thử lại",
+                reload: "Tải lại trang",
+            };
+
             return (
                 <div className="error-boundary">
                     <div className="error-boundary-content">
-                        <h2>Đã xảy ra lỗi</h2>
-                        <p>
-                            Ứng dụng gặp sự cố không mong muốn. Vui lòng thử
-                            lại.
-                        </p>
+                        <h2>{texts.title}</h2>
+                        <p>{texts.description}</p>
 
                         {process.env.NODE_ENV === "development" &&
                             this.state.error && (
                                 <details className="error-details">
-                                    <summary>Chi tiết lỗi (Development)</summary>
+                                    <summary>{texts.details}</summary>
                                     <pre>
                                         {this.state.error.toString()}
                                         {this.state.errorInfo?.componentStack}
@@ -78,13 +94,13 @@ export class ErrorBoundary extends Component<Props, State> {
                                 onClick={this.handleRetry}
                                 className="btn btn-primary"
                             >
-                                Thử lại
+                                {texts.retry}
                             </button>
                             <button
                                 onClick={() => window.location.reload()}
                                 className="btn btn-outline"
                             >
-                                Tải lại trang
+                                {texts.reload}
                             </button>
                         </div>
                     </div>
@@ -150,4 +166,14 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 }
 
-export default ErrorBoundary;
+// Wrapper component that provides language context to the class component
+function ErrorBoundaryWithLang({ children, fallback }: Omit<Props, 'texts'>) {
+    const lang = useLang();
+    return (
+        <ErrorBoundary texts={lang.errorBoundary} fallback={fallback}>
+            {children}
+        </ErrorBoundary>
+    );
+}
+
+export default ErrorBoundaryWithLang;

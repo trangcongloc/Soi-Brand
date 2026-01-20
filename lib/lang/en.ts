@@ -11,18 +11,6 @@ export const en = {
         title: "Soi'Brand",
     },
 
-    common: {
-        days: {
-            0: "Sunday",
-            1: "Monday",
-            2: "Tuesday",
-            3: "Wednesday",
-            4: "Thursday",
-            5: "Friday",
-            6: "Saturday",
-        },
-    },
-
     form: {
         placeholder: "Paste YouTube channel link...",
         submitButton: "Analyze Now",
@@ -348,11 +336,79 @@ export const en = {
     },
 
     settings: {
+        title: "Settings",
+        aiModel: "AI Model",
+        language: "Language",
+        footerNote: "API keys are stored locally in your browser.",
         validating: "Verifying...",
-        valid: "Valid",
         invalid: "Invalid",
         apiKeyVerified: "API key verified",
         apiKeyInvalid: "API key invalid",
+        // Badge states
+        verifying: "verifying",
+        notConfigured: "not configured",
+        configured: "configured",
+        free: "free",
+        paid: "paid",
+    },
+
+    loadingState: {
+        retrying: "Retrying...",
+        retryCount: "Retry {current}/{max} in {seconds}s...",
+        maxRetriesReached: "Retried {max} times. Please try again in a few minutes.",
+        retryNow: "Retry now",
+        cancel: "Cancel",
+        dismiss: "Dismiss",
+    },
+
+    history: {
+        title: "Analysis History",
+        savedReports: "Saved Reports",
+        noReports: "No reports",
+        latest: "Latest",
+        clearAll: "Clear all",
+        confirmDelete: "Confirm delete",
+        cancelAction: "Cancel",
+        viewReport: "View report",
+        deleteReport: "Delete",
+    },
+
+    errorBoundary: {
+        title: "An error occurred",
+        description: "The app encountered an unexpected error. Please try again.",
+        details: "Error details (Development)",
+        retry: "Retry",
+        reload: "Reload page",
+    },
+
+    timeAgo: {
+        yearsAgo: "{n} year(s) ago",
+        monthsAgo: "{n} month(s) ago",
+        daysAgo: "{n} day(s) ago",
+        hoursAgo: "{n} hour(s) ago",
+        minutesAgo: "{n} minute(s) ago",
+        secondsAgo: "{n} second(s) ago",
+    },
+
+    dataTab: {
+        videoPerformance: "Video Performance",
+        loadingChart: "Loading chart...",
+        postFallback: "Post {n}",
+    },
+
+    common: {
+        days: {
+            0: "Sunday",
+            1: "Monday",
+            2: "Tuesday",
+            3: "Wednesday",
+            4: "Thursday",
+            5: "Friday",
+            6: "Saturday",
+        },
+        back: "Back",
+        analyze: "Analyze",
+        skipToContent: "Skip to content",
     },
 } as const;
 

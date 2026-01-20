@@ -12,25 +12,32 @@ import {
     formatRelativeTime,
 } from "./report-utils";
 
+// Dynamic import needs to be outside the component
 const VideoPerformanceChart = dynamic(
     () => import("@/components/VideoPerformanceChart"),
     {
         ssr: false,
-        loading: () => (
-            <div
-                style={{
-                    height: 200,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#999",
-                }}
-            >
-                Loading chart...
-            </div>
-        ),
+        loading: () => <ChartLoadingPlaceholder />,
     },
 );
+
+// Separate loading component that can use hooks
+function ChartLoadingPlaceholder() {
+    const lang = useLang();
+    return (
+        <div
+            style={{
+                height: 200,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#999",
+            }}
+        >
+            {lang.dataTab.loadingChart}
+        </div>
+    );
+}
 
 interface DataTabProps {
     posts: Post[];
@@ -243,9 +250,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                             <line x1="18" y1="20" x2="18" y2="4"></line>
                             <line x1="6" y1="20" x2="6" y2="16"></line>
                         </svg>
-                        {langCode === "vi"
-                            ? "Hiệu suất Video"
-                            : "Video Performance"}
+                        {lang.dataTab.videoPerformance}
                     </h3>
                     <div className={styles.card}>
                         <VideoPerformanceChart posts={posts} maxItems={50} selectedDate={selectedDate} onDateClick={handleDateClick} />
@@ -314,7 +319,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                     <div style={{ flex: 1 }}>
                                         <p className={styles.postTitle}>
                                             {post.title ||
-                                                `Bài đăng ${displayIndex + 1}`}
+                                                lang.dataTab.postFallback.replace('{n}', String(displayIndex + 1))}
                                         </p>
                                     </div>
                                 </div>

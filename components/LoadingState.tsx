@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLanguage } from "@/lib/lang";
+import { useLanguage, useLang } from "@/lib/lang";
 import styles from "./LoadingState.module.css";
 
 const DEFAULT_STEPS_VI = [
@@ -164,6 +164,7 @@ const RETRYABLE_ERRORS = ['MODEL_OVERLOAD', 'NETWORK_ERROR', 'RATE_LIMIT', 'GEMI
 
 export default function LoadingState({ onCancel, onRetry, error, errorType, disableAILabels }: LoadingStateProps) {
     const { langCode } = useLanguage();
+    const lang = useLang();
     const defaultSteps =
         langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
 
@@ -325,7 +326,7 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
             ...prev,
             {
                 errorLabel: errorTitle,
-                retryLabel: langCode === 'en' ? 'Retrying...' : 'Đang thử lại...'
+                retryLabel: lang.loadingState.retrying
             }
         ]);
         setRetryCountdown(null);
@@ -340,7 +341,7 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
             ...prev,
             {
                 errorLabel: errorTitle,
-                retryLabel: langCode === 'en' ? 'Retrying...' : 'Đang thử lại...'
+                retryLabel: lang.loadingState.retrying
             }
         ]);
         setRetryCountdown(null);
@@ -393,17 +394,16 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
                                     <span className={styles.errorMessage}>
                                         {isRetryable && autoRetryCount >= MAX_AUTO_RETRIES ? (
                                             // Max retries exceeded message
-                                            langCode === 'en'
-                                                ? `Retried ${MAX_AUTO_RETRIES} times. Please try again in a few minutes.`
-                                                : `Đã thử lại ${MAX_AUTO_RETRIES} lần. Vui lòng thử lại sau vài phút.`
+                                            lang.loadingState.maxRetriesReached.replace('{max}', String(MAX_AUTO_RETRIES))
                                         ) : (
                                             <>
                                                 {error}
                                                 {isRetryable && retryCountdown !== null && retryCountdown > 0 && (
                                                     <span className={styles.countdownText}>
-                                                        {' '}{langCode === 'en'
-                                                            ? `Retry ${autoRetryCount + 1}/${MAX_AUTO_RETRIES} in ${retryCountdown}s...`
-                                                            : `Thử lại lần ${autoRetryCount + 1}/${MAX_AUTO_RETRIES} sau ${retryCountdown}s...`}
+                                                        {' '}{lang.loadingState.retryCount
+                                                            .replace('{current}', String(autoRetryCount + 1))
+                                                            .replace('{max}', String(MAX_AUTO_RETRIES))
+                                                            .replace('{seconds}', String(retryCountdown))}
                                                     </span>
                                                 )}
                                             </>
@@ -526,7 +526,7 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.3, duration: 0.3 }}
                         >
-                            {langCode === "en" ? "Retry now" : "Thử lại ngay"}
+                            {lang.loadingState.retryNow}
                         </motion.button>
                     )}
                     {onCancel && (
@@ -541,12 +541,8 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
                             transition={{ delay: 0.5, duration: 0.3 }}
                         >
                             {error
-                                ? langCode === "en"
-                                    ? "Dismiss"
-                                    : "Đóng"
-                                : langCode === "en"
-                                  ? "Cancel"
-                                  : "Hủy"}
+                                ? lang.loadingState.dismiss
+                                : lang.loadingState.cancel}
                         </motion.button>
                     )}
                 </div>

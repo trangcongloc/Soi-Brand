@@ -7,8 +7,7 @@ import { logger } from "./logger";
 const CACHE_PREFIX = "soibrand_report_";
 const ALIAS_PREFIX = "soibrand_alias_";
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-const MAX_REPORTS_PER_CHANNEL = 5;
-const MAX_TOTAL_REPORTS = 20;
+const MAX_TOTAL_REPORTS = 50; // Increased total limit, no per-channel limit
 
 interface CachedReport {
     report: MarketingReport;
@@ -159,16 +158,7 @@ export function setCachedReport(
             setChannelAlias(urlId, channelId);
         }
 
-        // Check reports for this channel and enforce limit
-        const channelReports = getCachedReportsForChannel(channelId);
-        if (channelReports.length >= MAX_REPORTS_PER_CHANNEL) {
-            // Remove oldest report for this channel
-            const oldest = channelReports[channelReports.length - 1];
-            const oldKey = getCacheKey(channelId, oldest.timestamp);
-            localStorage.removeItem(oldKey);
-        }
-
-        // Enforce total report limit
+        // Enforce total report limit (no per-channel limit)
         const allKeys = getAllCacheKeys();
         if (allKeys.length >= MAX_TOTAL_REPORTS) {
             // Find and remove oldest report globally
