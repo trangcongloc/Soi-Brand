@@ -3,22 +3,49 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import styles from "./LoadingState.module.css";
-import { useLang } from "@/lib/lang";
 
 const STEPS = [
-    { key: "validating", duration: 1000 },
-    { key: "fetchingChannel", duration: 3000 },
-    { key: "fetchingVideos", duration: 5000 },
-    { key: "analyzingContent", duration: 15000 },
-    { key: "generatingReport", duration: 25000 },
+    {
+        key: "validating",
+        duration: 1000,
+        label: "Validating YouTube URL",
+        subLabel: "Checking URL format...",
+    },
+    {
+        key: "fetchingChannel",
+        duration: 3000,
+        label: "Fetching channel data",
+        subLabel: "Retrieving channel info...",
+    },
+    {
+        key: "fetchingVideos",
+        duration: 5000,
+        label: "Loading recent videos",
+        subLabel: "Fetching video metadata...",
+    },
+    {
+        key: "analyzingContent",
+        duration: 15000,
+        label: "Analyzing with Gemini AI",
+        subLabel: "Processing content patterns...",
+    },
+    {
+        key: "generatingReport",
+        duration: 25000,
+        label: "Generating marketing report",
+        subLabel: "Compiling insights...",
+    },
 ];
 
-export default function LoadingState() {
-    const lang = useLang();
-    const [currentStep, setCurrentStep] = useState(0);
+const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+export default function LoadingState() {
+    const [currentStep, setCurrentStep] = useState(0);
+    const [spinnerFrame, setSpinnerFrame] = useState(0);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Step progression
     useEffect(() => {
-        // Step progression
         const stepTimers = STEPS.map((_, index) => {
             return setTimeout(() => {
                 setCurrentStep(index);
@@ -30,25 +57,31 @@ export default function LoadingState() {
         };
     }, []);
 
-    const stepLabels: { [key: string]: string } = {
-        validating: lang.loading.steps.validating || "Validating URL...",
-        fetchingChannel: lang.loading.steps.fetchingChannel,
-        fetchingVideos: lang.loading.steps.fetchingVideos || "Retrieving videos...",
-        analyzingContent: lang.loading.steps.analyzingContent,
-        generatingReport: lang.loading.steps.generatingReport,
+    // Braille spinner animation
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setSpinnerFrame((prev) => (prev + 1) % BRAILLE_FRAMES.length);
+        }, 80);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Elapsed time counter
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setElapsedTime((prev) => prev + 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
-    const getStepIcon = (stepIndex: number) => {
-        if (stepIndex < currentStep) return "✓";
-        if (stepIndex === currentStep) return "⟳";
-        return "○";
-    };
-
-    const getStepClass = (stepIndex: number) => {
-        if (stepIndex < currentStep) return styles.completed;
-        if (stepIndex === currentStep) return styles.active;
-        return "";
-    };
+    const currentTask = STEPS[currentStep];
 
     return (
         <motion.div
@@ -57,53 +90,30 @@ export default function LoadingState() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
         >
-            <motion.div
-                className={styles.spinner}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-            >
-                <div className={styles.spinnerRing}></div>
-            </motion.div>
+            <div className={styles.terminal}>
+                <motion.div
+                    key={currentTask.key}
+                    className={styles.step}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <div className={styles.mainLine}>
+                        <span className={styles.statusIcon}>
+                            {BRAILLE_FRAMES[spinnerFrame]}
+                        </span>
+                        <span className={styles.label}>{currentTask.label}</span>
+                    </div>
+                    <div className={styles.subLine}>
+                        <span className={styles.connector}>└</span>
+                        <span className={styles.subLabel}>
+                            {currentTask.subLabel}
+                        </span>
+                    </div>
+                </motion.div>
 
-            <motion.h3
-                className={styles.title}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-            >
-                {lang.loading.title}
-            </motion.h3>
-
-            <div className={styles.steps}>
-                {STEPS.map((step, index) => (
-                    <motion.div
-                        key={step.key}
-                        className={`${styles.step} ${getStepClass(index)}`}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}
-                    >
-                        <motion.div
-                            className={styles.stepIcon}
-                            animate={index === currentStep ? { scale: [1, 1.2, 1] } : {}}
-                            transition={{ duration: 0.3 }}
-                        >
-                            {getStepIcon(index)}
-                        </motion.div>
-                        <p>{stepLabels[step.key]}</p>
-                    </motion.div>
-                ))}
+                <div className={styles.elapsedTime}>{formatTime(elapsedTime)}</div>
             </div>
-
-            <motion.p
-                className={styles.note}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.4 }}
-            >
-                {lang.loading.note}
-            </motion.p>
         </motion.div>
     );
 }
