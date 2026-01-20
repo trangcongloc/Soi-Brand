@@ -5,9 +5,19 @@ import { useLang, formatString } from "@/lib/lang";
 
 interface UploadHeatmapProps {
     posts: Post[];
+    selectedDate: string | null;
+    onDateClick: (dateIso: string) => void;
 }
 
-const UploadHeatmap: React.FC<UploadHeatmapProps> = ({ posts }) => {
+// Format date as yyyy-mm-dd using local timezone
+const getLocalDateStr = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const UploadHeatmap: React.FC<UploadHeatmapProps> = ({ posts, selectedDate, onDateClick }) => {
     const lang = useLang();
     // Generate last 30 days
     const days = Array.from({ length: 30 }, (_, i) => {
@@ -16,7 +26,7 @@ const UploadHeatmap: React.FC<UploadHeatmapProps> = ({ posts }) => {
         return {
             date: d,
             dateStr: d.toLocaleDateString("vi-VN"), // dd/mm/yyyy
-            isoStr: d.toISOString().split("T")[0], // yyyy-mm-dd for matching
+            isoStr: getLocalDateStr(d), // yyyy-mm-dd for matching (local timezone)
             count: 0,
         };
     });
@@ -24,9 +34,7 @@ const UploadHeatmap: React.FC<UploadHeatmapProps> = ({ posts }) => {
     // Count posts per day
     posts.forEach((post) => {
         if (!post.published_at) return;
-        const postDate = new Date(post.published_at)
-            .toISOString()
-            .split("T")[0];
+        const postDate = getLocalDateStr(new Date(post.published_at));
         const day = days.find((d) => d.isoStr === postDate);
         if (day) {
             day.count++;
@@ -63,12 +71,14 @@ const UploadHeatmap: React.FC<UploadHeatmapProps> = ({ posts }) => {
                     {days.map((day, idx) => (
                         <div
                             key={idx}
-                            className={styles.dailyCell}
+                            className={`${styles.dailyCell} ${selectedDate === day.isoStr ? styles.dailyCellSelected : ""}`}
                             data-level={getLevel(day.count)}
                             title={`${day.dateStr}: ${formatString(
                                 lang.heatmap.videoCount,
                                 { count: day.count.toString() }
                             )}`}
+                            onClick={() => onDateClick(day.isoStr)}
+                            style={{ cursor: "pointer" }}
                         >
                             {/* Show day number if needed, or just boolean */}
                             <span className={styles.dayNumber}>

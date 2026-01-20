@@ -8,6 +8,7 @@ import {
     Tooltip,
     ResponsiveContainer,
     Legend,
+    ReferenceLine,
 } from "recharts";
 import { Post } from "@/lib/types";
 import { useLang } from "@/lib/lang";
@@ -15,7 +16,17 @@ import { useLang } from "@/lib/lang";
 interface VideoPerformanceChartProps {
     posts: Post[];
     maxItems?: number;
+    selectedDate?: string | null;
+    onDateClick?: (dateIso: string) => void;
 }
+
+// Format date as yyyy-mm-dd using local timezone
+const getLocalDateStr = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 // Format relative time (e.g., "1 day ago", "3 hours ago")
 const formatRelativeTime = (publishedAt: string): string => {
@@ -44,6 +55,8 @@ const formatRelativeTime = (publishedAt: string): string => {
 export default function VideoPerformanceChart({
     posts,
     maxItems = 10,
+    selectedDate,
+    onDateClick,
 }: VideoPerformanceChartProps) {
     const lang = useLang();
 
@@ -65,8 +78,14 @@ export default function VideoPerformanceChart({
             comments: post.statistics.comment_count,
             thumbnail: post.thumbnail,
             publishedAt: post.published_at,
+            dateIso: getLocalDateStr(new Date(post.published_at)),
             relativeTime: formatRelativeTime(post.published_at),
         }));
+
+    // Find x-axis names for selected date
+    const selectedNames = selectedDate
+        ? chartData.filter(d => d.dateIso === selectedDate).map(d => d.name)
+        : [];
 
     const formatNumber = (num: number) => {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -232,29 +251,62 @@ export default function VideoPerformanceChart({
                             return value;
                         }}
                     />
+                    {selectedNames.map(name => (
+                        <ReferenceLine
+                            key={name}
+                            x={name}
+                            stroke="#9ca3af"
+                            strokeWidth={1}
+                            strokeDasharray="4 4"
+                        />
+                    ))}
                     <Line
                         type="monotone"
                         dataKey="views"
                         stroke="#fa9191"
                         strokeWidth={2}
-                        dot={{ fill: "#fa9191", r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ fill: "#fa9191", r: 3, cursor: "pointer" }}
+                        activeDot={{
+                            r: 6,
+                            cursor: "pointer",
+                            onClick: (_e: any, payload: any) => {
+                                if (onDateClick && payload?.payload?.dateIso) {
+                                    onDateClick(payload.payload.dateIso);
+                                }
+                            }
+                        }}
                     />
                     <Line
                         type="monotone"
                         dataKey="likes"
                         stroke="#3b82f6"
                         strokeWidth={2}
-                        dot={{ fill: "#3b82f6", r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ fill: "#3b82f6", r: 3, cursor: "pointer" }}
+                        activeDot={{
+                            r: 6,
+                            cursor: "pointer",
+                            onClick: (_e: any, payload: any) => {
+                                if (onDateClick && payload?.payload?.dateIso) {
+                                    onDateClick(payload.payload.dateIso);
+                                }
+                            }
+                        }}
                     />
                     <Line
                         type="monotone"
                         dataKey="comments"
                         stroke="#f59e0b"
                         strokeWidth={2}
-                        dot={{ fill: "#f59e0b", r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ fill: "#f59e0b", r: 3, cursor: "pointer" }}
+                        activeDot={{
+                            r: 6,
+                            cursor: "pointer",
+                            onClick: (_e: any, payload: any) => {
+                                if (onDateClick && payload?.payload?.dateIso) {
+                                    onDateClick(payload.payload.dateIso);
+                                }
+                            }
+                        }}
                     />
                 </LineChart>
             </ResponsiveContainer>

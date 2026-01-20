@@ -743,6 +743,13 @@
     box-shadow: 2px 3px 4px -1px rgb(0 0 0 / 0.15);
 }
 
+.dailyCellSelected {
+    outline: 1.2px solid #f97316;
+    outline-offset: 0px;
+    transform: scale(1.1);
+    z-index: 11;
+}
+
 .dayNumber {
     font-size: 9px;
     font-weight: 500;

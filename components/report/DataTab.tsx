@@ -46,6 +46,12 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
     const [copyStatus, setCopyStatus] = useState<string | null>(null);
     const [isChannelHovered, setIsChannelHovered] = useState(false);
     const [sortOrder, setSortOrder] = useState<SortOrder>("latest");
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+    const handleDateClick = (dateIso: string) => {
+        setSelectedDate(selectedDate === dateIso ? null : dateIso);
+        setActiveAccordion(null);
+    };
 
     const handleCopyTags = (tags: string[]) => {
         const text = tags.join(", ");
@@ -85,10 +91,26 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
         sortedByScoreOnly.slice(0, 10).map((item) => item.originalIndex),
     );
 
+    // Format date as yyyy-mm-dd using local timezone
+    const getLocalDateStr = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Filter posts by selected date
+    const filteredPosts = selectedDate
+        ? postsWithScores.filter(({ post }) => {
+            const postDate = getLocalDateStr(new Date(post.published_at));
+            return postDate === selectedDate;
+        })
+        : postsWithScores;
+
     // Sort posts based on selected order
     const sortedPosts = sortOrder === "rating"
-        ? [...postsWithScores].sort((a, b) => b.score - a.score)
-        : postsWithScores; // "latest" keeps original order (already sorted by date from API)
+        ? [...filteredPosts].sort((a, b) => b.score - a.score)
+        : filteredPosts; // "latest" keeps original order (already sorted by date from API)
 
     return (
         <div
@@ -203,7 +225,11 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                     )}
 
                     <div className={styles.card} style={{ height: "100%" }}>
-                        <UploadHeatmap posts={posts} />
+                        <UploadHeatmap
+                            posts={posts}
+                            selectedDate={selectedDate}
+                            onDateClick={handleDateClick}
+                        />
                     </div>
                 </div>
             </section>
@@ -222,7 +248,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                             : "Video Performance"}
                     </h3>
                     <div className={styles.card}>
-                        <VideoPerformanceChart posts={posts} maxItems={50} />
+                        <VideoPerformanceChart posts={posts} maxItems={50} selectedDate={selectedDate} onDateClick={handleDateClick} />
                     </div>
                 </section>
             )}
@@ -446,7 +472,6 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                                                 styles.tag
                                                             }
                                                         >
-                                                            #
                                                             {cleanTag.replace(
                                                                 /^#/,
                                                                 "",
