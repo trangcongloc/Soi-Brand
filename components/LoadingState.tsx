@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import styles from "./LoadingState.module.css";
 
 const DEFAULT_STEPS = [
@@ -96,29 +96,32 @@ export default function LoadingState() {
             <div className={styles.terminal}>
                 {/* Current step - fixed position */}
                 <div className={styles.currentTask}>
-                    <motion.div
-                        key={`current-${currentStep}`}
-                        className={styles.step}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15 }}
-                    >
-                        <div className={styles.mainLine}>
-                            <span className={styles.statusIcon}>
-                                {BRAILLE_FRAMES[spinnerFrame]}
-                            </span>
-                            <span className={styles.label}>{currentTask.label}</span>
-                            <span className={styles.elapsedTime}>
-                                {formatTime(elapsedTime)}
-                            </span>
-                        </div>
-                        <div className={styles.subLine}>
-                            <span className={styles.connector}>└</span>
-                            <span className={styles.subLabel}>
-                                {currentTask.subLabel}
-                            </span>
-                        </div>
-                    </motion.div>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={`current-${currentStep}`}
+                            className={styles.step}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                        >
+                            <div className={styles.mainLine}>
+                                <span className={styles.statusIcon}>
+                                    {BRAILLE_FRAMES[spinnerFrame]}
+                                </span>
+                                <span className={styles.label}>{currentTask.label}</span>
+                                <span className={styles.elapsedTime}>
+                                    {formatTime(elapsedTime)}
+                                </span>
+                            </div>
+                            <div className={styles.subLine}>
+                                <span className={styles.connector}>└</span>
+                                <span className={styles.subLabel}>
+                                    {currentTask.subLabel}
+                                </span>
+                            </div>
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
 
                 {/* Completed steps - grow upward */}
