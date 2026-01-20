@@ -83,6 +83,7 @@ export default function LoadingState() {
         return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
+    const completedSteps = steps.slice(0, currentStep);
     const currentTask = steps[currentStep];
 
     return (
@@ -93,8 +94,33 @@ export default function LoadingState() {
             transition={{ duration: 0.3 }}
         >
             <div className={styles.terminal}>
+                {/* Completed steps - at top, push up */}
+                <div className={styles.completedList}>
+                    {completedSteps.map((step, index) => (
+                        <motion.div
+                            key={`completed-${index}`}
+                            className={`${styles.step} ${styles.completed}`}
+                            layout
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 0.5, height: "auto" }}
+                            transition={{
+                                duration: 0.3,
+                                ease: "easeOut"
+                            }}
+                        >
+                            <div className={styles.mainLine}>
+                                <span className={styles.checkIcon}>✓</span>
+                                <span className={styles.completedLabel}>
+                                    {step.label}
+                                </span>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Current step - fixed at bottom */}
                 <motion.div
-                    key={currentStep}
+                    key={`current-${currentStep}`}
                     className={styles.step}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}

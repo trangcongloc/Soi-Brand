@@ -5,18 +5,36 @@
     padding: 2rem 1rem;
     max-width: 400px;
     margin: 0 auto;
+    min-height: 200px;
 }
 
 .terminal {
     width: 100%;
     font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Monaco", "Inconsolata",
         "Roboto Mono", monospace;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.completedList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
 }
 
 .step {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+}
+
+.step.completed {
+    overflow: hidden;
 }
 
 .mainLine {
@@ -33,10 +51,24 @@
     color: #de7356;
 }
 
+.checkIcon {
+    font-size: 14px;
+    width: 1rem;
+    text-align: center;
+    flex-shrink: 0;
+    color: #22c55e;
+}
+
 .label {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-main, #1a1a1a);
+}
+
+.completedLabel {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary, #6b7280);
 }
 
 .elapsedTime {
