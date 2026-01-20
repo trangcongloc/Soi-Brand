@@ -1,40 +1,34 @@
 # Soi'Brand
 
-Website phân tích chiến lược marketing cho kênh YouTube sử dụng AI (Google Gemini).
+Công cụ phân tích chiến lược marketing cho kênh YouTube sử dụng AI (Google Gemini).
 
 ## Tính năng
 
--   **Phân tích Kênh**: Tự động nhận diện kênh từ URL và lấy thông tin chi tiết.
--   **Phân tích Marketing sâu**: Sử dụng Gemini AI để phân tích định vị thương hiệu, phễu marketing, và tuyến nội dung.
--   **Báo cáo chuyên nghiệp**: Hiển thị dữ liệu trực quan với giao diện hiện đại, tối ưu cho trải nghiệm người dùng.
--   **Xuất dữ liệu**: Hỗ trợ tải báo cáo dưới dạng JSON để lưu trữ hoặc xử lý tiếp.
+- **Phân tích Kênh**: Tự động nhận diện kênh từ URL và lấy thông tin chi tiết
+- **Phân tích Marketing**: Sử dụng Gemini AI để phân tích định vị thương hiệu, phễu marketing, và chiến lược nội dung
+- **Báo cáo chuyên nghiệp**: Hiển thị dữ liệu trực quan với giao diện hiện đại
+- **Xuất dữ liệu**: Hỗ trợ tải báo cáo dưới dạng JSON
 
-## Công nghệ sử dụng
+## Công nghệ
 
--   **Frontend**: Next.js 14 (App Router), TypeScript, Vanilla CSS.
--   **Backend**: Next.js API Routes, YouTube Data API v3.
--   **AI**: Google Gemini Pro API.
--   **Styling**: Modern UI with Rich Aesthetics.
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript
+- **Backend**: Next.js API Routes
+- **AI**: Google Gemini API
+- **APIs**: YouTube Data API v3
 
-## Cấu hình
+## Cài đặt
 
-1.  Clone project và di chuyển vào thư mục:
+```bash
+# Clone và di chuyển vào thư mục
+cd Soi-Brand
 
-    ```bash
-    cd Soi-Brand
-    ```
+# Cài đặt dependencies
+npm install
 
-2.  Cài đặt dependencies:
-
-    ```bash
-    npm install
-    ```
-
-3.  Tạo file `.env.local` và thêm các API keys:
-    ```env
-    YOUTUBE_API_KEY=your_youtube_api_key_here
-    GEMINI_API_KEY=your_gemini_api_key_here
-    ```
+# Tạo file .env.local
+cp .env.example .env.local
+# Thêm API keys vào .env.local
+```
 
 ## Chạy dự án
 
@@ -42,8 +36,19 @@ Website phân tích chiến lược marketing cho kênh YouTube sử dụng AI (
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000) trên trình duyệt để sử dụng.
+Mở [http://localhost:3000](http://localhost:3000) trên trình duyệt.
 
-## Deploy trên Vercel
+## Scripts
 
-Dự án đã được tối ưu để deploy trên Vercel. Hãy đảm bảo bạn đã cấu hình các biến môi trường (Environment Variables) trong dashboard của Vercel tương tự như trong file `.env.local`.
+```bash
+npm run dev          # Development server
+npm run build        # Build production
+npm run lint         # Run ESLint
+npm run type-check   # TypeScript check
+npm run test         # Run tests
+npm run validate     # Run all checks
+```
+
+## Deploy
+
+Tối ưu cho Vercel. Cấu hình environment variables trong Vercel dashboard.
