@@ -272,7 +272,7 @@ export async function generateMarketingReport(
 
         return report;
     } catch (error: any) {
-        logger.error("Error generating marketing report:", error);
+        logger.error("Error generating marketing report", error);
 
         // Extract error details
         const errorMessage = error?.message || "";

@@ -20,7 +20,7 @@ interface StoredSettings {
     encrypted?: boolean;
 }
 
-const SETTINGS_KEY = "ourtube_user_settings";
+const SETTINGS_KEY = "soibrand_user_settings";
 
 // In-memory cache for decrypted settings
 let cachedSettings: UserSettings | null = null;
@@ -71,7 +71,7 @@ export async function getUserSettingsAsync(): Promise<UserSettings> {
         cachedSettings = parsed as UserSettings;
         return parsed as UserSettings;
     } catch (error) {
-        logger.error("[UserSettings] Error reading user settings:", error);
+        logger.error("[UserSettings] Error reading user settings", error);
         return {};
     }
 }
@@ -148,7 +148,7 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(stored));
         cachedSettings = settings;
     } catch (error) {
-        logger.error("[UserSettings] Error saving user settings:", error);
+        logger.error("[UserSettings] Error saving user settings", error);
     }
 }
 
@@ -158,7 +158,7 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
 export function saveUserSettings(settings: UserSettings): void {
     // Fire and forget async save
     saveUserSettingsAsync(settings).catch((error) => {
-        logger.error("[UserSettings] Error in async save:", error);
+        logger.error("[UserSettings] Error in async save", error);
     });
     // Update cache immediately
     cachedSettings = settings;

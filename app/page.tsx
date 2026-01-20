@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import AnalysisForm from "@/components/AnalysisForm";
 import LoadingState from "@/components/LoadingState";
-import ReportDisplay from "@/components/ReportDisplay";
 import AnalysisHistory from "@/components/AnalysisHistory";
 import SplashScreen from "@/components/SplashScreen";
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
@@ -20,6 +20,8 @@ import {
     clearExpiredReports,
     resolveChannelId,
 } from "@/lib/cache";
+
+const CURRENT_REPORT_KEY = "soibrand_current_report";
 
 const staggerContainer = {
     initial: { opacity: 0 },
@@ -59,11 +61,12 @@ interface FilterState {
 }
 
 export default function Home() {
+    const router = useRouter();
     const { lang, langCode } = useLanguage();
     const [showSplash, setShowSplash] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
-    const [report, setReport] = useState<MarketingReport | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorType, setErrorType] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterState | null>(null);
     const lastAnalysisRef = useRef<{ channelUrl: string; urlExtractedId: string | null } | null>(null);
 
@@ -81,47 +84,6 @@ export default function Home() {
             return () => clearTimeout(timer);
         }
     }, [error, isLoading]);
-
-    // Update document title and favicon based on report
-    useEffect(() => {
-        const defaultTitle = lang.metadata.title;
-        let addedFaviconLink: HTMLLinkElement | null = null;
-
-        if (report) {
-            // When report is loaded, show channel name
-            document.title = report.brand_name;
-
-            // Update favicon to channel avatar
-            const channelAvatar = report.report_part_1.channel_info.avatar;
-            if (channelAvatar) {
-                // Remove existing favicon links
-                const existingLinks = document.querySelectorAll("link[rel*='icon']");
-                existingLinks.forEach(link => link.remove());
-
-                // Add new favicon with channel avatar
-                addedFaviconLink = document.createElement('link');
-                addedFaviconLink.rel = 'icon';
-                addedFaviconLink.type = 'image/png';
-                addedFaviconLink.href = channelAvatar;
-                document.head.appendChild(addedFaviconLink);
-            }
-        } else {
-            // When no report, show default title
-            document.title = defaultTitle;
-
-            // Reset favicon to default
-            const existingLinks = document.querySelectorAll("link[rel*='icon']");
-            existingLinks.forEach(link => link.remove());
-        }
-
-        // Cleanup function to restore default state
-        return () => {
-            document.title = defaultTitle;
-            if (addedFaviconLink && addedFaviconLink.parentNode) {
-                addedFaviconLink.parentNode.removeChild(addedFaviconLink);
-            }
-        };
-    }, [report, lang.metadata.title]);
 
     const handleAnalyze = async (channelUrl: string) => {
         setError(null);
@@ -165,7 +127,7 @@ export default function Home() {
     ) => {
         setIsLoading(true);
         setError(null);
-        setReport(null);
+        setErrorType(null);
         setFilter(null);
         lastAnalysisRef.current = { channelUrl, urlExtractedId };
 
@@ -183,16 +145,14 @@ export default function Home() {
 
             if (response.data.success && response.data.data) {
                 const newReport = response.data.data;
-                setReport(newReport);
-                setIsLoading(false);
 
                 // Update API quota usage
                 try {
-                    updateYouTubeQuota(103); // YouTube API cost per analysis
-                    updateGeminiQuota(); // Gemini API request count
+                    updateYouTubeQuota(103);
+                    updateGeminiQuota();
                     logger.log("API quota updated");
                 } catch (quotaError) {
-                    logger.error("Failed to update quota:", quotaError);
+                    logger.error("Failed to update quota", quotaError);
                 }
 
                 // Cache the report using actual channel ID
@@ -206,31 +166,39 @@ export default function Home() {
                     );
                     logger.log("Report cached for:", actualChannelId);
                 }
+
+                // Store current report and redirect to /report
+                localStorage.setItem(CURRENT_REPORT_KEY, JSON.stringify(newReport));
+                router.push("/report");
             } else {
-                // Error from API response - keep loading state to show error in progress
+                // Error from API response
                 setError(response.data.error || lang.form.errors.analysisError);
+                setErrorType(response.data.errorType || null);
             }
         } catch (err: any) {
-            logger.error("Analysis error:", err);
+            logger.error("Analysis error", err);
 
             const errorData = err.response?.data;
             const errorMessage = errorData?.error;
+            const apiErrorType = errorData?.errorType;
 
             let displayError: string;
+            let displayErrorType: string | null = apiErrorType || null;
 
             if (!err.response) {
                 displayError = lang.form.errors.networkError;
+                displayErrorType = 'NETWORK_ERROR';
             } else if (!errorMessage) {
                 displayError = lang.form.errors.unknownError;
+                displayErrorType = displayErrorType || 'UNKNOWN';
             } else if (typeof errorMessage === "string") {
                 displayError = errorMessage;
             } else {
-                // Handle case where error is an object
                 displayError = errorMessage.message || lang.form.errors.unknownError;
             }
 
-            // Keep isLoading true so error shows in progress indicator
             setError(displayError);
+            setErrorType(displayErrorType);
         }
     };
 
@@ -238,10 +206,14 @@ export default function Home() {
         setFilter(null);
     };
 
+    const handleLoadReport = (loadedReport: MarketingReport) => {
+        localStorage.setItem(CURRENT_REPORT_KEY, JSON.stringify(loadedReport));
+        router.push("/report");
+    };
+
     const handleUpload = (uploadedReport: MarketingReport) => {
-        setReport(uploadedReport);
-        setError(null);
-        setFilter(null);
+        localStorage.setItem(CURRENT_REPORT_KEY, JSON.stringify(uploadedReport));
+        router.push("/report");
     };
 
     return (
@@ -253,11 +225,11 @@ export default function Home() {
             </AnimatePresence>
 
             <div
-                className={`flex-1 ${!report ? "center-screen" : ""}`}
+                className="flex-1 center-screen"
                 role="main"
             >
                 <AnimatePresence mode="wait">
-                    {!report && !isLoading && !showSplash && (
+                    {!isLoading && !showSplash && (
                         <motion.div
                             key="home"
                             initial="initial"
@@ -304,11 +276,7 @@ export default function Home() {
                                 variants={fadeInUp}
                             >
                                 <AnalysisHistory
-                                    onLoadReport={(loadedReport) => {
-                                        setReport(loadedReport);
-                                        setError(null);
-                                        setFilter(null);
-                                    }}
+                                    onLoadReport={handleLoadReport}
                                     filteredChannelId={filter?.channelId}
                                     filteredChannelName={filter?.channelName}
                                     onClearFilter={handleClearFilter}
@@ -332,6 +300,7 @@ export default function Home() {
                         >
                             <LoadingState
                                 error={error}
+                                errorType={errorType}
                                 onRetry={
                                     lastAnalysisRef.current
                                         ? () => {
@@ -344,22 +313,8 @@ export default function Home() {
                                 onCancel={() => {
                                     setIsLoading(false);
                                     setError(null);
+                                    setErrorType(null);
                                 }}
-                            />
-                        </motion.div>
-                    )}
-
-                    {report && !isLoading && !showSplash && (
-                        <motion.div
-                            key="report"
-                            className="container py-8"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1, transition: { duration: 0.15 } }}
-                            exit={{ opacity: 0, transition: { duration: 0.01 } }}
-                        >
-                            <ReportDisplay
-                                report={report}
-                                onReset={() => setReport(null)}
                             />
                         </motion.div>
                     )}

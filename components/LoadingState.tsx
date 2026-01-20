@@ -126,9 +126,43 @@ interface LoadingStateProps {
     onCancel?: () => void;
     onRetry?: () => void;
     error?: string | null;
+    errorType?: string | null;
+    disableAILabels?: boolean;
 }
 
-export default function LoadingState({ onCancel, onRetry, error }: LoadingStateProps) {
+// Error title mapping based on errorType
+const ERROR_TITLES_VI: Record<string, string> = {
+    MODEL_OVERLOAD: "Mô hình AI quá tải",
+    NETWORK_ERROR: "Lỗi kết nối",
+    RATE_LIMIT: "Giới hạn tần suất",
+    GEMINI_QUOTA: "Hết hạn mức API",
+    YOUTUBE_QUOTA: "Hết hạn mức YouTube",
+    API_CONFIG: "Lỗi cấu hình",
+    CHANNEL_NOT_FOUND: "Không tìm thấy kênh",
+    AI_PARSE_ERROR: "Lỗi phân tích AI",
+    YOUTUBE_API_ERROR: "Lỗi YouTube API",
+    GEMINI_API_ERROR: "Lỗi Gemini API",
+    UNKNOWN: "Phân tích thất bại",
+};
+
+const ERROR_TITLES_EN: Record<string, string> = {
+    MODEL_OVERLOAD: "AI Model Overloaded",
+    NETWORK_ERROR: "Network Error",
+    RATE_LIMIT: "Rate Limited",
+    GEMINI_QUOTA: "API Quota Exceeded",
+    YOUTUBE_QUOTA: "YouTube Quota Exceeded",
+    API_CONFIG: "Configuration Error",
+    CHANNEL_NOT_FOUND: "Channel Not Found",
+    AI_PARSE_ERROR: "AI Parse Error",
+    YOUTUBE_API_ERROR: "YouTube API Error",
+    GEMINI_API_ERROR: "Gemini API Error",
+    UNKNOWN: "Analysis Failed",
+};
+
+// Retryable error types (auto-retry only for these)
+const RETRYABLE_ERRORS = ['MODEL_OVERLOAD', 'NETWORK_ERROR', 'RATE_LIMIT', 'GEMINI_QUOTA', 'AI_PARSE_ERROR'];
+
+export default function LoadingState({ onCancel, onRetry, error, errorType, disableAILabels }: LoadingStateProps) {
     const { langCode } = useLanguage();
     const defaultSteps =
         langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
@@ -139,33 +173,71 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
     const [elapsedTime, setElapsedTime] = useState(0);
     const [steps, setSteps] = useState<StepLabel[]>(defaultSteps);
     const pendingLabelsRef = useRef<StepLabel[] | null>(null);
-    // TEMPORARILY DISABLED - AI labels fetch
-    // const initialLangRef = useRef(langCode);
+
+    // Auto-retry state
+    const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+    const [retryHistory, setRetryHistory] = useState<{ errorLabel: string; retryLabel: string }[]>([]);
+    const [autoRetryCount, setAutoRetryCount] = useState(0);
+    const MAX_AUTO_RETRIES = 3;
+    const RETRY_INTERVAL_SECONDS = 30;
+
+    // Track step progression state for retry
+    const hasStartedRef = useRef(false);
+    const stepAtErrorRef = useRef<number>(0);
+
+    const isRetryable = errorType && RETRYABLE_ERRORS.includes(errorType);
+
+    // Get error title based on errorType
+    const errorTitles = langCode === "en" ? ERROR_TITLES_EN : ERROR_TITLES_VI;
+    const errorTitle = errorType ? (errorTitles[errorType] || errorTitles.UNKNOWN) : errorTitles.UNKNOWN;
+    const initialLangRef = useRef(langCode);
 
     // Fetch AI-generated labels once on mount, store in pending ref
-    // TEMPORARILY DISABLED - using default labels only
-    // useEffect(() => {
-    //     const fetchLabels = async () => {
-    //         try {
-    //             const response = await fetch(
-    //                 `/api/loading-labels?lang=${initialLangRef.current}`,
-    //             );
-    //             if (response.ok) {
-    //                 const data = await response.json();
-    //                 if (data.steps && data.steps.length === 5) {
-    //                     pendingLabelsRef.current = data.steps;
-    //                 }
-    //             }
-    //         } catch {
-    //             // Keep default labels on error
-    //         }
-    //     };
-    //     fetchLabels();
-    // }, []);
+    useEffect(() => {
+        if (disableAILabels) return;
+
+        const fetchLabels = async () => {
+            try {
+                const response = await fetch(
+                    `/api/loading-labels?lang=${initialLangRef.current}`,
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.steps && data.steps.length === 5) {
+                        pendingLabelsRef.current = data.steps;
+                    }
+                }
+            } catch {
+                // Keep default labels on error
+            }
+        };
+        fetchLabels();
+    }, [disableAILabels]);
+
+    // Save current step when error occurs (don't add to history until retry)
+    useEffect(() => {
+        if (error) {
+            stepAtErrorRef.current = currentStep;
+        }
+    }, [error, currentStep]);
 
     // Step progression - apply pending labels only at step transitions
+    // On retry, continue from where we left off
     useEffect(() => {
-        const stepTimers = STEP_DURATIONS.map((_, index) => {
+        if (error) return; // Don't start new timers if there's an error
+
+        // Determine starting step: 0 for initial load, or saved step for retry
+        const startFromStep = hasStartedRef.current ? stepAtErrorRef.current : 0;
+        hasStartedRef.current = true;
+
+        // Create timers only for remaining steps
+        const remainingSteps = STEP_DURATIONS.slice(startFromStep);
+        const stepTimers = remainingSteps.map((_, index) => {
+            const actualStepIndex = startFromStep + index;
+            const delay = index === 0
+                ? 0
+                : remainingSteps.slice(0, index).reduce((acc, d) => acc + d, 0);
+
             return setTimeout(
                 () => {
                     // Apply pending AI labels at step transition if available
@@ -173,20 +245,22 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
                         setSteps(pendingLabelsRef.current);
                         pendingLabelsRef.current = null;
                     }
-                    setCurrentStep(index);
+                    setCurrentStep(actualStepIndex);
                     setVisibleSubLabelIndex(0);
                 },
-                STEP_DURATIONS.slice(0, index).reduce((acc, d) => acc + d, 0),
+                delay,
             );
         });
 
         return () => {
             stepTimers.forEach((t) => clearTimeout(t));
         };
-    }, []);
+    }, [error]);
 
-    // Progress through sub-labels one at a time, stop at last one
+    // Progress through sub-labels one at a time, stop at last one or when error occurs
     useEffect(() => {
+        if (error) return; // Stop progression on error
+
         const currentSubLabels = steps[currentStep]?.subLabels || [];
         if (visibleSubLabelIndex >= currentSubLabels.length - 1) return;
 
@@ -199,7 +273,7 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
         }, delay);
 
         return () => clearTimeout(timer);
-    }, [currentStep, visibleSubLabelIndex, steps]);
+    }, [currentStep, visibleSubLabelIndex, steps, error]);
 
     // Braille spinner animation
     useEffect(() => {
@@ -219,13 +293,70 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
         return () => clearInterval(interval);
     }, []);
 
+    // Start countdown when retryable error appears (if not exceeded max retries)
+    useEffect(() => {
+        if (error && isRetryable && onRetry && autoRetryCount < MAX_AUTO_RETRIES) {
+            setRetryCountdown(RETRY_INTERVAL_SECONDS);
+        } else {
+            setRetryCountdown(null);
+        }
+    }, [error, isRetryable, onRetry, autoRetryCount]);
+
+    // Countdown timer
+    useEffect(() => {
+        if (retryCountdown === null || retryCountdown <= 0) return;
+        const timer = setTimeout(() => setRetryCountdown(prev => prev! - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [retryCountdown]);
+
+    // Auto-retry when countdown reaches 0
+    useEffect(() => {
+        if (retryCountdown === 0 && onRetry) {
+            handleAutoRetry();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [retryCountdown]);
+
+    // Handle auto-retry
+    const handleAutoRetry = () => {
+        setAutoRetryCount(prev => prev + 1);
+        // Add error with retry sub-label to history
+        setRetryHistory(prev => [
+            ...prev,
+            {
+                errorLabel: errorTitle,
+                retryLabel: langCode === 'en' ? 'Retrying...' : 'Đang thử lại...'
+            }
+        ]);
+        setRetryCountdown(null);
+        onRetry?.();
+    };
+
+    // Handle manual retry (resets auto-retry count)
+    const handleManualRetry = () => {
+        setAutoRetryCount(0);
+        // Add error with retry sub-label to history
+        setRetryHistory(prev => [
+            ...prev,
+            {
+                errorLabel: errorTitle,
+                retryLabel: langCode === 'en' ? 'Retrying...' : 'Đang thử lại...'
+            }
+        ]);
+        setRetryCountdown(null);
+        onRetry?.();
+    };
+
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
-    const completedSteps = steps.slice(0, currentStep);
+    // Split completed steps: before first error vs after retry
+    const firstErrorStep = retryHistory.length > 0 ? stepAtErrorRef.current : currentStep;
+    const stepsBeforeError = steps.slice(0, Math.min(firstErrorStep, currentStep));
+    const stepsAfterRetry = retryHistory.length > 0 ? steps.slice(firstErrorStep, currentStep) : [];
     const currentTask = steps[currentStep];
 
     return (
@@ -251,7 +382,7 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
                                 <div className={styles.mainLine}>
                                     <span className={styles.errorIcon}>✕</span>
                                     <span className={styles.label}>
-                                        {currentTask.label}
+                                        {errorTitle}
                                     </span>
                                     <span className={styles.elapsedTime}>
                                         {formatTime(elapsedTime)}
@@ -260,7 +391,23 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
                                 <div className={styles.subLine}>
                                     <span className={styles.connector}>└</span>
                                     <span className={styles.errorMessage}>
-                                        {error}
+                                        {isRetryable && autoRetryCount >= MAX_AUTO_RETRIES ? (
+                                            // Max retries exceeded message
+                                            langCode === 'en'
+                                                ? `Retried ${MAX_AUTO_RETRIES} times. Please try again in a few minutes.`
+                                                : `Đã thử lại ${MAX_AUTO_RETRIES} lần. Vui lòng thử lại sau vài phút.`
+                                        ) : (
+                                            <>
+                                                {error}
+                                                {isRetryable && retryCountdown !== null && retryCountdown > 0 && (
+                                                    <span className={styles.countdownText}>
+                                                        {' '}{langCode === 'en'
+                                                            ? `Retry ${autoRetryCount + 1}/${MAX_AUTO_RETRIES} in ${retryCountdown}s...`
+                                                            : `Thử lại lần ${autoRetryCount + 1}/${MAX_AUTO_RETRIES} sau ${retryCountdown}s...`}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
                                     </span>
                                 </div>
                             </motion.div>
@@ -310,9 +457,50 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
 
                 {/* Completed steps - grow upward */}
                 <div className={styles.completedList}>
-                    {completedSteps.map((step, index) => (
+                    {/* Steps completed before error */}
+                    {stepsBeforeError.map((step, index) => (
                         <motion.div
-                            key={`completed-${index}`}
+                            key={`completed-before-${index}`}
+                            className={`${styles.step} ${styles.completed}`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 0.5, height: "auto" }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                        >
+                            <div className={styles.mainLine}>
+                                <span className={styles.checkIcon}>✓</span>
+                                <span className={styles.completedLabel}>
+                                    {step.label}
+                                </span>
+                            </div>
+                        </motion.div>
+                    ))}
+                    {/* Error and retry history */}
+                    {retryHistory.map((item, index) => (
+                        <motion.div
+                            key={`history-${index}`}
+                            className={`${styles.step} ${styles.completed}`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 0.5, height: "auto" }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                        >
+                            <div className={styles.mainLine}>
+                                <span className={styles.errorIconMuted}>✕</span>
+                                <span className={styles.completedLabel}>
+                                    {item.errorLabel}
+                                </span>
+                            </div>
+                            <div className={styles.subLine}>
+                                <span className={styles.connectorRetry}>↻</span>
+                                <span className={styles.retryLabel}>
+                                    {item.retryLabel}
+                                </span>
+                            </div>
+                        </motion.div>
+                    ))}
+                    {/* Steps completed after retry */}
+                    {stepsAfterRetry.map((step, index) => (
+                        <motion.div
+                            key={`completed-after-${index}`}
                             className={`${styles.step} ${styles.completed}`}
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 0.5, height: "auto" }}
@@ -333,18 +521,21 @@ export default function LoadingState({ onCancel, onRetry, error }: LoadingStateP
                     {error && onRetry && (
                         <motion.button
                             className={styles.retryLink}
-                            onClick={onRetry}
+                            onClick={handleManualRetry}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.3, duration: 0.3 }}
                         >
-                            {langCode === "en" ? "Retry" : "Thử lại"}
+                            {langCode === "en" ? "Retry now" : "Thử lại ngay"}
                         </motion.button>
                     )}
                     {onCancel && (
                         <motion.button
                             className={styles.cancelLink}
-                            onClick={onCancel}
+                            onClick={() => {
+                                setRetryCountdown(null); // Stop auto-retry
+                                onCancel();
+                            }}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.5, duration: 0.3 }}

@@ -27,7 +27,7 @@ function handleYouTubeError(error: unknown, context: string): never {
     const errorMessage = errorData?.message || err?.message || "Unknown YouTube API error";
     const errorReason = errorData?.errors?.[0]?.reason || "";
 
-    logger.error(`YouTube API Error (${context}):`, {
+    logger.error(`YouTube API Error (${context})`, {
         status: statusCode,
         message: errorMessage,
         reason: errorReason,
@@ -113,7 +113,7 @@ export async function resolveChannelId(
             handleYouTubeError(error, "resolveChannelId");
         }
 
-        logger.error("Error resolving channel ID:", error);
+        logger.error("Error resolving channel ID", error);
         return null;
     }
 }
@@ -342,7 +342,7 @@ export async function getFullChannelData(
 ) {
     const channelId = await resolveChannelId(channelUrl, customApiKey);
     if (!channelId) {
-        throw new Error("Could not resolve channel ID from URL");
+        throw new APIError("Could not resolve channel ID from URL", "CHANNEL_NOT_FOUND", 404);
     }
 
     const [channelInfo, videos] = await Promise.all([
@@ -351,7 +351,7 @@ export async function getFullChannelData(
     ]);
 
     if (!channelInfo) {
-        throw new Error("Channel not found");
+        throw new APIError("Channel not found", "CHANNEL_NOT_FOUND", 404);
     }
 
     return {

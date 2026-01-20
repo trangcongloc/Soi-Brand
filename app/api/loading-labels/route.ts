@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { logger } from "@/lib/logger";
 
 const PROMPT_VI = `Bạn là một copywriter sáng tạo. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và nhiều sub-labels chi tiết.
 
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(data);
     } catch (error) {
-        console.error("Error generating loading labels:", error);
+        logger.error("Error generating loading labels", error);
         return NextResponse.json(
             { error: "Failed to generate labels" },
             { status: 500 }

@@ -28,13 +28,14 @@ function getCorsHeaders(origin: string | null): HeadersInit {
 export async function POST(request: NextRequest) {
     const origin = request.headers.get("origin");
     const corsHeaders = getCorsHeaders(origin);
+    let isVi = true; // Default to Vietnamese
 
     try {
         // Validate environment configuration
         try {
             validateEnv();
         } catch (envError) {
-            logger.error("Environment validation failed:", envError);
+            logger.error("Environment validation failed", envError);
             return NextResponse.json(
                 {
                     success: false,
@@ -48,13 +49,15 @@ export async function POST(request: NextRequest) {
         // Parse request body
         const body: AnalyzeRequest = await request.json();
         const { channelUrl, youtubeApiKey, geminiApiKey, geminiModel, language } = body;
+        isVi = language !== 'en';
 
         // Validate input
         if (!channelUrl) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Channel URL is required",
+                    error: isVi ? "Vui lòng nhập URL kênh YouTube" : "Channel URL is required",
+                    errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
                 { status: 400, headers: corsHeaders }
             );
@@ -64,7 +67,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Invalid YouTube channel URL",
+                    error: isVi ? "URL kênh YouTube không hợp lệ" : "Invalid YouTube channel URL",
+                    errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
                 { status: 400, headers: corsHeaders }
             );
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
         const { channelInfo, videos } = await withRetry(
             () => getFullChannelData(channelUrl, youtubeApiKey),
             {
-                maxAttempts: 2,
+                maxAttempts: 3,
                 initialDelayMs: 1000,
                 onRetry: (attempt, error) => {
                     logger.log(`YouTube API retry ${attempt}: ${error.message}`);
@@ -87,7 +91,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Channel not found or could not be accessed",
+                    error: isVi ? "Không tìm thấy kênh hoặc không thể truy cập" : "Channel not found or could not be accessed",
+                    errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
                 { status: 404, headers: corsHeaders }
             );
@@ -97,7 +102,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "No videos found on this channel",
+                    error: isVi ? "Không tìm thấy video nào trên kênh này" : "No videos found on this channel",
+                    errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
                 { status: 404, headers: corsHeaders }
             );
@@ -108,7 +114,7 @@ export async function POST(request: NextRequest) {
         const report = await withRetry(
             () => generateMarketingReport(channelInfo, videos, geminiApiKey, geminiModel, language),
             {
-                maxAttempts: 2,
+                maxAttempts: 3,
                 initialDelayMs: 2000,
                 onRetry: (attempt, error) => {
                     logger.log(`Gemini API retry ${attempt}: ${error.message}`);
@@ -125,23 +131,39 @@ export async function POST(request: NextRequest) {
             { status: 200, headers: corsHeaders }
         );
     } catch (error: any) {
-        logger.error("Error in analyze API:", error);
+        logger.error("Error in analyze API", error);
 
         // Handle typed APIError from youtube.ts and gemini.ts
         if (error instanceof APIError) {
-            const errorMessages: Record<string, string> = {
+            const errorMessagesVi: Record<string, string> = {
                 YOUTUBE_QUOTA: "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
-                GEMINI_QUOTA: "Đã hết hạn mức Gemini API. Vui lòng thử lại sau vài phút.",
-                MODEL_OVERLOAD: "Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
-                RATE_LIMIT: "Đã vượt quá giới hạn số lần truy cập. Vui lòng thử lại sau.",
+                GEMINI_QUOTA: "Đã hết hạn mức Gemini API.",
+                MODEL_OVERLOAD: "Mô hình AI đang quá tải.",
+                RATE_LIMIT: "Đã vượt quá giới hạn số lần truy cập.",
                 API_CONFIG: "Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
-                YOUTUBE_API_ERROR: "Lỗi từ YouTube API. Vui lòng thử lại sau.",
-                GEMINI_API_ERROR: "Lỗi từ Gemini AI. Vui lòng thử lại sau.",
+                YOUTUBE_API_ERROR: "Lỗi từ YouTube API.",
+                GEMINI_API_ERROR: "Lỗi từ Gemini AI.",
                 NETWORK_ERROR: "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
-                AI_PARSE_ERROR: "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
+                AI_PARSE_ERROR: "AI trả về dữ liệu không hợp lệ.",
                 CHANNEL_NOT_FOUND: "Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
-                UNKNOWN: "Có lỗi không xác định. Vui lòng thử lại sau.",
+                UNKNOWN: "Có lỗi không xác định.",
             };
+
+            const errorMessagesEn: Record<string, string> = {
+                YOUTUBE_QUOTA: "YouTube API quota exceeded for today. Please try again tomorrow.",
+                GEMINI_QUOTA: "Gemini API quota exceeded.",
+                MODEL_OVERLOAD: "AI model is overloaded.",
+                RATE_LIMIT: "Rate limit exceeded.",
+                API_CONFIG: "API key configuration error. Please contact administrator.",
+                YOUTUBE_API_ERROR: "Error from YouTube API.",
+                GEMINI_API_ERROR: "Error from Gemini AI.",
+                NETWORK_ERROR: "Cannot connect to server. Please check your internet connection.",
+                AI_PARSE_ERROR: "AI returned invalid data.",
+                CHANNEL_NOT_FOUND: "YouTube channel not found. Please check the URL.",
+                UNKNOWN: "An unknown error occurred.",
+            };
+
+            const errorMessages = isVi ? errorMessagesVi : errorMessagesEn;
 
             return NextResponse.json(
                 {
@@ -168,7 +190,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Mô hình AI đang quá tải. Vui lòng thử lại sau 1-2 phút.",
+                    error: isVi ? "Mô hình AI đang quá tải." : "AI model is overloaded.",
                     errorType: "MODEL_OVERLOAD",
                 } as AnalyzeResponse,
                 { status: 503, headers: corsHeaders }
@@ -183,7 +205,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Đã hết hạn mức Gemini API. Vui lòng thử lại sau vài phút.",
+                    error: isVi ? "Đã hết hạn mức Gemini API." : "Gemini API quota exceeded.",
                     errorType: "GEMINI_QUOTA",
                 } as AnalyzeResponse,
                 { status: 429, headers: corsHeaders }
@@ -200,7 +222,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai.",
+                    error: isVi ? "Đã hết hạn mức YouTube API hôm nay. Vui lòng thử lại vào ngày mai." : "YouTube API quota exceeded for today. Please try again tomorrow.",
                     errorType: "YOUTUBE_QUOTA",
                 } as AnalyzeResponse,
                 { status: 429, headers: corsHeaders }
@@ -216,7 +238,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Đã vượt quá giới hạn số lần truy cập. Vui lòng thử lại sau.",
+                    error: isVi ? "Đã vượt quá giới hạn số lần truy cập." : "Rate limit exceeded.",
                     errorType: "RATE_LIMIT",
                 } as AnalyzeResponse,
                 { status: 429, headers: corsHeaders }
@@ -233,7 +255,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.",
+                    error: isVi ? "Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên." : "API key configuration error. Please contact administrator.",
                     errorType: "API_CONFIG",
                 } as AnalyzeResponse,
                 { status: 500, headers: corsHeaders }
@@ -252,7 +274,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet.",
+                    error: isVi ? "Không thể kết nối với máy chủ. Vui lòng kiểm tra kết nối internet." : "Cannot connect to server. Please check your internet connection.",
                     errorType: "NETWORK_ERROR",
                 } as AnalyzeResponse,
                 { status: 503, headers: corsHeaders }
@@ -269,7 +291,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.",
+                    error: isVi ? "AI trả về dữ liệu không hợp lệ." : "AI returned invalid data.",
                     errorType: "AI_PARSE_ERROR",
                 } as AnalyzeResponse,
                 { status: 500, headers: corsHeaders }
@@ -281,7 +303,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL.",
+                    error: isVi ? "Không tìm thấy kênh YouTube. Vui lòng kiểm tra lại URL." : "YouTube channel not found. Please check the URL.",
                     errorType: "CHANNEL_NOT_FOUND",
                 } as AnalyzeResponse,
                 { status: 404, headers: corsHeaders }
@@ -292,7 +314,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: errorMessage || "Có lỗi không xác định. Vui lòng thử lại sau.",
+                error: errorMessage || (isVi ? "Có lỗi không xác định." : "An unknown error occurred."),
                 errorType: "UNKNOWN",
             } as AnalyzeResponse,
             { status: 500, headers: corsHeaders }

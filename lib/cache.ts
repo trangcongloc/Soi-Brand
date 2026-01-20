@@ -4,8 +4,8 @@ import { MarketingReport } from "./types";
 import { isBrowser } from "./utils";
 import { logger } from "./logger";
 
-const CACHE_PREFIX = "ourtube_report_";
-const ALIAS_PREFIX = "ourtube_alias_";
+const CACHE_PREFIX = "soibrand_report_";
+const ALIAS_PREFIX = "soibrand_alias_";
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 const MAX_REPORTS_PER_CHANNEL = 5;
 const MAX_TOTAL_REPORTS = 20;
@@ -127,7 +127,7 @@ export function getCachedReportByTimestamp(
 
         return data.report;
     } catch (error) {
-        logger.error("Error reading from cache:", error);
+        logger.error("Error reading from cache", error);
         return null;
     }
 }
@@ -198,7 +198,7 @@ export function setCachedReport(
         const key = getCacheKey(channelId, timestamp);
         localStorage.setItem(key, JSON.stringify(cacheData));
     } catch (error) {
-        logger.error("Error writing to cache:", error);
+        logger.error("Error writing to cache", error);
         if (error instanceof Error && error.name === "QuotaExceededError") {
             clearOldReports();
         }

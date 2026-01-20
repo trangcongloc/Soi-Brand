@@ -6,7 +6,7 @@
 import { GeminiModel, ApiQuotaUsage } from "./types";
 import { getModelInfo } from "./geminiModels";
 
-const STORAGE_KEY = 'ourtube_api_quota';
+const STORAGE_KEY = 'soibrand_api_quota';
 const YOUTUBE_DAILY_QUOTA = 10000;
 const DEFAULT_GEMINI_RPM = 2; // Default to most restrictive free tier
 const YOUTUBE_COST_PER_ANALYSIS = 103; // Channel search (100) + info (1) + playlist (1) + video (1)

@@ -57,7 +57,7 @@ export function detectBrowserLanguage(): LanguageCode {
 }
 
 // Storage key for language preference
-export const LANGUAGE_STORAGE_KEY = "ourtube-language";
+export const LANGUAGE_STORAGE_KEY = "soibrand-language";
 
 // Get stored language preference
 export function getStoredLanguage(): LanguageCode | null {

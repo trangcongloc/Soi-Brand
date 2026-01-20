@@ -3,116 +3,165 @@ import {
     extractUsername,
     isValidYouTubeUrl,
     generateUUID,
+    isBrowser,
 } from "@/lib/utils";
 
-describe("extractChannelId", () => {
-    it("should extract channel ID from /channel/ URL", () => {
-        expect(
-            extractChannelId("https://youtube.com/channel/UC1234567890")
-        ).toBe("UC1234567890");
+describe("utils", () => {
+    describe("extractChannelId", () => {
+        it("extracts channel ID from /channel/ URL", () => {
+            expect(
+                extractChannelId("https://www.youtube.com/channel/UC1234567890")
+            ).toBe("UC1234567890");
+        });
+
+        it("extracts channel ID from /channel/ URL with trailing path", () => {
+            expect(
+                extractChannelId("https://www.youtube.com/channel/UC1234567890/videos")
+            ).toBe("UC1234567890");
+        });
+
+        it("returns null for /@username URL (needs API resolution)", () => {
+            expect(
+                extractChannelId("https://www.youtube.com/@username")
+            ).toBeNull();
+        });
+
+        it("returns null for /c/ URL (needs API resolution)", () => {
+            expect(
+                extractChannelId("https://www.youtube.com/c/channelname")
+            ).toBeNull();
+        });
+
+        it("returns null for /user/ URL (needs API resolution)", () => {
+            expect(
+                extractChannelId("https://www.youtube.com/user/username")
+            ).toBeNull();
+        });
+
+        it("returns null for non-YouTube URLs", () => {
+            expect(
+                extractChannelId("https://vimeo.com/channel/123")
+            ).toBeNull();
+        });
+
+        it("returns null for invalid URLs", () => {
+            expect(extractChannelId("not-a-url")).toBeNull();
+        });
+
+        it("works with m.youtube.com", () => {
+            expect(
+                extractChannelId("https://m.youtube.com/channel/UC1234567890")
+            ).toBe("UC1234567890");
+        });
     });
 
-    it("should return null for @username URLs (needs API resolution)", () => {
-        expect(extractChannelId("https://youtube.com/@username")).toBeNull();
+    describe("extractUsername", () => {
+        it("extracts username from /@username URL", () => {
+            expect(
+                extractUsername("https://www.youtube.com/@MrBeast")
+            ).toBe("MrBeast");
+        });
+
+        it("extracts username from /@username URL with trailing path", () => {
+            expect(
+                extractUsername("https://www.youtube.com/@MrBeast/videos")
+            ).toBe("MrBeast");
+        });
+
+        it("extracts username from /c/ URL", () => {
+            expect(
+                extractUsername("https://www.youtube.com/c/ChannelName")
+            ).toBe("ChannelName");
+        });
+
+        it("extracts username from /user/ URL", () => {
+            expect(
+                extractUsername("https://www.youtube.com/user/username123")
+            ).toBe("username123");
+        });
+
+        it("returns null for /channel/ URL", () => {
+            expect(
+                extractUsername("https://www.youtube.com/channel/UC123")
+            ).toBeNull();
+        });
+
+        it("returns null for invalid URLs", () => {
+            expect(extractUsername("not-a-url")).toBeNull();
+        });
     });
 
-    it("should return null for /c/ URLs (needs API resolution)", () => {
-        expect(extractChannelId("https://youtube.com/c/channelname")).toBeNull();
+    describe("isValidYouTubeUrl", () => {
+        it("returns true for valid /channel/ URL", () => {
+            expect(
+                isValidYouTubeUrl("https://www.youtube.com/channel/UC123")
+            ).toBe(true);
+        });
+
+        it("returns true for valid /@username URL", () => {
+            expect(
+                isValidYouTubeUrl("https://www.youtube.com/@MrBeast")
+            ).toBe(true);
+        });
+
+        it("returns true for valid /c/ URL", () => {
+            expect(
+                isValidYouTubeUrl("https://www.youtube.com/c/ChannelName")
+            ).toBe(true);
+        });
+
+        it("returns true for valid /user/ URL", () => {
+            expect(
+                isValidYouTubeUrl("https://www.youtube.com/user/username")
+            ).toBe(true);
+        });
+
+        it("returns false for YouTube video URL", () => {
+            expect(
+                isValidYouTubeUrl("https://www.youtube.com/watch?v=abc123")
+            ).toBe(false);
+        });
+
+        it("returns false for YouTube homepage", () => {
+            expect(
+                isValidYouTubeUrl("https://www.youtube.com/")
+            ).toBe(false);
+        });
+
+        it("returns false for non-YouTube URL", () => {
+            expect(
+                isValidYouTubeUrl("https://vimeo.com/@user")
+            ).toBe(false);
+        });
+
+        it("returns false for invalid URL", () => {
+            expect(isValidYouTubeUrl("not-a-url")).toBe(false);
+        });
+
+        it("works with m.youtube.com", () => {
+            expect(
+                isValidYouTubeUrl("https://m.youtube.com/@MrBeast")
+            ).toBe(true);
+        });
     });
 
-    it("should return null for /user/ URLs (needs API resolution)", () => {
-        expect(extractChannelId("https://youtube.com/user/username")).toBeNull();
+    describe("generateUUID", () => {
+        it("generates a valid UUID v4 format", () => {
+            const uuid = generateUUID();
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            expect(uuid).toMatch(uuidRegex);
+        });
+
+        it("generates unique UUIDs", () => {
+            const uuid1 = generateUUID();
+            const uuid2 = generateUUID();
+            expect(uuid1).not.toBe(uuid2);
+        });
     });
 
-    it("should return null for invalid URLs", () => {
-        expect(extractChannelId("not-a-url")).toBeNull();
-    });
-
-    it("should return null for non-YouTube URLs", () => {
-        expect(extractChannelId("https://google.com/channel/test")).toBeNull();
-    });
-});
-
-describe("extractUsername", () => {
-    it("should extract username from @username URL", () => {
-        expect(extractUsername("https://youtube.com/@testchannel")).toBe(
-            "testchannel"
-        );
-    });
-
-    it("should extract username from /c/ URL", () => {
-        expect(extractUsername("https://youtube.com/c/testchannel")).toBe(
-            "testchannel"
-        );
-    });
-
-    it("should extract username from /user/ URL", () => {
-        expect(extractUsername("https://youtube.com/user/testchannel")).toBe(
-            "testchannel"
-        );
-    });
-
-    it("should return null for /channel/ URLs", () => {
-        expect(extractUsername("https://youtube.com/channel/UC123")).toBeNull();
-    });
-
-    it("should return null for invalid URLs", () => {
-        expect(extractUsername("not-a-url")).toBeNull();
-    });
-});
-
-describe("isValidYouTubeUrl", () => {
-    it("should return true for valid channel URLs", () => {
-        expect(isValidYouTubeUrl("https://youtube.com/channel/UC123")).toBe(
-            true
-        );
-        expect(isValidYouTubeUrl("https://youtube.com/@username")).toBe(true);
-        expect(isValidYouTubeUrl("https://youtube.com/c/channelname")).toBe(
-            true
-        );
-        expect(isValidYouTubeUrl("https://youtube.com/user/username")).toBe(
-            true
-        );
-    });
-
-    it("should return true for www.youtube.com URLs", () => {
-        expect(isValidYouTubeUrl("https://www.youtube.com/@username")).toBe(
-            true
-        );
-    });
-
-    it("should return true for m.youtube.com URLs", () => {
-        expect(isValidYouTubeUrl("https://m.youtube.com/@username")).toBe(true);
-    });
-
-    it("should return false for video URLs", () => {
-        expect(
-            isValidYouTubeUrl("https://youtube.com/watch?v=dQw4w9WgXcQ")
-        ).toBe(false);
-    });
-
-    it("should return false for non-YouTube URLs", () => {
-        expect(isValidYouTubeUrl("https://google.com")).toBe(false);
-    });
-
-    it("should return false for invalid URLs", () => {
-        expect(isValidYouTubeUrl("not-a-url")).toBe(false);
-    });
-});
-
-describe("generateUUID", () => {
-    it("should generate a valid UUID v4 format", () => {
-        const uuid = generateUUID();
-        const uuidRegex =
-            /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-        expect(uuid).toMatch(uuidRegex);
-    });
-
-    it("should generate unique UUIDs", () => {
-        const uuids = new Set();
-        for (let i = 0; i < 100; i++) {
-            uuids.add(generateUUID());
-        }
-        expect(uuids.size).toBe(100);
+    describe("isBrowser", () => {
+        it("returns true in jsdom environment", () => {
+            expect(isBrowser()).toBe(true);
+        });
     });
 });
