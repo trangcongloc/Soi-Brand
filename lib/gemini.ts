@@ -326,14 +326,11 @@ export async function generateMarketingReport(
             errorMessage.includes("Unexpected token") ||
             errorMessage.includes("Expected")
         ) {
-            const parseError: APIError = {
-                name: "JSONParseError",
-                message:
-                    "The AI generated an invalid response format. This is usually temporary. Please try again. Details: " +
-                    errorMessage.substring(0, 200),
-                errorType: "AI_PARSE_ERROR",
-            };
-            throw parseError;
+            throw new APIError(
+                "The AI generated an invalid response format. This is usually temporary. Please try again.",
+                "AI_PARSE_ERROR",
+                500
+            );
         }
 
         // Check for validation errors
@@ -341,14 +338,11 @@ export async function generateMarketingReport(
             errorMessage.includes("Missing or invalid") ||
             errorMessage.includes("AI response is not")
         ) {
-            const validationError: APIError = {
-                name: "ValidationError",
-                message:
-                    "The AI response is missing required information. Please try again. Details: " +
-                    errorMessage.substring(0, 200),
-                errorType: "AI_PARSE_ERROR",
-            };
-            throw validationError;
+            throw new APIError(
+                "The AI response is missing required information. Please try again.",
+                "AI_PARSE_ERROR",
+                500
+            );
         }
 
         // Error mapping based on official Gemini API documentation

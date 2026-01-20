@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const PROMPT = `Bạn là một copywriter sáng tạo. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và sub-label chi tiết.
+const PROMPT_VI = `Bạn là một copywriter sáng tạo. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và sub-label chi tiết.
 
 Các bước:
 1. Kiểm tra URL - xác thực link, trích xuất ID kênh
@@ -27,7 +27,33 @@ Trả về JSON theo format:
   ]
 }`;
 
-export async function GET() {
+const PROMPT_EN = `You are a creative copywriter. Create 5 label pairs (in English) for loading steps when analyzing a YouTube channel. Each step has a main label and a detailed sub-label.
+
+Steps:
+1. Validate URL - verify link, extract channel ID
+2. Load channel info - connect API, get subscribers, views, description
+3. Load video list - collect recent videos, gather engagement stats
+4. Analyze content - analyze trends, frequency, performance
+5. Generate report - compile insights, suggest strategies
+
+Requirements:
+- Main label: concise (max 25 characters), use strong action verbs
+- Sub-label: more detailed (50-80 characters), describe what's happening
+- Creative, professional tone
+- Do NOT mention AI, Gemini, machine learning, or any technology
+
+Return JSON in this format:
+{
+  "steps": [
+    { "label": "...", "subLabel": "..." },
+    { "label": "...", "subLabel": "..." },
+    { "label": "...", "subLabel": "..." },
+    { "label": "...", "subLabel": "..." },
+    { "label": "...", "subLabel": "..." }
+  ]
+}`;
+
+export async function GET(request: NextRequest) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
@@ -37,13 +63,17 @@ export async function GET() {
             );
         }
 
+        const { searchParams } = new URL(request.url);
+        const lang = searchParams.get("lang") || "vi";
+        const prompt = lang === "en" ? PROMPT_EN : PROMPT_VI;
+
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
             model: "gemini-2.0-flash-lite",
             generationConfig: { responseMimeType: "application/json" },
         });
 
-        const result = await model.generateContent(PROMPT);
+        const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 

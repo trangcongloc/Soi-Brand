@@ -201,12 +201,17 @@ export default function Home() {
             const errorData = err.response?.data;
             const errorMessage = errorData?.error;
 
-            let displayError = errorMessage;
+            let displayError: string;
 
             if (!err.response) {
                 displayError = lang.form.errors.networkError;
-            } else if (!displayError) {
+            } else if (!errorMessage) {
                 displayError = lang.form.errors.unknownError;
+            } else if (typeof errorMessage === "string") {
+                displayError = errorMessage;
+            } else {
+                // Handle case where error is an object
+                displayError = errorMessage.message || lang.form.errors.unknownError;
             }
 
             setError(displayError);

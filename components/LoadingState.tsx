@@ -2,14 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/lib/lang";
 import styles from "./LoadingState.module.css";
 
-const DEFAULT_STEPS = [
+const DEFAULT_STEPS_VI = [
     { label: "Đang kiểm tra URL", subLabel: "Xác thực định dạng link YouTube và trích xuất ID kênh..." },
     { label: "Đang tải thông tin kênh", subLabel: "Kết nối YouTube API, lấy số subscriber, lượt xem tổng và mô tả kênh..." },
     { label: "Đang tải danh sách video", subLabel: "Thu thập 50 video gần nhất, thống kê view, like, comment từng video..." },
     { label: "Đang phân tích nội dung", subLabel: "Phân tích xu hướng nội dung, tần suất đăng, hiệu suất theo thời gian..." },
     { label: "Đang tạo báo cáo", subLabel: "Tổng hợp insight, đề xuất chiến lược marketing và ý tưởng video mới..." },
+];
+
+const DEFAULT_STEPS_EN = [
+    { label: "Validating URL", subLabel: "Checking YouTube link format and extracting channel ID..." },
+    { label: "Loading channel info", subLabel: "Connecting to YouTube API, fetching subscribers, views, and description..." },
+    { label: "Loading video list", subLabel: "Collecting recent 50 videos, gathering views, likes, comments stats..." },
+    { label: "Analyzing content", subLabel: "Analyzing content trends, posting frequency, performance over time..." },
+    { label: "Generating report", subLabel: "Compiling insights, marketing strategy recommendations and video ideas..." },
 ];
 
 const STEP_DURATIONS = [2500, 3500, 5000, 12000, 20000];
@@ -22,17 +31,25 @@ interface StepLabel {
 }
 
 export default function LoadingState() {
+    const { langCode } = useLanguage();
+    const defaultSteps = langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
+
     const [currentStep, setCurrentStep] = useState(0);
     const [spinnerFrame, setSpinnerFrame] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
-    const [steps, setSteps] = useState<StepLabel[]>(DEFAULT_STEPS);
+    const [steps, setSteps] = useState<StepLabel[]>(defaultSteps);
+
+    // Update default steps when language changes
+    useEffect(() => {
+        setSteps(langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI);
+    }, [langCode]);
 
     // Fetch AI-generated labels
     // Delay fetch until after step 0 completes to prevent mid-step text jump
     useEffect(() => {
         const fetchTimer = setTimeout(async () => {
             try {
-                const response = await fetch("/api/loading-labels");
+                const response = await fetch(`/api/loading-labels?lang=${langCode}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.steps && data.steps.length === 5) {
@@ -45,7 +62,7 @@ export default function LoadingState() {
         }, STEP_DURATIONS[0]); // Wait for step 0 duration (2500ms)
 
         return () => clearTimeout(fetchTimer);
-    }, []);
+    }, [langCode]);
 
     // Step progression
     useEffect(() => {
