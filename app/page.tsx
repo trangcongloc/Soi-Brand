@@ -71,15 +71,15 @@ export default function Home() {
         clearExpiredReports();
     }, []);
 
-    // Auto dismiss error after 5 seconds
+    // Auto dismiss error after 5 seconds (only for toast errors, not loading errors)
     useEffect(() => {
-        if (error) {
+        if (error && !isLoading) {
             const timer = setTimeout(() => {
                 setError(null);
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [error]);
+    }, [error, isLoading]);
 
     // Update document title and favicon based on report
     useEffect(() => {
@@ -182,6 +182,7 @@ export default function Home() {
             if (response.data.success && response.data.data) {
                 const newReport = response.data.data;
                 setReport(newReport);
+                setIsLoading(false);
 
                 // Update API quota usage
                 try {
@@ -204,6 +205,7 @@ export default function Home() {
                     logger.log("Report cached for:", actualChannelId);
                 }
             } else {
+                // Error from API response - keep loading state to show error in progress
                 setError(response.data.error || lang.form.errors.analysisError);
             }
         } catch (err: any) {
@@ -225,9 +227,8 @@ export default function Home() {
                 displayError = errorMessage.message || lang.form.errors.unknownError;
             }
 
+            // Keep isLoading true so error shows in progress indicator
             setError(displayError);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -327,7 +328,13 @@ export default function Home() {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.25 }}
                         >
-                            <LoadingState onCancel={() => setIsLoading(false)} />
+                            <LoadingState
+                                error={error}
+                                onCancel={() => {
+                                    setIsLoading(false);
+                                    setError(null);
+                                }}
+                            />
                         </motion.div>
                     )}
 
@@ -349,7 +356,7 @@ export default function Home() {
             </div>
 
             <AnimatePresence>
-                {error && (
+                {error && !isLoading && (
                     <div className="toast-container">
                         <motion.div
                             className="toast toast-error"

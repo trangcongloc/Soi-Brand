@@ -124,9 +124,10 @@ interface StepLabel {
 
 interface LoadingStateProps {
     onCancel?: () => void;
+    error?: string | null;
 }
 
-export default function LoadingState({ onCancel }: LoadingStateProps) {
+export default function LoadingState({ onCancel, error }: LoadingStateProps) {
     const { langCode } = useLanguage();
     const defaultSteps =
         langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
@@ -234,48 +235,75 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
             transition={{ duration: 0.3 }}
         >
             <div className={styles.terminal}>
-                {/* Current step - fixed position */}
+                {/* Current step or error - fixed position */}
                 <div className={styles.currentTask}>
                     <AnimatePresence mode="wait">
-                        <motion.div
-                            key={`current-${currentStep}`}
-                            className={styles.step}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.2, ease: "easeInOut" }}
-                        >
-                            <div className={styles.mainLine}>
-                                <span className={styles.statusIcon}>
-                                    {BRAILLE_FRAMES[spinnerFrame]}
-                                </span>
-                                <span className={styles.label}>
-                                    {currentTask.label}
-                                </span>
-                                <span className={styles.elapsedTime}>
-                                    {formatTime(elapsedTime)}
-                                </span>
-                            </div>
-                            <div className={styles.subLine}>
-                                <span className={styles.connector}>└</span>
-                                <AnimatePresence mode="wait">
-                                    <motion.span
-                                        key={visibleSubLabelIndex}
-                                        className={styles.subLabel}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.15 }}
-                                    >
-                                        {
-                                            currentTask.subLabels[
-                                                visibleSubLabelIndex
-                                            ]
-                                        }
-                                    </motion.span>
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
+                        {error ? (
+                            <motion.div
+                                key="error"
+                                className={`${styles.step} ${styles.error}`}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                            >
+                                <div className={styles.mainLine}>
+                                    <span className={styles.errorIcon}>✕</span>
+                                    <span className={styles.label}>
+                                        {currentTask.label}
+                                    </span>
+                                    <span className={styles.elapsedTime}>
+                                        {formatTime(elapsedTime)}
+                                    </span>
+                                </div>
+                                <div className={styles.subLine}>
+                                    <span className={styles.connector}>└</span>
+                                    <span className={styles.errorMessage}>
+                                        {error}
+                                    </span>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key={`current-${currentStep}`}
+                                className={styles.step}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                            >
+                                <div className={styles.mainLine}>
+                                    <span className={styles.statusIcon}>
+                                        {BRAILLE_FRAMES[spinnerFrame]}
+                                    </span>
+                                    <span className={styles.label}>
+                                        {currentTask.label}
+                                    </span>
+                                    <span className={styles.elapsedTime}>
+                                        {formatTime(elapsedTime)}
+                                    </span>
+                                </div>
+                                <div className={styles.subLine}>
+                                    <span className={styles.connector}>└</span>
+                                    <AnimatePresence mode="wait">
+                                        <motion.span
+                                            key={visibleSubLabelIndex}
+                                            className={styles.subLabel}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            {
+                                                currentTask.subLabels[
+                                                    visibleSubLabelIndex
+                                                ]
+                                            }
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+                        )}
                     </AnimatePresence>
                 </div>
 
@@ -299,7 +327,7 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
                     ))}
                 </div>
 
-                {/* Cancel link */}
+                {/* Cancel/Dismiss button */}
                 {onCancel && (
                     <motion.button
                         className={styles.cancelLink}
@@ -308,7 +336,13 @@ export default function LoadingState({ onCancel }: LoadingStateProps) {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5, duration: 0.3 }}
                     >
-                        {langCode === "en" ? "Cancel" : "Hủy"}
+                        {error
+                            ? langCode === "en"
+                                ? "Dismiss"
+                                : "Đóng"
+                            : langCode === "en"
+                              ? "Cancel"
+                              : "Hủy"}
                     </motion.button>
                 )}
             </div>
