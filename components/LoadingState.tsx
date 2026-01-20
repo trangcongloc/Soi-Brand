@@ -5,11 +5,11 @@ import { motion } from "framer-motion";
 import styles from "./LoadingState.module.css";
 
 const DEFAULT_STEPS = [
-    { label: "Đang kiểm tra URL", subLabel: "Xác thực định dạng..." },
-    { label: "Đang tải thông tin kênh", subLabel: "Lấy dữ liệu kênh..." },
-    { label: "Đang tải danh sách video", subLabel: "Lấy metadata video..." },
-    { label: "Đang phân tích nội dung", subLabel: "Xử lý dữ liệu..." },
-    { label: "Đang tạo báo cáo", subLabel: "Tổng hợp thông tin..." },
+    { label: "Đang kiểm tra URL", subLabel: "Xác thực định dạng link YouTube và trích xuất ID kênh..." },
+    { label: "Đang tải thông tin kênh", subLabel: "Kết nối YouTube API, lấy số subscriber, lượt xem tổng và mô tả kênh..." },
+    { label: "Đang tải danh sách video", subLabel: "Thu thập 50 video gần nhất, thống kê view, like, comment từng video..." },
+    { label: "Đang phân tích nội dung", subLabel: "Phân tích xu hướng nội dung, tần suất đăng, hiệu suất theo thời gian..." },
+    { label: "Đang tạo báo cáo", subLabel: "Tổng hợp insight, đề xuất chiến lược marketing và ý tưởng video mới..." },
 ];
 
 const STEP_DURATIONS = [1000, 3000, 5000, 15000, 25000];
@@ -94,19 +94,42 @@ export default function LoadingState() {
             transition={{ duration: 0.3 }}
         >
             <div className={styles.terminal}>
-                {/* Completed steps - at top, push up */}
+                {/* Current step - fixed position */}
+                <div className={styles.currentTask}>
+                    <motion.div
+                        key={`current-${currentStep}`}
+                        className={styles.step}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <div className={styles.mainLine}>
+                            <span className={styles.statusIcon}>
+                                {BRAILLE_FRAMES[spinnerFrame]}
+                            </span>
+                            <span className={styles.label}>{currentTask.label}</span>
+                            <span className={styles.elapsedTime}>
+                                {formatTime(elapsedTime)}
+                            </span>
+                        </div>
+                        <div className={styles.subLine}>
+                            <span className={styles.connector}>└</span>
+                            <span className={styles.subLabel}>
+                                {currentTask.subLabel}
+                            </span>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* Completed steps - grow upward */}
                 <div className={styles.completedList}>
                     {completedSteps.map((step, index) => (
                         <motion.div
                             key={`completed-${index}`}
                             className={`${styles.step} ${styles.completed}`}
-                            layout
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 0.5, height: "auto" }}
-                            transition={{
-                                duration: 0.3,
-                                ease: "easeOut"
-                            }}
+                            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                            animate={{ opacity: 0.5, height: "auto", marginTop: 8 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
                         >
                             <div className={styles.mainLine}>
                                 <span className={styles.checkIcon}>✓</span>
@@ -117,31 +140,6 @@ export default function LoadingState() {
                         </motion.div>
                     ))}
                 </div>
-
-                {/* Current step - fixed at bottom */}
-                <motion.div
-                    key={`current-${currentStep}`}
-                    className={styles.step}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    <div className={styles.mainLine}>
-                        <span className={styles.statusIcon}>
-                            {BRAILLE_FRAMES[spinnerFrame]}
-                        </span>
-                        <span className={styles.label}>{currentTask.label}</span>
-                        <span className={styles.elapsedTime}>
-                            {formatTime(elapsedTime)}
-                        </span>
-                    </div>
-                    <div className={styles.subLine}>
-                        <span className={styles.connector}>└</span>
-                        <span className={styles.subLabel}>
-                            {currentTask.subLabel}
-                        </span>
-                    </div>
-                </motion.div>
             </div>
         </motion.div>
     );

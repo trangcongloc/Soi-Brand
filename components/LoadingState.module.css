@@ -1,29 +1,43 @@
 .container {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    min-height: 300px;
     padding: 2rem 1rem;
     max-width: 400px;
     margin: 0 auto;
-    min-height: 200px;
+    position: relative;
 }
 
 .terminal {
     width: 100%;
     font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Monaco", "Inconsolata",
         "Roboto Mono", monospace;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
+}
+
+.currentTask {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 380px;
+    z-index: 10;
 }
 
 .completedList {
+    position: fixed;
+    left: 50%;
+    bottom: calc(50% + 45px);
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    justify-content: flex-end;
     width: 100%;
+    max-width: 380px;
+    z-index: 5;
+    padding-bottom: 8px;
 }
 
 .step {
