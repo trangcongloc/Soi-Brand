@@ -8,32 +8,32 @@ const STEPS = [
     {
         key: "validating",
         duration: 1000,
-        label: "Validating YouTube URL",
-        subLabel: "Checking URL format...",
+        label: "Đang kiểm tra URL",
+        subLabel: "Xác thực định dạng...",
     },
     {
         key: "fetchingChannel",
         duration: 3000,
-        label: "Fetching channel data",
-        subLabel: "Retrieving channel info...",
+        label: "Đang tải thông tin kênh",
+        subLabel: "Lấy dữ liệu kênh...",
     },
     {
         key: "fetchingVideos",
         duration: 5000,
-        label: "Loading recent videos",
-        subLabel: "Fetching video metadata...",
+        label: "Đang tải danh sách video",
+        subLabel: "Lấy metadata video...",
     },
     {
         key: "analyzingContent",
         duration: 15000,
-        label: "Analyzing with Gemini AI",
-        subLabel: "Processing content patterns...",
+        label: "Đang phân tích nội dung",
+        subLabel: "Xử lý dữ liệu...",
     },
     {
         key: "generatingReport",
         duration: 25000,
-        label: "Generating marketing report",
-        subLabel: "Compiling insights...",
+        label: "Đang tạo báo cáo",
+        subLabel: "Tổng hợp thông tin...",
     },
 ];
 
@@ -103,6 +103,9 @@ export default function LoadingState() {
                             {BRAILLE_FRAMES[spinnerFrame]}
                         </span>
                         <span className={styles.label}>{currentTask.label}</span>
+                        <span className={styles.elapsedTime}>
+                            {formatTime(elapsedTime)}
+                        </span>
                     </div>
                     <div className={styles.subLine}>
                         <span className={styles.connector}>└</span>
@@ -111,8 +114,6 @@ export default function LoadingState() {
                         </span>
                     </div>
                 </motion.div>
-
-                <div className={styles.elapsedTime}>{formatTime(elapsedTime)}</div>
             </div>
         </motion.div>
     );
