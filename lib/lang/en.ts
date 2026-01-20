@@ -57,11 +57,34 @@ export const en = {
 
     sidebar: {
         backButton: "Analyze another channel",
-        title: "Report",
+        title: "{channelName}'s Report",
         tabs: {
             data: "Data",
             analysis: "Analysis",
             evaluation: "Evaluation",
+        },
+        sections: {
+            label: "Navigate",
+            data: {
+                channel: "Channel",
+                performance: "Video Performance",
+                content: "Channel Content",
+            },
+            analysis: {
+                strategy: "Strategy Analysis",
+                contentStructure: "Content Structure",
+                funnel: "Marketing Funnel",
+                audience: "Audience Analysis",
+                personas: "Audience Personas",
+                seo: "SEO Analysis",
+                growth: "Growth Opportunities",
+            },
+            evaluation: {
+                overall: "Overall Evaluation",
+                insights: "Actionable Insights",
+                videoIdeas: "Video Ideas",
+                actionPlan: "Action Plan",
+            },
         },
         downloadBox: {
             text: "This report was analyzed using advanced AI models.",

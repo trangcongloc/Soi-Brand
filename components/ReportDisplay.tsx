@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { MarketingReport } from "@/lib/types";
 import styles from "./ReportDisplay.module.css";
 import { downloadJSON } from "@/lib/utils";
@@ -8,6 +8,25 @@ import AnalysisTab from "./report/AnalysisTab";
 import EvaluationTab from "./report/EvaluationTab";
 
 type TabType = "data" | "analysis" | "evaluation";
+
+type SectionId =
+    // Data sections
+    | "section-channel"
+    | "section-performance"
+    | "section-content"
+    // Analysis sections
+    | "section-strategy"
+    | "section-content-structure"
+    | "section-funnel"
+    | "section-audience"
+    | "section-personas"
+    | "section-seo"
+    | "section-growth"
+    // Evaluation sections
+    | "section-overall"
+    | "section-insights"
+    | "section-video-ideas"
+    | "section-action-plan";
 
 interface ReportDisplayProps {
     report: MarketingReport;
@@ -21,6 +40,59 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
     const { report_part_1, report_part_2, report_part_3 } = report;
     const posts = report_part_1?.posts || [];
     const channelInfo = report_part_1?.channel_info;
+
+    const scrollToSection = useCallback((sectionId: SectionId) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            const headerOffset = 80;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth",
+            });
+
+            // Add highlight effect
+            element.classList.remove("section-highlight");
+            void element.offsetWidth; // Trigger reflow to restart animation
+            element.classList.add("section-highlight");
+
+            // Remove class after animation completes
+            setTimeout(() => {
+                element.classList.remove("section-highlight");
+            }, 1500);
+        }
+    }, []);
+
+    const getSectionsForTab = (tab: TabType) => {
+        switch (tab) {
+            case "data":
+                return [
+                    { id: "section-channel" as SectionId, label: lang.sidebar.sections.data.channel },
+                    { id: "section-performance" as SectionId, label: lang.sidebar.sections.data.performance },
+                    { id: "section-content" as SectionId, label: lang.sidebar.sections.data.content },
+                ];
+            case "analysis":
+                return [
+                    { id: "section-strategy" as SectionId, label: lang.sidebar.sections.analysis.strategy },
+                    { id: "section-content-structure" as SectionId, label: lang.sidebar.sections.analysis.contentStructure },
+                    { id: "section-funnel" as SectionId, label: lang.sidebar.sections.analysis.funnel },
+                    { id: "section-audience" as SectionId, label: lang.sidebar.sections.analysis.audience },
+                    { id: "section-personas" as SectionId, label: lang.sidebar.sections.analysis.personas },
+                    { id: "section-seo" as SectionId, label: lang.sidebar.sections.analysis.seo },
+                    { id: "section-growth" as SectionId, label: lang.sidebar.sections.analysis.growth },
+                ];
+            case "evaluation":
+                return [
+                    { id: "section-overall" as SectionId, label: lang.sidebar.sections.evaluation.overall },
+                    { id: "section-insights" as SectionId, label: lang.sidebar.sections.evaluation.insights },
+                    { id: "section-video-ideas" as SectionId, label: lang.sidebar.sections.evaluation.videoIdeas },
+                    { id: "section-action-plan" as SectionId, label: lang.sidebar.sections.evaluation.actionPlan },
+                ];
+        }
+    };
+
+    const currentSections = getSectionsForTab(activeTab);
 
     return (
         <div className={styles.container}>
@@ -42,7 +114,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                     )}
                     <div className={styles.sidebarHeader}>
                         <h2 className={styles.sidebarTitle}>
-                            {lang.sidebar.title}
+                            {formatString(lang.sidebar.title, {
+                                channelName: report.brand_name,
+                            })}
                         </h2>
                         <nav className={styles.nav}>
                             {[
@@ -58,6 +132,24 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                                     }`}
                                 >
                                     {tab.label}
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+
+                    {/* Section Navigation */}
+                    <div className={styles.sectionNav}>
+                        <p className={styles.sectionNavLabel}>
+                            {lang.sidebar.sections.label}
+                        </p>
+                        <nav className={styles.sectionNavList}>
+                            {currentSections.map((section) => (
+                                <button
+                                    key={section.id}
+                                    onClick={() => scrollToSection(section.id)}
+                                    className={styles.sectionNavItem}
+                                >
+                                    {section.label}
                                 </button>
                             ))}
                         </nav>

@@ -222,7 +222,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
 
             {/* ========== BRAND & POSITIONING ========== */}
             {/* Strategy Analysis Section */}
-            <section>
+            <section id="section-strategy">
                 <h3 className={styles.sectionTitle}>
                     <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -536,7 +536,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* ========== CONTENT ANALYSIS ========== */}
             {/* Content Structure Analysis */}
             {report_part_2.strategy_analysis.content_structure_analysis && (
-                <section>
+                <section id="section-content-structure">
                     <h3 className={styles.sectionTitle}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -1112,7 +1112,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
 
             {/* ========== MARKETING FUNNEL ========== */}
             {/* Funnel Analysis */}
-            <section>
+            <section id="section-funnel">
                 <h3 className={styles.sectionTitle}>
                     <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -1262,7 +1262,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* ========== AUDIENCE INTELLIGENCE ========== */}
             {/* Audience Analysis */}
             {report_part_2.audience_analysis && (
-                <section>
+                <section id="section-audience">
                     <h3 className={styles.sectionTitle}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -1636,7 +1636,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* Audience Personas */}
             {report_part_2.audience_personas &&
                 report_part_2.audience_personas.length > 0 && (
-                    <section>
+                    <section id="section-personas">
                         <h3 className={styles.sectionTitle}>
                             <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -1878,7 +1878,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* ========== OPTIMIZATION & GROWTH ========== */}
             {/* SEO Analysis */}
             {report_part_2.seo_analysis && (
-                <section>
+                <section id="section-seo">
                     <h3 className={styles.sectionTitle}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <circle cx="11" cy="11" r="8"></circle>
@@ -2604,7 +2604,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* Growth Opportunities */}
             {report_part_2.growth_opportunities &&
                 report_part_2.growth_opportunities.length > 0 && (
-                    <section>
+                    <section id="section-growth">
                         <h3 className={styles.sectionTitle}>
                             <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>

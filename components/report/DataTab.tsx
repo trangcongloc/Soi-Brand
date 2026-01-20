@@ -121,7 +121,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
             }}
         >
             {/* Channel Info + Heatmap */}
-            <section>
+            <section id="section-channel">
                 <h3 className={styles.sectionTitle}>
                     <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
@@ -236,7 +236,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
 
             {/* Video Performance Chart */}
             {posts.length > 0 && (
-                <section>
+                <section id="section-performance">
                     <h3 className={styles.sectionTitle}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <line x1="12" y1="20" x2="12" y2="10"></line>
@@ -254,7 +254,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
             )}
 
             {/* Posts Accordion */}
-            <section>
+            <section id="section-content">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                     <h3 className={styles.sectionTitle} style={{ marginBottom: 0 }}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

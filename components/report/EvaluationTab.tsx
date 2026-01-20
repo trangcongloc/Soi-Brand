@@ -15,7 +15,7 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
             {/* Overall Evaluation */}
-            <section>
+            <section id="section-overall">
                 <h3 className={styles.sectionTitle}>
                     <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="8" r="7"></circle>
@@ -69,7 +69,7 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
 
             {/* Actionable Insights - Learn From and Avoid */}
             {(report_part_3.actionable_insights.learn_from || report_part_3.actionable_insights.avoid) && (
-                <section>
+                <section id="section-insights">
                     <h3 className={styles.sectionTitle}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
@@ -120,7 +120,7 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
             )}
 
             {/* Video Ideas */}
-            <section>
+            <section id="section-video-ideas">
                 <h3 className={styles.sectionTitle}>
                     <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polygon points="23 7 16 12 23 17 23 7"></polygon>
@@ -159,7 +159,7 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
 
             {/* Action Plan */}
             {report_part_3.action_plan && (
-                <section>
+                <section id="section-action-plan">
                     <h3 className={styles.sectionTitle}>
                         <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M9 11l3 3L22 4"></path>

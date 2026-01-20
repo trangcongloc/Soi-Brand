@@ -375,3 +375,20 @@ select:focus-visible {
 .skip-link:focus {
     top: 0;
 }
+
+/* Section Highlight Animation (for navigation) */
+@keyframes sectionHighlight {
+    0% {
+        outline: 2px solid rgba(0, 0, 0, 0.8);
+        outline-offset: 8px;
+    }
+    100% {
+        outline: 2px solid transparent;
+        outline-offset: 8px;
+    }
+}
+
+.section-highlight {
+    animation: sectionHighlight 1.5s ease-out;
+    border-radius: 0.75rem;
+}

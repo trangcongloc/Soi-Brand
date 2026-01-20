@@ -55,11 +55,34 @@ export const vi = {
 
     sidebar: {
         backButton: "← Phân tích kênh khác",
-        title: "Báo cáo",
+        title: "Báo cáo kênh {channelName}",
         tabs: {
             data: "Dữ liệu",
             analysis: "Phân tích",
             evaluation: "Đánh giá",
+        },
+        sections: {
+            label: "Điều hướng",
+            data: {
+                channel: "Kênh",
+                performance: "Hiệu suất Video",
+                content: "Nội dung kênh",
+            },
+            analysis: {
+                strategy: "Phân tích chiến lược",
+                contentStructure: "Cấu trúc nội dung",
+                funnel: "Phễu Marketing",
+                audience: "Phân tích khán giả",
+                personas: "Phân khúc khán giả",
+                seo: "SEO & Tìm kiếm",
+                growth: "Cơ hội tăng trưởng",
+            },
+            evaluation: {
+                overall: "Đánh giá chung",
+                insights: "Đề xuất hành động",
+                videoIdeas: "Ý tưởng Video",
+                actionPlan: "Kế hoạch hành động",
+            },
         },
         downloadBox: {
             text: "Báo cáo này được phân tích bằng mô hình AI siêu cấp víp pờ rồ.",
