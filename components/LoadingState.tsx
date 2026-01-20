@@ -28,8 +28,9 @@ export default function LoadingState() {
     const [steps, setSteps] = useState<StepLabel[]>(DEFAULT_STEPS);
 
     // Fetch AI-generated labels
+    // Delay fetch until after step 0 completes to prevent mid-step text jump
     useEffect(() => {
-        const fetchLabels = async () => {
+        const fetchTimer = setTimeout(async () => {
             try {
                 const response = await fetch("/api/loading-labels");
                 if (response.ok) {
@@ -41,9 +42,9 @@ export default function LoadingState() {
             } catch {
                 // Keep default labels on error
             }
-        };
+        }, STEP_DURATIONS[0]); // Wait for step 0 duration (2500ms)
 
-        fetchLabels();
+        return () => clearTimeout(fetchTimer);
     }, []);
 
     // Step progression
