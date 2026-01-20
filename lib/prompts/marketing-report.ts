@@ -108,7 +108,8 @@ QUAN TRỌNG:
   * top_countries: TẤT CẢ các mục PHẢI là tên quốc gia CỤ THỂ BẰNG TIẾNG VIỆT
   * KHÔNG ĐƯỢC dùng: "Khác", "Other", "Đông Nam Á", "Southeast Asia", "Châu Á", "Asia", "Quốc gia 1", "Country 1", hoặc bất kỳ tên vùng/khu vực nào
   * CHỈ ĐƯỢC dùng tên quốc gia cụ thể: "Hoa Kỳ", "Việt Nam", "Nhật Bản", "Ấn Độ", "Brasil", "Philippines", "Thái Lan", "Indonesia", "Malaysia", "Hàn Quốc", "Đức", "Pháp", "Anh", "Canada", "Úc", v.v.
-  * Nếu không chắc chắn, hãy ước tính dựa trên ngôn ngữ nội dung và đặt phần trăm thấp cho quốc gia thứ 3
+  * PHẢI liệt kê ÍT NHẤT 5 quốc gia cụ thể
+  * Nếu không chắc chắn, hãy ước tính dựa trên ngôn ngữ nội dung và đặt phần trăm thấp cho các quốc gia cuối
 - Tạo ÍT NHẤT 2 audience segments (NHÓM khán giả, không phải cá nhân) với ĐẦY ĐỦ thông tin
 - Tạo ÍT NHẤT 3 growth opportunities với priority khác nhau (cao, trung bình, thấp)
 - Video ideas phải CỤ THỂ cho kênh này, không chung chung
@@ -212,7 +213,8 @@ IMPORTANT:
   * top_countries: ALL entries MUST be SPECIFIC country names
   * DO NOT use: "Other", "Southeast Asia", "Asia", "Europe", "Country 1", or any region/area names
   * ONLY use specific country names: "United States", "Vietnam", "Japan", "India", "Brazil", "Philippines", "Thailand", "Indonesia", "Malaysia", "South Korea", "Germany", "France", "United Kingdom", "Canada", "Australia", etc.
-  * If uncertain, estimate based on content language and assign lower percentage to the 3rd country
+  * MUST list AT LEAST 5 specific countries
+  * If uncertain, estimate based on content language and assign lower percentages to the last countries
 - Create AT LEAST 2 audience segments (GROUPS, not individuals) with COMPLETE information
 - Create AT LEAST 3 growth opportunities with different priorities (high, medium, low)
 - Video ideas must be SPECIFIC to this channel, not generic
@@ -318,9 +320,11 @@ function JSON_STRUCTURE_TEMPLATE(
           "other": 2
         },
         "top_countries": [
-          {"country": "TÊN QUỐC GIA CỤ THỂ #1 (VD: 'Hoa Kỳ', 'Việt Nam', 'Ấn Độ' - ước tính dựa trên ngôn ngữ nội dung)", "percentage": 70},
-          {"country": "TÊN QUỐC GIA CỤ THỂ #2 (VD: 'Philippines', 'Thái Lan', 'Indonesia', 'Malaysia')", "percentage": 20},
-          {"country": "TÊN QUỐC GIA CỤ THỂ #3 (VD: 'Nhật Bản', 'Hàn Quốc', 'Đức', 'Anh' - KHÔNG dùng 'Khác' hay tên vùng)", "percentage": 10}
+          {"country": "TÊN QUỐC GIA CỤ THỂ #1 (VD: 'Hoa Kỳ', 'Việt Nam', 'Ấn Độ' - ước tính dựa trên ngôn ngữ nội dung)", "percentage": 40},
+          {"country": "TÊN QUỐC GIA CỤ THỂ #2 (VD: 'Philippines', 'Thái Lan', 'Indonesia', 'Malaysia')", "percentage": 25},
+          {"country": "TÊN QUỐC GIA CỤ THỂ #3 (VD: 'Nhật Bản', 'Hàn Quốc', 'Đức', 'Anh')", "percentage": 15},
+          {"country": "TÊN QUỐC GIA CỤ THỂ #4 (VD: 'Canada', 'Úc', 'Singapore', 'Brasil')", "percentage": 12},
+          {"country": "TÊN QUỐC GIA CỤ THỂ #5 (VD: 'Mexico', 'Pháp', 'Nga', 'Đài Loan' - KHÔNG dùng 'Khác' hay tên vùng)", "percentage": 8}
         ],
         "primary_languages": ["Ngôn ngữ chính của kênh", "Ngôn ngữ phụ nếu có"]
       },
@@ -649,9 +653,11 @@ function JSON_STRUCTURE_TEMPLATE_EN(
           "other": 2
         },
         "top_countries": [
-          {"country": "SPECIFIC COUNTRY NAME #1 (e.g., 'United States', 'Vietnam', 'India' - estimate based on content language)", "percentage": 70},
-          {"country": "SPECIFIC COUNTRY NAME #2 (e.g., 'Philippines', 'Thailand', 'Indonesia', 'Malaysia')", "percentage": 20},
-          {"country": "SPECIFIC COUNTRY NAME #3 (e.g., 'Japan', 'South Korea', 'Germany', 'UK' - DO NOT use 'Other' or region names)", "percentage": 10}
+          {"country": "SPECIFIC COUNTRY NAME #1 (e.g., 'United States', 'Vietnam', 'India' - estimate based on content language)", "percentage": 40},
+          {"country": "SPECIFIC COUNTRY NAME #2 (e.g., 'Philippines', 'Thailand', 'Indonesia', 'Malaysia')", "percentage": 25},
+          {"country": "SPECIFIC COUNTRY NAME #3 (e.g., 'Japan', 'South Korea', 'Germany', 'UK')", "percentage": 15},
+          {"country": "SPECIFIC COUNTRY NAME #4 (e.g., 'Canada', 'Australia', 'Singapore', 'Brazil')", "percentage": 12},
+          {"country": "SPECIFIC COUNTRY NAME #5 (e.g., 'Mexico', 'France', 'Russia', 'Taiwan' - DO NOT use 'Other' or region names)", "percentage": 8}
         ],
         "primary_languages": ["Channel's main language", "Secondary language if any"]
       },
