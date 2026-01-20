@@ -16,7 +16,13 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
             {/* Overall Evaluation */}
             <section>
-                <h3 className={styles.sectionTitle}>{lang.evaluation.overallTitle}</h3>
+                <h3 className={styles.sectionTitle}>
+                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="8" r="7"></circle>
+                        <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                    </svg>
+                    {lang.evaluation.overallTitle}
+                </h3>
                 <div className={`${styles.card} ${styles.summaryCard}`}>
                     <h4 className={`${styles.cardTitle} ${styles.textBlue}`}>
                         {lang.evaluation.executiveSummary}
@@ -64,7 +70,12 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
             {/* Actionable Insights - Learn From and Avoid */}
             {(report_part_3.actionable_insights.learn_from || report_part_3.actionable_insights.avoid) && (
                 <section>
-                    <h3 className={styles.sectionTitle}>{lang.evaluation.insights.title}</h3>
+                    <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        {lang.evaluation.insights.title}
+                    </h3>
                     <div className={styles.grid2}>
                         {/* Learn From */}
                         {report_part_3.actionable_insights.learn_from && (
@@ -110,7 +121,13 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
 
             {/* Video Ideas */}
             <section>
-                <h3 className={styles.sectionTitle}>{lang.evaluation.videoIdeas.title}</h3>
+                <h3 className={styles.sectionTitle}>
+                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    {lang.evaluation.videoIdeas.title}
+                </h3>
                 <div style={{ display: "grid", gap: "0.75rem" }}>
                     {report_part_3.actionable_insights.video_ideas.map((idea, idx) => (
                         <div key={idx} className={styles.ideaCard}>
@@ -143,7 +160,13 @@ const EvaluationTab: React.FC<EvaluationTabProps> = ({ report_part_3 }) => {
             {/* Action Plan */}
             {report_part_3.action_plan && (
                 <section>
-                    <h3 className={styles.sectionTitle}>{lang.evaluation.actionPlan.title}</h3>
+                    <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 11l3 3L22 4"></path>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        {lang.evaluation.actionPlan.title}
+                    </h3>
 
                     {/* Tab Navigation */}
                     <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>

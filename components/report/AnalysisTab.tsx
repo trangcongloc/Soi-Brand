@@ -224,6 +224,11 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* Strategy Analysis Section */}
             <section>
                 <h3 className={styles.sectionTitle}>
+                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                    </svg>
                     {lang.analysis.strategyTitle}
                 </h3>
                 <div className={styles.grid2}>
@@ -533,6 +538,16 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {report_part_2.strategy_analysis.content_structure_analysis && (
                 <section>
                     <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                            <line x1="7" y1="2" x2="7" y2="22"></line>
+                            <line x1="17" y1="2" x2="17" y2="22"></line>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <line x1="2" y1="7" x2="7" y2="7"></line>
+                            <line x1="2" y1="17" x2="7" y2="17"></line>
+                            <line x1="17" y1="17" x2="22" y2="17"></line>
+                            <line x1="17" y1="7" x2="22" y2="7"></line>
+                        </svg>
                         {lang.analysis.contentStructureAnalysis.title}
                     </h3>
                     <div className={styles.grid2}>
@@ -576,6 +591,12 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {(currentStats || report_part_2.content_calendar) && (
                 <section>
                     <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
                         {langCode === "vi"
                             ? "Lịch đăng nội dung"
                             : "Content Calendar Insights"}
@@ -846,6 +867,11 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 report_part_2.content_calendar?.worst_performing_overview) && (
                 <section>
                     <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
                         {langCode === "vi"
                             ? "Tổng quan hiệu suất nội dung"
                             : "Content Performance Overview"}
@@ -888,6 +914,12 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 report_part_2.content_calendar.content_mix.length > 0 && (
                     <section>
                         <h3 className={styles.sectionTitle}>
+                            <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
                             {langCode === "vi"
                                 ? "Phối hợp nội dung"
                                 : "Content Mix"}
@@ -1082,6 +1114,9 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {/* Funnel Analysis */}
             <section>
                 <h3 className={styles.sectionTitle}>
+                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
                     {lang.analysis.funnelAnalysis.title}
                 </h3>
                 <div style={{ marginTop: "1rem" }}>
@@ -1229,6 +1264,12 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {report_part_2.audience_analysis && (
                 <section>
                     <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
                         {lang.analysis.audienceAnalysis.title}
                     </h3>
                     <div className={styles.grid2}>
@@ -1440,29 +1481,12 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                         <div
                             className={`${styles.card} ${styles.accentPurple}`}
                         >
-                            <div className={styles.sectionHeader}>
-                                <div
-                                    className={`${styles.iconBox} ${styles.iconPurple}`}
-                                >
-                                    <svg
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                    >
-                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
-                                        <circle cx="12" cy="12" r="3" />
-                                    </svg>
-                                </div>
-                                <h4 className={styles.cardHeaderTitle}>
-                                    {
-                                        lang.analysis.audienceAnalysis
-                                            .behaviorTitle
-                                    }
-                                </h4>
-                            </div>
+                            <h4 className={styles.cardTitle}>
+                                {
+                                    lang.analysis.audienceAnalysis
+                                        .behaviorTitle
+                                }
+                            </h4>
                             <div
                                 style={{ fontSize: "11px", lineHeight: "1.8" }}
                             >
@@ -1614,6 +1638,10 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 report_part_2.audience_personas.length > 0 && (
                     <section>
                         <h3 className={styles.sectionTitle}>
+                            <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
                             {lang.analysis.audiencePersonas.title}
                         </h3>
                         <div className={styles.grid2}>
@@ -1852,6 +1880,10 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
             {report_part_2.seo_analysis && (
                 <section>
                     <h3 className={styles.sectionTitle}>
+                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
                         {lang.analysis.seoAnalysis.title}
                     </h3>
 
@@ -2467,6 +2499,9 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                         .length > 0 && (
                         <div>
                             <h3 className={styles.sectionTitle}>
+                                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                </svg>
                                 {
                                     lang.analysis.seoAnalysis
                                         .optimizationOpportunities
@@ -2571,6 +2606,10 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({ report_part_2, posts }) => {
                 report_part_2.growth_opportunities.length > 0 && (
                     <section>
                         <h3 className={styles.sectionTitle}>
+                            <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline points="17 6 23 6 23 12"></polyline>
+                            </svg>
                             {lang.analysis.growthOpportunities.title}
                         </h3>
                         <div style={{ display: "grid", gap: "0.75rem" }}>

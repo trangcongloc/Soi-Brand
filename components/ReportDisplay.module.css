@@ -137,6 +137,15 @@
     color: #8e8e8e;
     letter-spacing: 0.05em;
     margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sectionIcon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
 }
 
 /* Channel New Layout */
