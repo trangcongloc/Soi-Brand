@@ -43,7 +43,7 @@ export const vi = {
 
     sidebar: {
         backButton: "← Phân tích kênh khác",
-        title: "Báo cáo kênh {channelName}",
+        title: "{channelName}",
         tabs: {
             data: "Dữ liệu",
             analysis: "Phân tích",
@@ -352,7 +352,8 @@ export const vi = {
     loadingState: {
         retrying: "Đang thử lại...",
         retryCount: "Thử lại lần {current}/{max} sau {seconds}s...",
-        maxRetriesReached: "Đã thử lại {max} lần. Vui lòng thử lại sau vài phút.",
+        maxRetriesReached:
+            "Đã thử lại {max} lần. Vui lòng thử lại sau vài phút.",
         retryNow: "Thử lại ngay",
         cancel: "Hủy",
         dismiss: "Đóng",

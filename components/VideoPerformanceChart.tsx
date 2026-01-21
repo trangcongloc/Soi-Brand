@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
     LineChart,
     Line,
@@ -163,14 +164,16 @@ function VideoPerformanceChart({
                                         }}
                                     >
                                         {/* Thumbnail on the left - matches full height */}
-                                        <img
+                                        <Image
                                             src={data.thumbnail}
                                             alt={data.fullTitle}
+                                            width={120}
+                                            height={90}
                                             style={{
-                                                width: "120px",
                                                 objectFit: "cover",
                                                 flexShrink: 0,
                                             }}
+                                            unoptimized
                                         />
 
                                         {/* Content on the right */}

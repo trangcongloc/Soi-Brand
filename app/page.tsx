@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import AnalysisForm from "@/components/AnalysisForm";
-import LoadingState from "@/components/LoadingState";
-import AnalysisHistory from "@/components/AnalysisHistory";
 import SplashScreen from "@/components/SplashScreen";
+
+// Lazy load heavy components for better initial bundle size
+const LoadingState = dynamic(() => import("@/components/LoadingState"), {
+    ssr: false,
+});
+const AnalysisHistory = dynamic(() => import("@/components/AnalysisHistory"), {
+    ssr: false,
+});
 import { MarketingReport, AnalyzeResponse } from "@/lib/types";
 import { useLanguage } from "@/lib/lang";
 import { getUserSettings } from "@/lib/userSettings";
@@ -63,7 +70,10 @@ interface FilterState {
 export default function Home() {
     const router = useRouter();
     const { lang, langCode } = useLanguage();
-    const [showSplash, setShowSplash] = useState(true);
+    const [showSplash, setShowSplash] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return !sessionStorage.getItem("soibrand-splash-shown");
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<string | null>(null);
@@ -220,7 +230,10 @@ export default function Home() {
         <main id="main-content" className="min-h-screen flex flex-col">
             <AnimatePresence>
                 {showSplash && (
-                    <SplashScreen onComplete={() => setShowSplash(false)} />
+                    <SplashScreen onComplete={() => {
+                        sessionStorage.setItem("soibrand-splash-shown", "true");
+                        setShowSplash(false);
+                    }} />
                 )}
             </AnimatePresence>
 

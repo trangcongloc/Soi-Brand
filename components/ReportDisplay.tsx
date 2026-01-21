@@ -52,10 +52,13 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                 behavior: "smooth",
             });
 
-            // Add highlight effect
+            // Add highlight effect using double rAF to avoid forced reflow
             element.classList.remove("section-highlight");
-            void element.offsetWidth; // Trigger reflow to restart animation
-            element.classList.add("section-highlight");
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    element.classList.add("section-highlight");
+                });
+            });
 
             // Remove class after animation completes
             setTimeout(() => {

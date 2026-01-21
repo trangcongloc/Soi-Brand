@@ -45,7 +45,7 @@ export const en = {
 
     sidebar: {
         backButton: "Analyze another channel",
-        title: "{channelName}'s Report",
+        title: "{channelName}",
         tabs: {
             data: "Data",
             analysis: "Analysis",
@@ -355,7 +355,8 @@ export const en = {
     loadingState: {
         retrying: "Retrying...",
         retryCount: "Retry {current}/{max} in {seconds}s...",
-        maxRetriesReached: "Retried {max} times. Please try again in a few minutes.",
+        maxRetriesReached:
+            "Retried {max} times. Please try again in a few minutes.",
         retryNow: "Retry now",
         cancel: "Cancel",
         dismiss: "Dismiss",
@@ -375,7 +376,8 @@ export const en = {
 
     errorBoundary: {
         title: "An error occurred",
-        description: "The app encountered an unexpected error. Please try again.",
+        description:
+            "The app encountered an unexpected error. Please try again.",
         details: "Error details (Development)",
         retry: "Retry",
         reload: "Reload page",
