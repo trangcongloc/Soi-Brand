@@ -183,7 +183,7 @@ export async function getChannelInfo(
 }
 
 /**
- * Get all videos from last 30 days. If fewer than 30 videos, expand to 90 days.
+ * Get all videos from last 30 days. If fewer than 50, fetch at least 50 videos total.
  */
 export async function getChannelVideos(
     channelId: string,
@@ -219,6 +219,10 @@ export async function getChannelVideos(
             channelResponse.data.items[0].contentDetails.relatedPlaylists
                 .uploads;
 
+        // Calculate 30 days ago
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
         // Helper function to fetch playlist page
         const fetchPlaylistPage = async (pageToken?: string) => {
             const response = await apiClient.get(
@@ -242,53 +246,45 @@ export async function getChannelVideos(
             };
         };
 
-        // Helper function to fetch videos within a date range
-        const fetchVideosInDateRange = async (daysBack: number): Promise<string[]> => {
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+        // Fetch videos: all from 30 days, or minimum 50 total
+        let allVideoIds: string[] = [];
+        const MIN_VIDEOS = 50;
+        const MAX_PAGES = 10; // Safety limit: 10 pages * 50 = 500 max videos
+        let nextPageToken: string | undefined = undefined;
+        let reachedOldVideos = false;
 
-            let videoIds: string[] = [];
-            const MAX_PAGES = 10; // Safety limit: 10 pages * 50 = 500 max videos
-            let nextPageToken: string | undefined = undefined;
+        for (let pageCount = 0; pageCount < MAX_PAGES; pageCount++) {
+            const data = await fetchPlaylistPage(nextPageToken);
 
-            for (let pageCount = 0; pageCount < MAX_PAGES; pageCount++) {
-                const data = await fetchPlaylistPage(nextPageToken);
+            const items = data.items;
+            if (!items || items.length === 0) {
+                break;
+            }
 
-                const items = data.items;
-                if (!items || items.length === 0) {
-                    break;
-                }
+            // Collect videos and check dates
+            for (const item of items) {
+                const publishedAt = new Date(
+                    item.contentDetails.videoPublishedAt || item.snippet.publishedAt
+                );
 
-                // Check each video's publish date
-                for (const item of items) {
-                    const publishedAt = new Date(
-                        item.contentDetails.videoPublishedAt || item.snippet.publishedAt
-                    );
+                allVideoIds.push(item.contentDetails.videoId);
 
-                    if (publishedAt >= cutoffDate) {
-                        videoIds.push(item.contentDetails.videoId);
-                    } else {
-                        // Videos are sorted by date (newest first)
-                        // Once we hit an older video, stop fetching
-                        return videoIds;
-                    }
-                }
-
-                nextPageToken = data.nextPageToken;
-                if (!nextPageToken) {
-                    break;
+                // Mark when we pass the 30-day threshold
+                if (publishedAt < thirtyDaysAgo) {
+                    reachedOldVideos = true;
                 }
             }
 
-            return videoIds;
-        };
+            // Stop conditions:
+            // 1. If we have 50+ videos and we've passed the 30-day mark
+            if (reachedOldVideos && allVideoIds.length >= MIN_VIDEOS) {
+                break;
+            }
 
-        // Step 1: Fetch all videos from last 30 days
-        let allVideoIds = await fetchVideosInDateRange(30);
-
-        // Step 2: If less than 30 videos, expand to 90 days
-        if (allVideoIds.length < 30) {
-            allVideoIds = await fetchVideosInDateRange(90);
+            nextPageToken = data.nextPageToken;
+            if (!nextPageToken) {
+                break;
+            }
         }
 
         if (allVideoIds.length === 0) {
@@ -341,7 +337,7 @@ export async function getChannelVideos(
 
 /**
  * Get full channel data (info + videos)
- * Videos: All from last 30 days, or all from 90 days if fewer than 30
+ * Videos: All from last 30 days, or minimum 50 videos if fewer
  */
 export async function getFullChannelData(
     channelUrl: string,
@@ -354,7 +350,7 @@ export async function getFullChannelData(
 
     const [channelInfo, videos] = await Promise.all([
         getChannelInfo(channelId, customApiKey),
-        getChannelVideos(channelId, 50, customApiKey), // All from 30 days, or 90 days if <30
+        getChannelVideos(channelId, 50, customApiKey), // All from 30 days, or min 50 if fewer
     ]);
 
     if (!channelInfo) {
