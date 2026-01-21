@@ -85,7 +85,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 1.0 }}
                 >
-                    <span className={styles.title}>Soi'Brand</span>
+                    <span className={styles.title}>Soi&apos;Brand</span>
                     <span className={styles.subtitle}>Marketing Analytics</span>
                 </motion.div>
 

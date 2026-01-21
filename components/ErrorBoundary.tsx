@@ -42,11 +42,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
         // Log error to console in development
         console.error("ErrorBoundary caught an error:", error, errorInfo);
-
-        // TODO: Send to error tracking service (e.g., Sentry)
-        // if (typeof window !== 'undefined' && window.Sentry) {
-        //     window.Sentry.captureException(error, { extra: errorInfo });
-        // }
     }
 
     handleRetry = (): void => {
