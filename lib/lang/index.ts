@@ -44,20 +44,8 @@ export function useLanguage() {
     return useContext(LanguageContext);
 }
 
-// Detect browser language
-export function detectBrowserLanguage(): LanguageCode {
-    if (typeof window === "undefined") return defaultLanguageCode;
-
-    const browserLang = navigator.language.toLowerCase();
-
-    if (browserLang.startsWith("vi")) return "vi";
-    if (browserLang.startsWith("en")) return "en";
-
-    return defaultLanguageCode;
-}
-
 // Storage key for language preference
-export const LANGUAGE_STORAGE_KEY = "soibrand-language";
+const LANGUAGE_STORAGE_KEY = "soibrand-language";
 
 // Get stored language preference
 export function getStoredLanguage(): LanguageCode | null {

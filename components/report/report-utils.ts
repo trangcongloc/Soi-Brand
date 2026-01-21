@@ -1,7 +1,5 @@
 // Report display utility functions
 
-import styles from "@/components/ReportDisplay.module.css";
-
 export const formatFullNumber = (num: number | string): string => {
     const n = typeof num === "string" ? parseInt(num) : num;
     if (isNaN(n)) return "0";
@@ -43,24 +41,6 @@ export const truncateText = (text: string, limit: number): string => {
             ? truncated.substring(0, lastSpaceIndex)
             : truncated) + " . . ."
     );
-};
-
-export const getVideoTypeBadge = (videoType: string) => {
-    const badgeClass =
-        {
-            Short: styles.videoTypeShort,
-            Live: styles.videoTypeLive,
-            Upcoming: styles.videoTypeUpcoming,
-            Premiere: styles.videoTypePremiere,
-            Video: "", // No special badge for regular videos
-        }[videoType] || "";
-
-    if (!badgeClass && videoType === "Video") return null;
-
-    return {
-        className: `${styles.videoTypeBadge} ${badgeClass}`,
-        label: videoType,
-    };
 };
 
 // Time-based Ranking Algorithm (Hacker News style)

@@ -219,7 +219,7 @@ export function clearExpiredReports(): void {
 /**
  * Clear old reports (keep only most recent per channel)
  */
-export function clearOldReports(): void {
+function clearOldReports(): void {
     if (!isBrowser()) return;
 
     const keys = getAllCacheKeys();

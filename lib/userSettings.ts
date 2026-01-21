@@ -164,15 +164,3 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
     }
 }
 
-/**
- * Save user settings synchronously (deprecated, use saveUserSettingsAsync)
- */
-export function saveUserSettings(settings: UserSettings): void {
-    // Fire and forget async save
-    saveUserSettingsAsync(settings).catch((error) => {
-        logger.error("[UserSettings] Error in async save", error);
-    });
-    // Update cache immediately
-    cachedSettings = settings;
-}
-
