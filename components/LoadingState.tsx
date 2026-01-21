@@ -176,12 +176,29 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
     const defaultSteps =
         langCode === "en" ? DEFAULT_STEPS_EN : DEFAULT_STEPS_VI;
 
+    // Initialize steps: use cached AI labels if available, otherwise use defaults
+    const getInitialSteps = (): StepLabel[] => {
+        if (disableAILabels) return defaultSteps;
+
+        try {
+            const cached = localStorage.getItem(LABELS_CACHE_KEY);
+            if (cached) {
+                const data: CachedLabels = JSON.parse(cached);
+                if (data.lang === langCode && data.labels?.length === 5) {
+                    return data.labels;
+                }
+            }
+        } catch {
+            // Cache read failed, use defaults
+        }
+        return defaultSteps;
+    };
+
     const [currentStep, setCurrentStep] = useState(0);
     const [visibleSubLabelIndex, setVisibleSubLabelIndex] = useState(0);
     const [spinnerFrame, setSpinnerFrame] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
-    const [steps, setSteps] = useState<StepLabel[]>(defaultSteps);
-    const pendingLabelsRef = useRef<StepLabel[] | null>(null);
+    const [steps] = useState<StepLabel[]>(getInitialSteps()); // Never change steps after initialization
 
     // Auto-retry state
     const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
@@ -199,39 +216,35 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
     // Get error title based on errorType
     const errorTitles = langCode === "en" ? ERROR_TITLES_EN : ERROR_TITLES_VI;
     const errorTitle = errorType ? (errorTitles[errorType] || errorTitles.UNKNOWN) : errorTitles.UNKNOWN;
-    const initialLangRef = useRef(langCode);
 
-    // Load labels: use cache if available, fetch if not. Refresh cache on unmount.
+    // Fetch fresh AI labels in background for next run (only if not cached)
     useEffect(() => {
         if (disableAILabels) return;
 
+        // Check if we already have cached labels for this language
         let hasCache = false;
-
-        // Try to use cached labels
         try {
             const cached = localStorage.getItem(LABELS_CACHE_KEY);
             if (cached) {
                 const data: CachedLabels = JSON.parse(cached);
-                if (data.lang === initialLangRef.current && data.labels?.length === 5) {
-                    pendingLabelsRef.current = data.labels;
+                if (data.lang === langCode && data.labels?.length === 5) {
                     hasCache = true;
                 }
             }
         } catch {
-            // Cache read failed
+            // Cache check failed
         }
 
-        // No cache - fetch for first use
+        // Only fetch if no cache exists
         if (!hasCache) {
-            fetch(`/api/loading-labels?lang=${initialLangRef.current}`)
+            fetch(`/api/loading-labels?lang=${langCode}`)
                 .then(response => response.ok ? response.json() : null)
                 .then(data => {
                     if (data?.steps?.length === 5) {
-                        pendingLabelsRef.current = data.steps;
                         try {
                             localStorage.setItem(LABELS_CACHE_KEY, JSON.stringify({
                                 labels: data.steps,
-                                lang: initialLangRef.current,
+                                lang: langCode,
                             }));
                         } catch {
                             // Cache write failed
@@ -240,26 +253,7 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
                 })
                 .catch(() => {});
         }
-
-        // Refresh cache in background when component unmounts (analysis done)
-        return () => {
-            fetch(`/api/loading-labels?lang=${initialLangRef.current}`)
-                .then(response => response.ok ? response.json() : null)
-                .then(data => {
-                    if (data?.steps?.length === 5) {
-                        try {
-                            localStorage.setItem(LABELS_CACHE_KEY, JSON.stringify({
-                                labels: data.steps,
-                                lang: initialLangRef.current,
-                            }));
-                        } catch {
-                            // Cache write failed
-                        }
-                    }
-                })
-                .catch(() => {});
-        };
-    }, [disableAILabels]);
+    }, [disableAILabels, langCode]);
 
     // Save current step when error occurs (don't add to history until retry)
     useEffect(() => {
@@ -287,11 +281,6 @@ export default function LoadingState({ onCancel, onRetry, error, errorType, disa
 
             return setTimeout(
                 () => {
-                    // Apply pending AI labels at step transition if available
-                    if (pendingLabelsRef.current) {
-                        setSteps(pendingLabelsRef.current);
-                        pendingLabelsRef.current = null;
-                    }
                     setCurrentStep(actualStepIndex);
                     setVisibleSubLabelIndex(0);
                 },
