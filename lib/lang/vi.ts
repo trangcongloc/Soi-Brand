@@ -7,18 +7,6 @@ export const vi = {
             "Soi'Brand, YouTube, marketing, analysis, AI, phân tích, chiến lược",
     },
 
-    patch: {
-        title: "Lịch sử cập nhật",
-        subtitle: "Những cập nhật mới trong Soi'Brand",
-        backButton: "Quay lại",
-        badges: {
-            feature: "MỚI",
-            fix: "SỬA LỖI",
-            improvement: "CẢI THIỆN",
-            breaking: "THAY ĐỔI LỚN",
-        },
-    },
-
     home: {
         title: "Soi'Brand",
     },

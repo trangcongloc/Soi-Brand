@@ -345,37 +345,6 @@ export default function Home() {
                     </div>
                 )}
             </AnimatePresence>
-
-            {/* Version indicator */}
-            {!showSplash && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1, duration: 0.5 }}
-                    style={{
-                        position: "fixed",
-                        bottom: "1rem",
-                        right: "1rem",
-                        fontSize: "0.75rem",
-                        color: "#9ca3af",
-                        zIndex: 10,
-                    }}
-                >
-                    <a
-                        href="/patch"
-                        style={{
-                            color: "inherit",
-                            textDecoration: "none",
-                            opacity: 0.6,
-                            transition: "opacity 0.2s",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
-                    >
-                        v1.2.0
-                    </a>
-                </motion.div>
-            )}
         </main>
     );
 }
