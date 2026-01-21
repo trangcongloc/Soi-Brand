@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
+import { motion } from "framer-motion";
 import { Post, ChannelInfo } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";
@@ -11,6 +12,10 @@ import {
     calculateHackerNewsScore,
     formatRelativeTime,
 } from "./report-utils";
+import {
+    sortAnimations,
+    layoutTransition,
+} from "@/lib/animations";
 
 // Dynamic import needs to be outside the component
 const VideoPerformanceChart = dynamic(
@@ -54,9 +59,11 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
     const [isChannelHovered, setIsChannelHovered] = useState(false);
     const [sortOrder, setSortOrder] = useState<SortOrder>("latest");
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [selectionSource, setSelectionSource] = useState<'chart' | 'heatmap' | null>(null);
 
-    const handleDateClick = (dateIso: string) => {
+    const handleDateClick = (dateIso: string, source: 'chart' | 'heatmap' = 'heatmap') => {
         setSelectedDate(selectedDate === dateIso ? null : dateIso);
+        setSelectionSource(source);
         setActiveAccordion(null);
     };
 
@@ -235,7 +242,8 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                         <UploadHeatmap
                             posts={posts}
                             selectedDate={selectedDate}
-                            onDateClick={handleDateClick}
+                            onDateClick={(dateIso) => handleDateClick(dateIso, 'heatmap')}
+                            isSelectedFromChart={selectionSource === 'chart'}
                         />
                     </div>
                 </div>
@@ -253,7 +261,12 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                         {lang.dataTab.videoPerformance}
                     </h3>
                     <div className={styles.card}>
-                        <VideoPerformanceChart posts={posts} maxItems={50} selectedDate={selectedDate} onDateClick={handleDateClick} />
+                        <VideoPerformanceChart
+                            posts={posts}
+                            maxItems={50}
+                            selectedDate={selectedDate}
+                            onDateClick={(dateIso) => handleDateClick(dateIso, 'chart')}
+                        />
                     </div>
                 </section>
             )}
@@ -276,24 +289,35 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                             {lang.posts.sortBy}
                         </span>
                         <div style={{ display: "flex", gap: "4px" }}>
-                            <button
+                            <motion.button
                                 onClick={() => setSortOrder("latest")}
                                 className={`${styles.sortButton} ${sortOrder === "latest" ? styles.sortButtonActive : ""}`}
+                                whileTap={{ scale: sortAnimations.buttonScale }}
+                                whileHover={{ scale: 1.02 }}
+                                transition={{ duration: sortAnimations.buttonDuration }}
                             >
                                 {lang.posts.sortLatest}
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
                                 onClick={() => setSortOrder("rating")}
                                 className={`${styles.sortButton} ${sortOrder === "rating" ? styles.sortButtonActive : ""}`}
+                                whileTap={{ scale: sortAnimations.buttonScale }}
+                                whileHover={{ scale: 1.02 }}
+                                transition={{ duration: sortAnimations.buttonDuration }}
                             >
                                 {lang.posts.sortRating}
-                            </button>
+                            </motion.button>
                         </div>
                     </div>
                 </div>
                 <div className={styles.postList}>
                     {sortedPosts.map(({ post, originalIndex, score }, displayIndex) => (
-                        <div key={originalIndex} className={styles.postCard}>
+                        <motion.div
+                            key={originalIndex}
+                            className={styles.postCard}
+                            layout="position"
+                            transition={layoutTransition}
+                        >
                             <div
                                 className={`${styles.accordionHeader} ${
                                     activeAccordion === displayIndex
@@ -539,7 +563,7 @@ const DataTab: React.FC<DataTabProps> = ({ posts, channelInfo }) => {
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </section>

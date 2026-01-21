@@ -496,7 +496,7 @@
 }
 
 .accordionIcon {
-  transition: transform 0.2s;
+  /* No transition - instant rotation */
 }
 
 .rotate180 {

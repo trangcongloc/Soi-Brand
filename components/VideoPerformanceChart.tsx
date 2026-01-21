@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { Post } from "@/lib/types";
 import { useLanguage, useLang } from "@/lib/lang";
+import { chartAnimationProps } from "@/lib/animations";
 
 interface VideoPerformanceChartProps {
     posts: Post[];
@@ -135,6 +136,7 @@ function VideoPerformanceChart({
                 <LineChart
                     data={chartData}
                     margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                    {...chartAnimationProps}
                 >
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis
