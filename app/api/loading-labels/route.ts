@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "@/lib/logger";
 
-const PROMPT_VI = `Bạn là một copywriter hài hước. Hãy tạo 5 cặp label (tiếng Việt) cho các bước loading khi phân tích kênh YouTube. Mỗi bước có label chính và nhiều sub-labels chi tiết.
+const PROMPT_VI = `Tạo 5 cặp label tiếng Việt cho các bước loading khi phân tích kênh YouTube. Mỗi bước gồm label chính và nhiều sub-labels chi tiết.
 
 Các bước:
 1. Kiểm tra URL (3 sub-labels) - xác thực link, trích xuất ID, kiểm tra tồn tại
@@ -12,16 +12,21 @@ Các bước:
 5. Tạo báo cáo (7 sub-labels) - tổng hợp, điểm mạnh, cơ hội, chiến lược, ý tưởng, kế hoạch, hoàn thiện
 
 Yêu cầu:
-- Label chính: ngắn gọn (tối đa 25 ký tự), dùng động từ mạnh
+- Label chính: ngắn gọn tối đa 25 ký tự, dùng động từ mạnh
 - Sub-labels: số lượng theo yêu cầu trên, mỗi mục 20-40 ký tự
-- Hài hước, dí dỏm, có chút mỉa mai nhẹ nhàng - nhưng vẫn chuyên nghiệp
-- Dùng ngôn ngữ gen Z, internet culture, meme khi phù hợp
-- KHÔNG đề cập đến AI, Gemini, machine learning
+- Hài hước, tự nhiên, hơi mỉa mai nhưng không quá cringe
+- Phong cách casual dành cho độ tuổi 18-35, dùng internet slang Việt khi hợp lý
+- Tránh format "A: B" hoặc "Đang [động từ]..."
+- Không dùng emoji
+- Không đề cập AI, Gemini, machine learning
+- Không sexual content
 
-Ví dụ tone:
-- "Đang lục lọi kho video như FBI"
-- "Soi kỹ từng góc kênh"
-- "Bắt trend nhanh hơn TikTok"
+Ví dụ tone phù hợp:
+- "Lục tung kho video của kênh"
+- "Soi từng con số như thám tử"
+- "Bắt trend nhanh hơn gen Z"
+- "Đếm view như đếm tiền lương"
+- "Phân tích sâu hơn cả drama"
 
 Trả về JSON theo format:
 {
@@ -34,7 +39,7 @@ Trả về JSON theo format:
   ]
 }`;
 
-const PROMPT_EN = `You are a witty copywriter with a great sense of humor. Create 5 label pairs (in English) for loading steps when analyzing a YouTube channel. Each step has a main label and multiple detailed sub-labels.
+const PROMPT_EN = `Create 5 label pairs in English for loading steps when analyzing a YouTube channel. Each step has a main label and multiple detailed sub-labels.
 
 Steps:
 1. Validate URL (3 sub-labels) - verify link, extract ID, check exists
@@ -44,16 +49,21 @@ Steps:
 5. Generate report (7 sub-labels) - compile, strengths, opportunities, strategy, ideas, plan, finalize
 
 Requirements:
-- Main label: concise (max 25 characters), use strong action verbs
+- Main label: concise max 25 characters, use strong action verbs
 - Sub-labels: count as specified above, each 20-40 characters
-- Funny, witty, slightly sarcastic - but still professional
-- Use internet humor, memes, pop culture references when fitting
+- Funny, natural, slightly sarcastic but not too cringe
+- Casual style for 18-35 age group, use internet slang when appropriate
+- Avoid "A: B" format or "Currently [verb]ing..." patterns
+- No emojis
 - Do NOT mention AI, Gemini, machine learning
+- No sexual content
 
-Example tone:
-- "Stalking the channel like it's my ex"
-- "Counting views like a casino dealer"
-- "Hunting for viral secrets"
+Example tone that works:
+- "Stalking this channel like a detective"
+- "Counting views like it's my paycheck"
+- "Digging through the video archive"
+- "Hunting for viral patterns"
+- "Going deeper than YouTube drama"
 
 Return JSON in this format:
 {

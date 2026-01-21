@@ -183,11 +183,11 @@ export async function getChannelInfo(
 }
 
 /**
- * Get all videos from the last 30 days using pagination
+ * Get all videos from last 30 days. If fewer than 30 videos, expand to 90 days.
  */
 export async function getChannelVideos(
     channelId: string,
-    _maxResults: number = 50, // Kept for API compatibility, but function fetches all 30-day videos
+    _maxResults: number = 50, // Kept for API compatibility
     customApiKey?: string
 ): Promise<YouTubeVideo[]> {
     const apiKey = customApiKey || process.env.YOUTUBE_API_KEY;
@@ -219,10 +219,6 @@ export async function getChannelVideos(
             channelResponse.data.items[0].contentDetails.relatedPlaylists
                 .uploads;
 
-        // Calculate 30 days ago for filtering
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
         // Helper function to fetch playlist page
         const fetchPlaylistPage = async (pageToken?: string) => {
             const response = await apiClient.get(
@@ -246,59 +242,53 @@ export async function getChannelVideos(
             };
         };
 
-        // Fetch all videos from last 30 days using pagination
-        let allVideoIds: string[] = [];
-        const MAX_PAGES = 10; // Safety limit: 10 pages * 50 = 500 max videos
-        let nextPageToken: string | undefined = undefined;
-        let stopFetching = false;
+        // Helper function to fetch videos within a date range
+        const fetchVideosInDateRange = async (daysBack: number): Promise<string[]> => {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
-        for (let pageCount = 0; pageCount < MAX_PAGES && !stopFetching; pageCount++) {
-            const data = await fetchPlaylistPage(nextPageToken);
+            let videoIds: string[] = [];
+            const MAX_PAGES = 10; // Safety limit: 10 pages * 50 = 500 max videos
+            let nextPageToken: string | undefined = undefined;
 
-            const items = data.items;
-            if (!items || items.length === 0) {
-                break;
-            }
+            for (let pageCount = 0; pageCount < MAX_PAGES; pageCount++) {
+                const data = await fetchPlaylistPage(nextPageToken);
 
-            // Check each video's publish date
-            for (const item of items) {
-                const publishedAt = new Date(item.contentDetails.videoPublishedAt || item.snippet.publishedAt);
+                const items = data.items;
+                if (!items || items.length === 0) {
+                    break;
+                }
 
-                if (publishedAt >= thirtyDaysAgo) {
-                    allVideoIds.push(item.contentDetails.videoId);
-                } else {
-                    // Videos are sorted by date, so once we find an older video,
-                    // all subsequent videos will also be older
-                    stopFetching = true;
+                // Check each video's publish date
+                for (const item of items) {
+                    const publishedAt = new Date(
+                        item.contentDetails.videoPublishedAt || item.snippet.publishedAt
+                    );
+
+                    if (publishedAt >= cutoffDate) {
+                        videoIds.push(item.contentDetails.videoId);
+                    } else {
+                        // Videos are sorted by date (newest first)
+                        // Once we hit an older video, stop fetching
+                        return videoIds;
+                    }
+                }
+
+                nextPageToken = data.nextPageToken;
+                if (!nextPageToken) {
                     break;
                 }
             }
 
-            nextPageToken = data.nextPageToken;
-            if (!nextPageToken) {
-                break;
-            }
-        }
+            return videoIds;
+        };
 
-        // If no videos in last 30 days, get the 30 most recent
-        if (allVideoIds.length === 0) {
-            const fallbackResponse = await apiClient.get(
-                `${YOUTUBE_API_BASE}/playlistItems`,
-                {
-                    params: {
-                        part: "snippet,contentDetails",
-                        playlistId: uploadsPlaylistId,
-                        maxResults: 30,
-                        key: apiKey,
-                    },
-                }
-            );
+        // Step 1: Fetch all videos from last 30 days
+        let allVideoIds = await fetchVideosInDateRange(30);
 
-            if (fallbackResponse.data.items) {
-                allVideoIds = fallbackResponse.data.items.map(
-                    (item: any) => item.contentDetails.videoId
-                );
-            }
+        // Step 2: If less than 30 videos, expand to 90 days
+        if (allVideoIds.length < 30) {
+            allVideoIds = await fetchVideosInDateRange(90);
         }
 
         if (allVideoIds.length === 0) {
@@ -351,7 +341,7 @@ export async function getChannelVideos(
 
 /**
  * Get full channel data (info + videos)
- * Videos are filtered to last 30 days (or 30 most recent if none in 30 days)
+ * Videos: All from last 30 days, or all from 90 days if fewer than 30
  */
 export async function getFullChannelData(
     channelUrl: string,
@@ -364,7 +354,7 @@ export async function getFullChannelData(
 
     const [channelInfo, videos] = await Promise.all([
         getChannelInfo(channelId, customApiKey),
-        getChannelVideos(channelId, 50, customApiKey), // Fetches all videos from last 30 days
+        getChannelVideos(channelId, 50, customApiKey), // All from 30 days, or 90 days if <30
     ]);
 
     if (!channelInfo) {
