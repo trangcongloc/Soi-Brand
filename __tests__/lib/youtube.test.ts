@@ -17,6 +17,7 @@ describe("YouTube Service", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockApiClient.get.mockReset();
         process.env.YOUTUBE_API_KEY = mockApiKey;
     });
 
@@ -318,6 +319,31 @@ describe("YouTube Service", () => {
         });
 
         it("should handle missing video statistics with default values", async () => {
+            // Generate 50 videos to satisfy MIN_VIDEOS requirement
+            const playlistItems = Array.from({ length: 50 }, (_, i) => ({
+                contentDetails: {
+                    videoId: `video${i + 1}`,
+                    videoPublishedAt: new Date().toISOString(),
+                },
+                snippet: {
+                    publishedAt: new Date().toISOString(),
+                },
+            }));
+
+            const videoItems = Array.from({ length: 50 }, (_, i) => ({
+                id: `video${i + 1}`,
+                snippet: {
+                    title: `Test ${i + 1}`,
+                    description: "Test",
+                    publishedAt: new Date().toISOString(),
+                    thumbnails: {},
+                },
+                statistics: i === 0 ? {} : { viewCount: "1000", likeCount: "100", commentCount: "10" }, // First video missing stats
+                contentDetails: {
+                    duration: "PT5M",
+                },
+            }));
+
             mockApiClient.get
                 .mockResolvedValueOnce({
                     data: {
@@ -332,24 +358,14 @@ describe("YouTube Service", () => {
                         ],
                     },
                 })
-                .mockResolvedValueOnce(mockPlaylistResponse)
                 .mockResolvedValueOnce({
                     data: {
-                        items: [
-                            {
-                                id: "video1",
-                                snippet: {
-                                    title: "Test",
-                                    description: "Test",
-                                    publishedAt: new Date().toISOString(),
-                                    thumbnails: {},
-                                },
-                                statistics: {}, // Missing all statistics
-                                contentDetails: {
-                                    duration: "PT5M",
-                                },
-                            },
-                        ],
+                        items: playlistItems,
+                    },
+                })
+                .mockResolvedValueOnce({
+                    data: {
+                        items: videoItems,
                     },
                 });
 
@@ -373,6 +389,36 @@ describe("YouTube Service", () => {
 
     describe("getFullChannelData", () => {
         it("should fetch full channel data successfully", async () => {
+
+            // Generate 50 videos to satisfy MIN_VIDEOS requirement
+            const playlistItems = Array.from({ length: 50 }, (_, i) => ({
+                contentDetails: {
+                    videoId: `video${i + 1}`,
+                    videoPublishedAt: new Date().toISOString(),
+                },
+                snippet: {
+                    publishedAt: new Date().toISOString(),
+                },
+            }));
+
+            const videoItems = Array.from({ length: 50 }, (_, i) => ({
+                id: `video${i + 1}`,
+                snippet: {
+                    title: `Test Video ${i + 1}`,
+                    description: "Test",
+                    publishedAt: new Date().toISOString(),
+                    thumbnails: {},
+                },
+                statistics: {
+                    viewCount: "1000",
+                    likeCount: "100",
+                    commentCount: "10",
+                },
+                contentDetails: {
+                    duration: "PT5M",
+                },
+            }));
+
             mockApiClient.get
                 .mockResolvedValueOnce({
                     data: {
@@ -408,40 +454,12 @@ describe("YouTube Service", () => {
                 })
                 .mockResolvedValueOnce({
                     data: {
-                        items: [
-                            {
-                                contentDetails: {
-                                    videoId: "video1",
-                                    videoPublishedAt: new Date().toISOString(),
-                                },
-                                snippet: {
-                                    publishedAt: new Date().toISOString(),
-                                },
-                            },
-                        ],
+                        items: playlistItems,
                     },
                 })
                 .mockResolvedValueOnce({
                     data: {
-                        items: [
-                            {
-                                id: "video1",
-                                snippet: {
-                                    title: "Test Video",
-                                    description: "Test",
-                                    publishedAt: new Date().toISOString(),
-                                    thumbnails: {},
-                                },
-                                statistics: {
-                                    viewCount: "1000",
-                                    likeCount: "100",
-                                    commentCount: "10",
-                                },
-                                contentDetails: {
-                                    duration: "PT5M",
-                                },
-                            },
-                        ],
+                        items: videoItems,
                     },
                 });
 
@@ -452,7 +470,7 @@ describe("YouTube Service", () => {
 
             expect(result.channelInfo).toBeDefined();
             expect(result.channelInfo?.id).toBe("UC123");
-            expect(result.videos).toHaveLength(1);
+            expect(result.videos).toHaveLength(50);
         });
 
         it("should throw error if channel ID cannot be resolved", async () => {
@@ -468,21 +486,16 @@ describe("YouTube Service", () => {
         });
 
         it("should throw error if channel info is not found", async () => {
-            mockApiClient.get
-                .mockResolvedValueOnce({
-                    data: {
-                        items: [], // No channel info
-                    },
-                })
-                .mockResolvedValueOnce({
-                    data: {
-                        items: [],
-                    },
-                });
+            // Mock getChannelInfo to return empty (channel not found)
+            mockApiClient.get.mockResolvedValue({
+                data: {
+                    items: [], // No channel found
+                },
+            });
 
             await expect(
                 getFullChannelData("https://www.youtube.com/channel/UC999", mockApiKey)
-            ).rejects.toThrow(APIError);
+            ).rejects.toThrow("Channel not found");
         });
     });
 });
