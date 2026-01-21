@@ -7,6 +7,18 @@ export const en = {
             "Soi'Brand, YouTube, marketing, analysis, AI, strategy, insights",
     },
 
+    patch: {
+        title: "Patch Notes",
+        subtitle: "What's new in Soi'Brand",
+        backButton: "Back",
+        badges: {
+            feature: "NEW",
+            fix: "FIX",
+            improvement: "IMPROVED",
+            breaking: "BREAKING",
+        },
+    },
+
     home: {
         title: "Soi'Brand",
     },
