@@ -5,6 +5,7 @@
 
 import { GeminiModel, ApiQuotaUsage } from "./types";
 import { getModelInfo } from "./geminiModels";
+import { logger } from "./logger";
 
 const STORAGE_KEY = 'soibrand_api_quota';
 const YOUTUBE_DAILY_QUOTA = 10000;
@@ -14,7 +15,7 @@ const YOUTUBE_COST_PER_ANALYSIS = 103; // Channel search (100) + info (1) + play
 /**
  * Initialize quota structure with defaults
  */
-export function initializeQuotaUsage(model?: GeminiModel, tier?: "free" | "paid"): ApiQuotaUsage {
+function initializeQuotaUsage(model?: GeminiModel, tier?: "free" | "paid"): ApiQuotaUsage {
   const now = new Date().toISOString();
 
   // Get model-specific RPM and RPD limits
@@ -106,7 +107,7 @@ export function getQuotaUsage(): ApiQuotaUsage {
 
     return parsed;
   } catch (error) {
-    console.error('Failed to parse quota usage:', error);
+    logger.error('Failed to parse quota usage:', error);
     const initial = initializeQuotaUsage();
     saveQuotaUsage(initial);
     return initial;
@@ -116,20 +117,20 @@ export function getQuotaUsage(): ApiQuotaUsage {
 /**
  * Save quota usage to localStorage
  */
-export function saveQuotaUsage(usage: ApiQuotaUsage): void {
+function saveQuotaUsage(usage: ApiQuotaUsage): void {
   if (typeof window === 'undefined') return;
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(usage));
   } catch (error) {
-    console.error('Failed to save quota usage:', error);
+    logger.error('Failed to save quota usage:', error);
   }
 }
 
 /**
  * Check if YouTube quota should reset (midnight PT)
  */
-export function shouldResetYouTubeQuota(lastResetISO: string): boolean {
+function shouldResetYouTubeQuota(lastResetISO: string): boolean {
   const lastReset = new Date(lastResetISO);
   const now = new Date();
 
@@ -149,7 +150,7 @@ export function shouldResetYouTubeQuota(lastResetISO: string): boolean {
 /**
  * Check if Gemini quota should reset (every minute)
  */
-export function shouldResetGeminiQuota(lastResetISO: string): boolean {
+function shouldResetGeminiQuota(lastResetISO: string): boolean {
   const lastReset = new Date(lastResetISO);
   const now = new Date();
 
@@ -160,7 +161,7 @@ export function shouldResetGeminiQuota(lastResetISO: string): boolean {
 /**
  * Check if Gemini daily quota should reset (every 24 hours)
  */
-export function shouldResetGeminiDailyQuota(lastResetISO: string): boolean {
+function shouldResetGeminiDailyQuota(lastResetISO: string): boolean {
   const lastReset = new Date(lastResetISO);
   const now = new Date();
 
@@ -205,15 +206,6 @@ export function getQuotaPercentage(provider: 'youtube' | 'gemini'): number {
 }
 
 /**
- * Get color based on quota percentage
- */
-export function getQuotaColor(percentage: number): string {
-  if (percentage >= 90) return '#ef4444'; // Red
-  if (percentage >= 70) return '#f59e0b'; // Yellow
-  return '#22c55e'; // Green
-}
-
-/**
  * Update Gemini quota limits based on model and tier
  */
 export function updateGeminiQuotaLimits(model: GeminiModel, tier: "free" | "paid"): ApiQuotaUsage {
@@ -244,12 +236,4 @@ export function updateGeminiQuotaLimits(model: GeminiModel, tier: "free" | "paid
 
   saveQuotaUsage(usage);
   return usage;
-}
-
-/**
- * Reset all quota (for testing/admin purposes)
- */
-export function resetAllQuota(): void {
-  const initial = initializeQuotaUsage();
-  saveQuotaUsage(initial);
 }

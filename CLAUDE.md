@@ -96,3 +96,125 @@ lib/
 - Supports URL formats: `/channel/ID`, `/@username`, `/c/custom`, `/user/username`
 - Vietnamese is default language
 - Path alias: `@/*` maps to root
+
+## Claude Code Setup
+
+This project uses [everything-claude-code](https://github.com/affaan-m/everything-claude-code) - a production-ready configuration collection for Claude Code CLI.
+
+### Installed Components (Global)
+
+Location: `~/.claude/`
+
+**9 Specialized Agents:**
+- `planner` - Feature implementation planning
+- `architect` - System design decisions
+- `code-reviewer` - Code quality and security review
+- `security-reviewer` - Vulnerability analysis
+- `tdd-guide` - Test-driven development enforcement
+- `build-error-resolver` - Build error diagnosis and fixes
+- `e2e-runner` - End-to-end testing with Playwright
+- `refactor-cleaner` - Dead code removal
+- `doc-updater` - Documentation synchronization
+
+**10 Workflow Commands:**
+- `/plan` - Create implementation plan
+- `/tdd` - Enforce test-first development
+- `/code-review` - Quality review current code
+- `/security-review` - Security audit
+- `/build-fix` - Fix build errors
+- `/e2e` - Generate E2E tests
+- `/test-coverage` - Coverage analysis
+- `/refactor-clean` - Clean up dead code
+- `/update-docs` - Update documentation
+- `/update-codemaps` - Update code maps
+
+**8 Rule Categories:**
+- `security.md` - Security protocols and secret management
+- `coding-style.md` - Code formatting and conventions
+- `testing.md` - TDD workflow, 80% coverage requirement
+- `git-workflow.md` - Commit format, PR process
+- `agents.md` - When to delegate to specialized agents
+- `patterns.md` - Design patterns and best practices
+- `performance.md` - Model selection, context optimization
+- `hooks.md` - Hook configuration guide
+
+**Active Hooks:**
+
+*PreToolUse:*
+- Blocks `npm run dev` outside tmux (use: `tmux new -s dev 'npm run dev'`)
+- Suggests tmux for long-running commands (install, test, build)
+- Pauses before `git push` for review
+- Blocks random `.md` file creation (use README.md)
+
+*PostToolUse:*
+- Auto-formats JS/TS files with Prettier after edits
+- Runs TypeScript check after `.ts`/`.tsx` edits
+- Warns about `console.log` statements
+- Logs PR URLs after `gh pr create`
+
+*Stop (session end):*
+- Final `console.log` audit in modified files
+- Session state persistence
+
+### Usage Guidelines
+
+**When to use agents:**
+- Complex features → `/plan` or use `planner` agent
+- After writing code → `/code-review` or `code-reviewer` agent
+- Before commits → `security-reviewer` agent
+- Build failures → `build-error-resolver` agent
+- New features/bugs → `/tdd` or `tdd-guide` agent
+
+**Best practices:**
+- **Security:** No hardcoded API keys, validate all inputs, check OWASP top 10
+- **Testing:** Write tests first (RED → GREEN → REFACTOR), 80% minimum coverage
+- **Git:** Conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`)
+- **Code style:** Immutability (never mutate objects), small files (200-400 lines)
+
+**Model selection:**
+- Sonnet 4.5 (default) - Main development work
+- Haiku 4.5 - Lightweight tasks, cost savings
+- Opus 4.5 - Complex architecture decisions
+
+**Context window management:**
+- Keep <10 MCPs active per project
+- Disable unused MCPs in `~/.claude.json` with `disabledMcpServers`
+- Your 200k context can shrink to ~70k with too many tools enabled
+
+### Project-Specific Patterns
+
+**AI Integration:**
+- Gemini streaming responses: `lib/gemini.ts`
+- YouTube API quota management: `lib/apiQuota.ts`
+- Retry logic with exponential backoff: `lib/retry.ts`
+- Caching strategy: `lib/cache.ts`
+
+**Next.js patterns:**
+- App Router API routes: `app/api/*/route.ts`
+- Server-side validation: `lib/apiValidation.ts`
+- Client components: Framer Motion animations
+- Error boundaries: `components/ErrorBoundary.tsx`
+
+**Internationalization:**
+- Language management: `lib/lang/index.ts`
+- Vietnamese (default): `lib/lang/vi.ts`
+- English: `lib/lang/en.ts`
+
+### Backup & Recovery
+
+**Factory reset backup location:**
+```bash
+~/claude-backup-20260121-123621/
+```
+
+To restore specific configs:
+```bash
+cp ~/claude-backup-*/CLAUDE.md ~/.claude/
+cp ~/claude-backup-*/.claude/rules/security.md ~/.claude/rules/
+```
+
+### References
+
+- Repository: https://github.com/affaan-m/everything-claude-code
+- License: MIT
+- Created by: Anthropic Hackathon Winner (10+ months production use)

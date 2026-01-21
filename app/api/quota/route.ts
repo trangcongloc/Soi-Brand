@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { getQuotaUsage, getQuotaPercentage } from "@/lib/apiQuota";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -36,7 +37,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[Quota API] Error fetching quota status:", error);
+    logger.error("[Quota API] Error fetching quota status:", error);
     return NextResponse.json(
       {
         success: false,

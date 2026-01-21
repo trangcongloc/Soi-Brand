@@ -84,8 +84,3 @@ export const DEFAULT_MODEL: GeminiModel = "gemini-2.5-flash-lite";
 export function getModelInfo(modelId: GeminiModel): GeminiModelInfo | undefined {
     return GEMINI_MODELS.find((m) => m.id === modelId);
 }
-
-export function getModelName(modelId: GeminiModel): string {
-    const model = getModelInfo(modelId);
-    return model ? model.name : modelId;
-}

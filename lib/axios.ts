@@ -11,6 +11,3 @@ export const apiClient = axios.create({
         "Content-Type": "application/json",
     },
 });
-
-// Export timeout constant for cases where custom timeout is needed
-export { DEFAULT_TIMEOUT };

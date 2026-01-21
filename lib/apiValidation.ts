@@ -183,16 +183,3 @@ export async function validateGeminiApiKey(
     }
 }
 
-/**
- * Detect Gemini API key tier
- * Returns the tier (free/paid) if detectable, otherwise undefined
- * Note: This is a best-effort detection and may not be 100% accurate
- */
-export async function detectGeminiTier(
-    _apiKey: string,
-): Promise<"free" | "paid" | undefined> {
-    // Unfortunately, Google Gemini API doesn't provide a direct way to detect tier
-    // The only reliable way is to monitor rate limits over time
-    // For now, we return undefined and let the user assume free tier
-    return undefined;
-}

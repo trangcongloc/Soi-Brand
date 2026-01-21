@@ -12,19 +12,36 @@ import {
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
 /**
+ * Type guard for axios-like errors
+ */
+function isAxiosError(error: unknown): error is {
+    response?: { status?: number; data?: { error?: { message?: string; errors?: Array<{ reason?: string }> } } };
+    status?: number;
+    message?: string;
+    code?: string;
+} {
+    return (
+        error !== null &&
+        typeof error === "object" &&
+        ("response" in error || "status" in error || "message" in error || "code" in error)
+    );
+}
+
+/**
  * Parse YouTube API error and throw appropriate APIError
  */
 function handleYouTubeError(error: unknown, context: string): never {
-    const err = error as {
-        response?: { status?: number; data?: { error?: { message?: string; errors?: Array<{ reason?: string }> } } };
-        status?: number;
-        message?: string;
-        code?: string;
-    };
+    if (!isAxiosError(error)) {
+        throw new APIError(
+            `YouTube API error (${context}): Unknown error`,
+            "UNKNOWN",
+            500
+        );
+    }
 
-    const statusCode = err?.response?.status || err?.status;
-    const errorData = err?.response?.data?.error;
-    const errorMessage = errorData?.message || err?.message || "Unknown YouTube API error";
+    const statusCode = error?.response?.status || error?.status;
+    const errorData = error?.response?.data?.error;
+    const errorMessage = errorData?.message || error?.message || "Unknown YouTube API error";
     const errorReason = errorData?.errors?.[0]?.reason || "";
 
     logger.error(`YouTube API Error (${context})`, {
@@ -34,7 +51,7 @@ function handleYouTubeError(error: unknown, context: string): never {
     });
 
     // Check for network errors
-    if (isNetworkError(err?.code)) {
+    if (isNetworkError(error?.code)) {
         throw new APIError(
             "Network error while connecting to YouTube API.",
             "NETWORK_ERROR",

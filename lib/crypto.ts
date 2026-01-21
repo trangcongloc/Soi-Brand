@@ -4,7 +4,8 @@
 
 import { isBrowser } from "./utils";
 
-const SALT = "soi-brand-v1";
+// Use environment variable for salt, fallback to default (obfuscation only)
+const SALT = process.env.NEXT_PUBLIC_ENCRYPTION_SALT || "soi-brand-v1";
 const ALGORITHM = "AES-GCM";
 
 /**

@@ -164,10 +164,12 @@ export async function generateMarketingReport(
         .map(hour => `${hour}:00`);
 
     // Calculate average engagement for video idea estimates
-    const avgViews = Math.round(
-        videosData.reduce((sum, v) => sum + v.views, 0) / videosData.length
-    );
-    const topVideoViews = Math.max(...videosData.map((v) => v.views));
+    const avgViews = videosData.length > 0
+        ? Math.round(videosData.reduce((sum, v) => sum + v.views, 0) / videosData.length)
+        : 0;
+    const topVideoViews = videosData.length > 0
+        ? Math.max(...videosData.map((v) => v.views))
+        : 0;
 
     // Extract all unique tags from all videos
     const allUniqueTags = Array.from(new Set(

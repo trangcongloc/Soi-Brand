@@ -176,36 +176,3 @@ export function saveUserSettings(settings: UserSettings): void {
     cachedSettings = settings;
 }
 
-/**
- * Clear user settings and cache
- */
-export function clearUserSettings(): void {
-    if (!isBrowser()) return;
-    localStorage.removeItem(SETTINGS_KEY);
-    cachedSettings = null;
-}
-
-/**
- * Clear the in-memory cache (useful after settings change)
- */
-export function clearSettingsCache(): void {
-    cachedSettings = null;
-}
-
-/**
- * Validate API key format (basic check)
- */
-export function isValidApiKeyFormat(key: string, type: "youtube" | "gemini"): boolean {
-    if (!key || key.trim().length === 0) return false;
-
-    // Basic format validation
-    if (type === "youtube") {
-        // YouTube API keys are typically 39 characters
-        return key.length >= 30 && /^[A-Za-z0-9_-]+$/.test(key);
-    } else if (type === "gemini") {
-        // Gemini API keys typically start with specific patterns
-        return key.length >= 30;
-    }
-
-    return false;
-}

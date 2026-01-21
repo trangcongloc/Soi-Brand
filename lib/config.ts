@@ -91,11 +91,3 @@ export function isOriginAllowed(origin: string | null): boolean {
     return false;
 }
 
-/**
- * Get safe API key (masked for logging)
- */
-export function getMaskedApiKey(key: string | undefined): string {
-    if (!key) return "[NOT SET]";
-    if (key.length <= 8) return "****";
-    return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
-}

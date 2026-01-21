@@ -138,12 +138,3 @@ export function createRetryWrapper(defaultOptions: RetryOptions) {
         withRetry(fn, { ...defaultOptions, ...overrideOptions });
 }
 
-/**
- * Pre-configured retry for API calls
- */
-export const retryApiCall = createRetryWrapper({
-    maxAttempts: 3,
-    initialDelayMs: 1000,
-    maxDelayMs: 10000,
-    backoffMultiplier: 2,
-});
