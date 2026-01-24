@@ -1,4 +1,4 @@
-import { withRetry, createRetryWrapper } from "@/lib/retry";
+import { withRetry } from "@/lib/retry";
 
 // Mock the logger
 jest.mock("@/lib/logger", () => ({
@@ -163,30 +163,4 @@ describe("retry", () => {
         });
     });
 
-    describe("createRetryWrapper", () => {
-        it("creates a wrapper with default options", async () => {
-            const retryFn = createRetryWrapper({
-                maxAttempts: 2,
-                initialDelayMs: 50,
-            });
-
-            const fn = jest.fn().mockResolvedValue("wrapped");
-            const result = await retryFn(fn);
-
-            expect(result).toBe("wrapped");
-        });
-
-        it("allows overriding options", async () => {
-            const retryFn = createRetryWrapper({
-                maxAttempts: 2,
-            });
-
-            const fn = jest.fn().mockRejectedValue(new Error("ETIMEDOUT"));
-
-            const resultPromise = retryFn(fn, { maxAttempts: 1 });
-
-            await expect(resultPromise).rejects.toThrow("ETIMEDOUT");
-            expect(fn).toHaveBeenCalledTimes(1);
-        });
-    });
 });

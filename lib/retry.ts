@@ -130,11 +130,4 @@ export async function withRetry<T>(
     throw lastError || new Error("Retry failed");
 }
 
-/**
- * Create a retry wrapper with pre-configured options
- */
-export function createRetryWrapper(defaultOptions: RetryOptions) {
-    return <T>(fn: () => Promise<T>, overrideOptions?: RetryOptions) =>
-        withRetry(fn, { ...defaultOptions, ...overrideOptions });
-}
 

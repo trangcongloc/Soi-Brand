@@ -1,5 +1,25 @@
-// Zod schemas for API response validation
+// Zod schemas for API request/response validation
 import { z } from "zod";
+
+// Valid Gemini model IDs (matching GeminiModel type in types.ts)
+const VALID_GEMINI_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-3-flash-preview",
+    "gemini-3-pro-preview",
+] as const;
+
+// Request validation schema for /api/analyze
+export const AnalyzeRequestSchema = z.object({
+    channelUrl: z.string().min(1, "Channel URL is required"),
+    youtubeApiKey: z.string().optional(),
+    geminiApiKey: z.string().optional(),
+    geminiModel: z.enum(VALID_GEMINI_MODELS).optional(),
+    language: z.enum(["vi", "en"]).optional().default("vi"),
+});
+
+export type ValidatedAnalyzeRequest = z.infer<typeof AnalyzeRequestSchema>;
 
 // Report Part 2 schemas
 const AdCreativeSchema = z.object({

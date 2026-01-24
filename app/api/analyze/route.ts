@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFullChannelData } from "@/lib/youtube";
 import { generateMarketingReport } from "@/lib/gemini";
 import { isValidYouTubeUrl } from "@/lib/utils";
-import { AnalyzeRequest, AnalyzeResponse, APIError } from "@/lib/types";
+import { AnalyzeResponse, APIError } from "@/lib/types";
 import { isOriginAllowed, validateEnv } from "@/lib/config";
 import { withRetry } from "@/lib/retry";
 import { logger } from "@/lib/logger";
+import { AnalyzeRequestSchema } from "@/lib/schemas";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
 
 // CORS headers helper
 function getCorsHeaders(origin: string | null): HeadersInit {
@@ -46,23 +48,64 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Parse request body
-        const body: AnalyzeRequest = await request.json();
-        const { channelUrl, youtubeApiKey, geminiApiKey, geminiModel, language } = body;
-        isVi = language !== 'en';
+        // Rate limiting check (10 requests per minute per IP)
+        const clientId = getClientIdentifier(request);
+        const rateLimitResult = checkRateLimit(clientId, { limit: 10, windowMs: 60000 });
 
-        // Validate input
-        if (!channelUrl) {
+        if (!rateLimitResult.success) {
+            const retryAfter = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
             return NextResponse.json(
                 {
                     success: false,
-                    error: isVi ? "Vui lòng nhập URL kênh YouTube" : "Channel URL is required",
-                    errorType: "CHANNEL_NOT_FOUND",
+                    error: isVi ? "Quá nhiều yêu cầu. Vui lòng thử lại sau." : "Too many requests. Please try again later.",
+                    errorType: "RATE_LIMIT",
+                } as AnalyzeResponse,
+                {
+                    status: 429,
+                    headers: {
+                        ...corsHeaders,
+                        "Retry-After": String(retryAfter),
+                        "X-RateLimit-Remaining": "0",
+                        "X-RateLimit-Reset": String(rateLimitResult.resetTime),
+                    },
+                }
+            );
+        }
+
+        // Parse and validate request body with Zod
+        let rawBody: unknown;
+        try {
+            rawBody = await request.json();
+        } catch {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: isVi ? "Dữ liệu yêu cầu không hợp lệ" : "Invalid request body",
+                    errorType: "UNKNOWN",
                 } as AnalyzeResponse,
                 { status: 400, headers: corsHeaders }
             );
         }
 
+        const parseResult = AnalyzeRequestSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            const errorMessage = parseResult.error.issues
+                .map((issue) => issue.message)
+                .join(", ");
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: isVi ? `Dữ liệu không hợp lệ: ${errorMessage}` : `Invalid input: ${errorMessage}`,
+                    errorType: "UNKNOWN",
+                } as AnalyzeResponse,
+                { status: 400, headers: corsHeaders }
+            );
+        }
+
+        const { channelUrl, youtubeApiKey, geminiApiKey, geminiModel, language } = parseResult.data;
+        isVi = language !== 'en';
+
+        // Validate YouTube URL format
         if (!isValidYouTubeUrl(channelUrl)) {
             return NextResponse.json(
                 {

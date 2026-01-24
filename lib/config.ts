@@ -83,8 +83,9 @@ export function isOriginAllowed(origin: string | null): boolean {
         return true;
     }
 
-    // Check Vercel preview deployments
-    if (origin.endsWith(".vercel.app")) {
+    // Check Vercel preview deployments - restrict to soi-brand project only
+    // Pattern: https://soi-brand-*.vercel.app or https://soi-brand.vercel.app
+    if (/^https:\/\/soi-brand(-[a-z0-9]+)?\.vercel\.app$/.test(origin)) {
         return true;
     }
 

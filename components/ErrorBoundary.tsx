@@ -40,8 +40,12 @@ export class ErrorBoundary extends Component<Props, State> {
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
         this.setState({ errorInfo });
 
-        // Log error to console in development
-        console.error("ErrorBoundary caught an error:", error, errorInfo);
+        // Log error using logger utility (respects environment settings)
+        if (typeof window !== "undefined") {
+            import("@/lib/logger").then(({ logger }) => {
+                logger.error("ErrorBoundary caught an error", { error: error.message, stack: error.stack, componentStack: errorInfo.componentStack });
+            });
+        }
     }
 
     handleRetry = (): void => {
