@@ -153,18 +153,13 @@ export function parseGeminiResponse(response: GeminiResponse): Scene[] {
   // Check for content and parts
   const content = candidate.content;
   if (!content || !content.parts || content.parts.length === 0) {
-    console.error("Gemini Response Diagnostic:", {
-      hasContent: !!content,
-      hasParts: !!(content?.parts),
-      partsLength: content?.parts?.length || 0,
-      finishReason,
-      fullCandidate: JSON.stringify(candidate, null, 2),
-    });
-
-    throw new Error(
+    // This is a transient API error - mark as retryable
+    const error = new Error(
       `No content parts in response. Finish reason: ${finishReason || "UNKNOWN"}. ` +
-      `This may indicate an API error, empty response, or content filtering issue.`
-    );
+      `This may indicate a transient API error. Retrying...`
+    ) as GeminiApiError;
+    error.status = 503; // Service unavailable - will be retried
+    throw error;
   }
 
   const text = content.parts[0].text;
