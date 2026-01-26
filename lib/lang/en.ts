@@ -412,6 +412,170 @@ export const en = {
         analyze: "Analyze",
         skipToContent: "Skip to content",
     },
+
+    veo: {
+        title: "VEO - Video Scene Generator",
+        subtitle: "Analyze YouTube videos and generate scenes for video generation",
+
+        form: {
+            placeholder: "Paste YouTube video link...",
+            scriptPlaceholder: "Paste your script text here or upload a file...",
+            submitButton: "Generate Scenes",
+            submitButtonLoading: "Processing...",
+            uploadScript: "Upload File",
+            generateScenes: "Generate Scenes",
+            extractScript: "Extract Script",
+            processing: "Processing...",
+            timeRange: "Time Range (optional)",
+            from: "From",
+            to: "To",
+            errors: {
+                emptyUrl: "Please enter a YouTube video link",
+                invalidUrl: "Invalid YouTube link. Please enter a video link (e.g., youtube.com/watch?v=xxx)",
+                apiKeyRequired: "Gemini API key is required to use this feature",
+                emptyScript: "Please enter or upload a script",
+                invalidFileType: "Invalid file type. Please upload a .txt or .json file",
+                cannotReadFile: "Cannot read file. Please try again.",
+            },
+        },
+
+        workflow: {
+            urlToScript: "URL to Script",
+            urlToScriptDesc: "Extract script from video",
+            scriptToScenes: "Script to Scenes",
+            scriptToScenesDesc: "Generate scenes from script",
+            urlHint: "Enter a YouTube URL to extract the script/transcript from the video",
+            scriptHint: "Paste your script or upload a text file to generate visual scenes",
+        },
+
+        script: {
+            title: "Generated Script",
+            newScript: "New Script",
+            videoTitle: "Video Title",
+            duration: "Duration",
+            language: "Language",
+            characters: "Characters",
+            noCharacters: "No characters identified",
+            summary: "Summary",
+            transcript: "Transcript",
+            copy: "Copy",
+            download: "Download",
+            nextStepHint: "Copy the script and use Step 2 to generate visual scenes from it",
+        },
+
+        modes: {
+            title: "Processing Mode",
+            direct: "Direct",
+            directDesc: "Fast, simple - single API call processing",
+            hybrid: "Hybrid",
+            hybridDesc: "Batched with character tracking (recommended)",
+        },
+
+        settings: {
+            title: "Settings",
+            sceneCount: "Scene Count",
+            sceneCountDesc: "Target number of scenes to generate",
+            batchSize: "Batch Size",
+            batchSizeDesc: "Scenes per batch (hybrid mode only)",
+            voice: "Voice",
+            voiceDesc: "Narration language for video",
+            voiceOptions: {
+                "no-voice": "No voice (silent)",
+                english: "English",
+                vietnamese: "Vietnamese",
+                spanish: "Spanish",
+                french: "French",
+                german: "German",
+                japanese: "Japanese",
+                korean: "Korean",
+                chinese: "Chinese",
+            },
+        },
+
+        loading: {
+            title: "Generating scenes...",
+            steps: {
+                validating: "Validating URL...",
+                initializing: "Initializing...",
+                processing: "Processing video...",
+                generating: "Generating scenes...",
+                parsing: "Parsing results...",
+                complete: "Complete!",
+            },
+            batchProgress: "Batch {current}/{total}",
+            scenesGenerated: "{count} scenes generated",
+            estimatedTime: "Estimated time: {time}",
+        },
+
+        result: {
+            title: "Results",
+            summary: "Summary",
+            scenes: "Scenes",
+            characters: "Characters",
+            download: "Download",
+
+            summaryStats: {
+                totalScenes: "Total Scenes",
+                characters: "Characters",
+                mode: "Mode",
+                voice: "Voice",
+                processingTime: "Processing Time",
+            },
+
+            sceneCard: {
+                description: "Description",
+                object: "Object",
+                character: "Character",
+                style: "Style",
+                visualSpecs: "Visual Specs",
+                lighting: "Lighting",
+                composition: "Composition",
+                technical: "Technical",
+                prompt: "Prompt",
+                copyPrompt: "Copy Prompt",
+                copied: "Copied!",
+            },
+
+            characterCard: {
+                appearances: "Appearances",
+                description: "Full Description",
+            },
+
+            downloadOptions: {
+                title: "Download",
+                allScenes: "All Scenes (JSON)",
+                characters: "Character Registry (JSON)",
+                summary: "Summary (JSON)",
+                prompts: "Prompts Only (TXT)",
+            },
+        },
+
+        history: {
+            title: "History",
+            noJobs: "No jobs yet",
+            viewResult: "View Result",
+            deleteJob: "Delete",
+            clearAll: "Clear All",
+        },
+
+        resume: {
+            title: "Incomplete Job Found",
+            message: "Previous job was interrupted at batch {batch}/{total}. Would you like to continue?",
+            continueButton: "Continue",
+            startNew: "Start New",
+        },
+
+        errors: {
+            INVALID_URL: "Invalid video URL",
+            GEMINI_API_ERROR: "Gemini API error",
+            GEMINI_QUOTA: "Gemini API quota exceeded",
+            GEMINI_RATE_LIMIT: "Rate limit exceeded. Please try again later.",
+            NETWORK_ERROR: "Network connection error",
+            PARSE_ERROR: "Failed to parse AI response",
+            TIMEOUT: "Request timed out",
+            UNKNOWN_ERROR: "An error occurred. Please try again.",
+        },
+    },
 } as const;
 
 export type EnLanguage = typeof en;

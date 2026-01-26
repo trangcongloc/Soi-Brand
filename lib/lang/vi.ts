@@ -408,6 +408,170 @@ export const vi = {
         analyze: "Phân tích",
         skipToContent: "Chuyển đến nội dung",
     },
+
+    veo: {
+        title: "VEO - Tạo Scene Video",
+        subtitle: "Phân tích video YouTube và tạo scene cho video generation",
+
+        form: {
+            placeholder: "Dán link video YouTube...",
+            scriptPlaceholder: "Dán script của bạn ở đây hoặc tải lên file...",
+            submitButton: "Tạo Scenes",
+            submitButtonLoading: "Đang xử lý...",
+            uploadScript: "Tải File",
+            generateScenes: "Tạo Scenes",
+            extractScript: "Trích xuất Script",
+            processing: "Đang xử lý...",
+            timeRange: "Khoảng thời gian (tùy chọn)",
+            from: "Từ",
+            to: "Đến",
+            errors: {
+                emptyUrl: "Vui lòng nhập link video YouTube",
+                invalidUrl: "Link YouTube không hợp lệ. Hãy nhập link video (ví dụ: youtube.com/watch?v=xxx)",
+                apiKeyRequired: "Cần có Gemini API key để sử dụng tính năng này",
+                emptyScript: "Vui lòng nhập hoặc tải lên script",
+                invalidFileType: "Loại file không hợp lệ. Vui lòng tải lên file .txt hoặc .json",
+                cannotReadFile: "Không thể đọc file. Vui lòng thử lại.",
+            },
+        },
+
+        workflow: {
+            urlToScript: "URL thành Script",
+            urlToScriptDesc: "Trích xuất script từ video",
+            scriptToScenes: "Script thành Scenes",
+            scriptToScenesDesc: "Tạo scenes từ script",
+            urlHint: "Nhập URL YouTube để trích xuất script/transcript từ video",
+            scriptHint: "Dán script của bạn hoặc tải file text để tạo scenes hình ảnh",
+        },
+
+        script: {
+            title: "Script đã tạo",
+            newScript: "Script mới",
+            videoTitle: "Tiêu đề Video",
+            duration: "Thời lượng",
+            language: "Ngôn ngữ",
+            characters: "Nhân vật",
+            noCharacters: "Không xác định được nhân vật",
+            summary: "Tóm tắt",
+            transcript: "Transcript",
+            copy: "Copy",
+            download: "Tải xuống",
+            nextStepHint: "Copy script và sử dụng Bước 2 để tạo scenes hình ảnh từ nó",
+        },
+
+        modes: {
+            title: "Chế độ xử lý",
+            direct: "Trực tiếp",
+            directDesc: "Nhanh, đơn giản - xử lý trong 1 lần gọi API",
+            hybrid: "Hybrid",
+            hybridDesc: "Theo batch với theo dõi nhân vật (khuyến nghị)",
+        },
+
+        settings: {
+            title: "Cài đặt",
+            sceneCount: "Số lượng scene",
+            sceneCountDesc: "Số scene mục tiêu cần tạo",
+            batchSize: "Kích thước batch",
+            batchSizeDesc: "Số scene mỗi batch (chỉ cho hybrid mode)",
+            voice: "Giọng nói",
+            voiceDesc: "Ngôn ngữ narration cho video",
+            voiceOptions: {
+                "no-voice": "Không có giọng (silent)",
+                english: "Tiếng Anh",
+                vietnamese: "Tiếng Việt",
+                spanish: "Tiếng Tây Ban Nha",
+                french: "Tiếng Pháp",
+                german: "Tiếng Đức",
+                japanese: "Tiếng Nhật",
+                korean: "Tiếng Hàn",
+                chinese: "Tiếng Trung",
+            },
+        },
+
+        loading: {
+            title: "Đang tạo scenes...",
+            steps: {
+                validating: "Kiểm tra URL...",
+                initializing: "Khởi tạo...",
+                processing: "Đang xử lý video...",
+                generating: "Đang tạo scenes...",
+                parsing: "Phân tích kết quả...",
+                complete: "Hoàn thành!",
+            },
+            batchProgress: "Batch {current}/{total}",
+            scenesGenerated: "{count} scenes đã tạo",
+            estimatedTime: "Thời gian ước tính: {time}",
+        },
+
+        result: {
+            title: "Kết quả",
+            summary: "Tổng quan",
+            scenes: "Scenes",
+            characters: "Nhân vật",
+            download: "Tải xuống",
+
+            summaryStats: {
+                totalScenes: "Tổng scenes",
+                characters: "Nhân vật",
+                mode: "Chế độ",
+                voice: "Giọng nói",
+                processingTime: "Thời gian xử lý",
+            },
+
+            sceneCard: {
+                description: "Mô tả",
+                object: "Đối tượng",
+                character: "Nhân vật",
+                style: "Phong cách",
+                visualSpecs: "Chi tiết hình ảnh",
+                lighting: "Ánh sáng",
+                composition: "Bố cục",
+                technical: "Kỹ thuật",
+                prompt: "Prompt",
+                copyPrompt: "Copy Prompt",
+                copied: "Đã copy!",
+            },
+
+            characterCard: {
+                appearances: "Xuất hiện",
+                description: "Mô tả chi tiết",
+            },
+
+            downloadOptions: {
+                title: "Tải xuống",
+                allScenes: "Tất cả Scenes (JSON)",
+                characters: "Registry Nhân vật (JSON)",
+                summary: "Tổng quan (JSON)",
+                prompts: "Chỉ Prompts (TXT)",
+            },
+        },
+
+        history: {
+            title: "Lịch sử",
+            noJobs: "Chưa có job nào",
+            viewResult: "Xem kết quả",
+            deleteJob: "Xóa",
+            clearAll: "Xóa tất cả",
+        },
+
+        resume: {
+            title: "Có job chưa hoàn thành",
+            message: "Job trước đó bị gián đoạn tại batch {batch}/{total}. Bạn có muốn tiếp tục?",
+            continueButton: "Tiếp tục",
+            startNew: "Bắt đầu mới",
+        },
+
+        errors: {
+            INVALID_URL: "URL video không hợp lệ",
+            GEMINI_API_ERROR: "Lỗi Gemini API",
+            GEMINI_QUOTA: "Đã hết quota Gemini API",
+            GEMINI_RATE_LIMIT: "Vượt quá giới hạn request. Vui lòng thử lại sau.",
+            NETWORK_ERROR: "Lỗi kết nối mạng",
+            PARSE_ERROR: "Không thể phân tích phản hồi từ AI",
+            TIMEOUT: "Yêu cầu quá thời gian chờ",
+            UNKNOWN_ERROR: "Đã xảy ra lỗi. Vui lòng thử lại.",
+        },
+    },
 } as const;
 
 export type ViLanguage = typeof vi;

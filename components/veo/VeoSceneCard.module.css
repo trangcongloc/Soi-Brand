@@ -1,0 +1,226 @@
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 0.75rem;
+  transition: var(--transition);
+  box-shadow: var(--shadow-xs);
+}
+
+.card:hover {
+  border-color: var(--text-secondary);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.sceneNumber {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.expandButton {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.expandButton:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.chevron {
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.description {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.characterBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+.details {
+  overflow: hidden;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.detailSection {
+  margin-bottom: 0.75rem;
+}
+
+.detailSection:last-child {
+  margin-bottom: 0;
+}
+
+.detailSection h4 {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem 0;
+}
+
+.detailSection p {
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.characterFull {
+  font-size: var(--fs-xs) !important;
+  color: var(--text-secondary) !important;
+  background: var(--bg-main);
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  font-style: italic;
+}
+
+.specGrid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.specGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.specLabel {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.specGrid > div > span:last-child {
+  font-size: var(--fs-xs);
+  color: var(--text-main);
+}
+
+.styleDetails {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: var(--bg-main);
+  border-radius: var(--radius-md);
+}
+
+.styleDetails summary {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.styleDetails[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.styleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.35rem;
+}
+
+.styleItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.styleItem > span:last-child {
+  font-size: var(--fs-xs);
+  color: var(--text-main);
+}
+
+.promptSection {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: var(--bg-main);
+  border-radius: var(--radius-md);
+}
+
+.promptHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.promptHeader h4 {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.copyButton {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.copyButton:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--text-secondary);
+}
+
+.prompt {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-main);
+  margin: 0;
+  white-space: pre-wrap;
+}

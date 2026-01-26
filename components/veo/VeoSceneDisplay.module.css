@@ -1,0 +1,116 @@
+.container {
+  width: 100%;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tab:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.tab.active {
+  background: var(--bg-main);
+  color: var(--text-main);
+  box-shadow: var(--shadow-xs);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.content {
+  min-height: 200px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.summaryLabel {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryValue {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.scenesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+@media (max-width: 640px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    flex: 1 1 40%;
+    font-size: var(--fs-xs);
+    padding: 0.4rem 0.5rem;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summaryValue {
+    font-size: var(--fs-lg);
+  }
+}

@@ -1,0 +1,441 @@
+.container {
+  width: 100%;
+}
+
+/* Workflow Selector */
+.workflowSelector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.workflowTab {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+}
+
+.workflowTab:hover:not(:disabled):not(.active) {
+  border-color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.workflowTab.active {
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.workflowTab:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.workflowNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  border-radius: 50%;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.workflowTab.active .workflowNumber {
+  background: var(--primary);
+  color: white;
+}
+
+.workflowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.workflowName {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text-main);
+}
+
+.workflowDesc {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.inputGroup {
+  position: relative;
+  width: 100%;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputWrapper input {
+  flex: 1;
+}
+
+.inputHint {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin: 0.35rem 0 0 0;
+  line-height: 1.4;
+}
+
+/* Time Range Input */
+.timeRangeRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.timeRangeLabel {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.timeInputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.timeLabel {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.timeInput {
+  width: 70px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: var(--fs-sm);
+  text-align: center;
+  transition: var(--transition);
+}
+
+.timeInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.timeInput::placeholder {
+  color: var(--text-muted);
+}
+
+.submitButton {
+  width: 32px;
+  height: 32px;
+  margin-left: 0.4rem;
+  border-radius: var(--radius-md);
+  background: #000000;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.submitButton:hover:not(:disabled) {
+  background: #1a1a1a;
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.submitButtonLarge {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  background: #000000;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  transition: var(--transition);
+  margin-top: 0.5rem;
+}
+
+.submitButtonLarge:hover:not(:disabled) {
+  background: #1a1a1a;
+  transform: translateY(-0.5px);
+  box-shadow: var(--shadow-sm);
+}
+
+.submitButtonLarge:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Script Input Area */
+.scriptInputArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scriptTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 120px;
+  transition: var(--transition);
+}
+
+.scriptTextarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.scriptTextarea::placeholder {
+  color: var(--text-muted);
+}
+
+.scriptActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+.uploadButton {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.uploadButton:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--text-main);
+  background: var(--bg-hover);
+}
+
+.uploadButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fileName {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.modeSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.modeLabel {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modeButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.modeButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+}
+
+.modeButton:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.modeButton.active {
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.modeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modeName {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text-main);
+}
+
+.modeDesc {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.settingsToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.settingsToggle:hover {
+  color: var(--text-main);
+}
+
+.chevron {
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.settings {
+  overflow: hidden;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.settingItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settingItem label {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.settingItem input,
+.settingItem select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: var(--fs-sm);
+  transition: var(--transition);
+}
+
+.settingItem input:focus,
+.settingItem select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.settingDesc {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+@media (max-width: 480px) {
+  .workflowSelector {
+    grid-template-columns: 1fr;
+  }
+
+  .modeButtons {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+}
