@@ -3,6 +3,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
+import { getUserSettingsAsync } from "@/lib/userSettings";
+import { GeminiModel } from "@/lib/types";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   VeoMode,
   VoiceLanguage,
@@ -55,6 +58,11 @@ export default function VeoPage() {
   const [state, setState] = useState<PageState>("idle");
   const [error, setError] = useState<string | null>(null);
 
+  // Settings from Soi-brand settings button
+  const [geminiApiKey, setGeminiApiKey] = useState<string | undefined>(undefined);
+  const [geminiModel, setGeminiModel] = useState<GeminiModel | undefined>(undefined);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   // Loading state
   const [batch, setBatch] = useState(0);
   const [totalBatches, setTotalBatches] = useState(0);
@@ -80,6 +88,17 @@ export default function VeoPage() {
 
   // Abort controller ref
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load settings from Soi-brand settings on mount
+  useEffect(() => {
+    async function loadSettings() {
+      const settings = await getUserSettingsAsync();
+      setGeminiApiKey(settings.geminiApiKey);
+      setGeminiModel(settings.geminiModel);
+      setSettingsLoaded(true);
+    }
+    loadSettings();
+  }, []);
 
   // Check for resumable progress on mount
   useEffect(() => {
@@ -122,6 +141,7 @@ export default function VeoPage() {
       endTime?: string;
       scriptText?: string;
       mode: VeoMode;
+      autoSceneCount: boolean;
       sceneCount: number;
       batchSize: number;
       voice: VoiceLanguage;
@@ -144,10 +164,17 @@ export default function VeoPage() {
       abortControllerRef.current = new AbortController();
 
       try {
+        // Include Gemini settings from Soi-brand settings
+        const requestBody = {
+          ...options,
+          ...(geminiApiKey && { geminiApiKey }),
+          ...(geminiModel && { geminiModel }),
+        };
+
         const response = await fetch("/api/veo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(options),
+          body: JSON.stringify(requestBody),
           signal: abortControllerRef.current.signal,
         });
 
@@ -206,7 +233,7 @@ export default function VeoPage() {
                       // Step 1 complete - show script
                       setState("script-complete");
                     } else {
-                      // Step 2 complete - show scenes
+                      // Step 2 or combined complete - show scenes
                       setScenes(event.data.scenes);
                       setCharacterRegistry(event.data.characterRegistry);
                       setSummary(event.data.summary);
@@ -214,13 +241,15 @@ export default function VeoPage() {
                       setState("complete");
 
                       // Cache the result
-                      setCachedJob(event.data.jobId, {
-                        videoId: event.data.summary.videoId,
-                        videoUrl: event.data.summary.youtubeUrl,
-                        summary: event.data.summary,
-                        scenes: event.data.scenes,
-                        characterRegistry: event.data.characterRegistry,
-                      });
+                      if (event.data.scenes.length > 0) {
+                        setCachedJob(event.data.jobId, {
+                          videoId: event.data.summary.videoId,
+                          videoUrl: event.data.summary.youtubeUrl,
+                          summary: event.data.summary,
+                          scenes: event.data.scenes,
+                          characterRegistry: event.data.characterRegistry,
+                        });
+                      }
                     }
 
                     // Clear any in-progress state
@@ -245,7 +274,7 @@ export default function VeoPage() {
         handleError("NETWORK_ERROR");
       }
     },
-    [handleError, lang]
+    [handleError, lang, geminiApiKey, geminiModel]
   );
 
   const handleCancel = useCallback(() => {
@@ -292,9 +321,10 @@ export default function VeoPage() {
   }, [generatedScript]);
 
   return (
-    <main id="main-content" className={styles.main}>
-      <div className={styles.centerScreen} role="main">
-        <AnimatePresence mode="wait">
+    <ErrorBoundary>
+      <main id="main-content" className={styles.main}>
+        <div className={styles.centerScreen} role="main">
+          <AnimatePresence mode="wait">
           {/* Idle State - Show Form */}
           {state === "idle" && (
             <motion.div
@@ -350,6 +380,8 @@ export default function VeoPage() {
                     onSubmit={handleSubmit}
                     onError={setError}
                     isLoading={false}
+                    hasApiKey={settingsLoaded ? !!geminiApiKey : true}
+                    geminiModel={geminiModel}
                   />
                 </motion.div>
               </div>
@@ -374,6 +406,7 @@ export default function VeoPage() {
                 scenesGenerated={scenesGenerated}
                 message={loadingMessage}
                 characters={characters}
+                generatedScript={generatedScript}
                 onCancel={handleCancel}
               />
             </motion.div>
@@ -561,7 +594,8 @@ export default function VeoPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
-    </main>
+        </AnimatePresence>
+      </main>
+    </ErrorBoundary>
   );
 }

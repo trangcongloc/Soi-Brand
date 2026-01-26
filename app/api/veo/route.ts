@@ -26,6 +26,7 @@ import {
   updateProgressAfterBatch,
   markProgressFailed,
   markProgressCompleted,
+  parseDuration,
   VeoMode,
   VoiceLanguage,
   Scene,
@@ -36,16 +37,18 @@ import {
   GeneratedScript,
 } from "@/lib/veo";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
+import { VEO_CONFIG } from "@/lib/config";
 
 // Request schema validation
 const VeoRequestSchema = z.object({
-  workflow: z.enum(["url-to-script", "script-to-scenes"]),
+  workflow: z.enum(["url-to-script", "script-to-scenes", "url-to-scenes"]),
   videoUrl: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   scriptText: z.string().optional(),
   mode: z.enum(["direct", "hybrid"]).default("hybrid"),
   sceneCount: z.number().int().min(1).max(200).default(40),
+  autoSceneCount: z.boolean().default(true), // Auto-calculate scene count from duration
   batchSize: z.number().int().min(1).max(50).default(10),
   voice: z
     .enum([
@@ -396,7 +399,7 @@ export async function POST(request: NextRequest) {
   const veoRequest = parseResult.data;
 
   // Workflow-specific validation
-  if (veoRequest.workflow === "url-to-script") {
+  if (veoRequest.workflow === "url-to-script" || veoRequest.workflow === "url-to-scenes") {
     if (!veoRequest.videoUrl) {
       return new Response(
         JSON.stringify({
@@ -495,6 +498,112 @@ export async function POST(request: NextRequest) {
               },
             },
           });
+        }
+        // Handle URL to Scenes (combined workflow)
+        else if (veoRequest.workflow === "url-to-scenes") {
+          const startTime = Date.now();
+
+          // Step 1: Extract script from URL
+          sendEvent({
+            event: "progress",
+            data: { batch: 0, total: 0, scenes: 0, message: "Step 1: Extracting script from video..." },
+          });
+
+          const script = await runUrlToScript(veoRequest, apiKey, sendEvent);
+
+          // Send script event so client can show/download it
+          sendEvent({
+            event: "script",
+            data: { script },
+          });
+
+          // Calculate scene count from duration if auto mode is enabled
+          let effectiveSceneCount = veoRequest.sceneCount;
+          if (veoRequest.autoSceneCount && script.duration) {
+            const durationSeconds = parseDuration(script.duration);
+            if (durationSeconds > 0) {
+              const calculatedCount = Math.ceil(durationSeconds / VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE);
+              effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
+
+              sendEvent({
+                event: "progress",
+                data: {
+                  batch: 0,
+                  total: 0,
+                  scenes: 0,
+                  message: `Video duration: ${script.duration}. Auto-calculated ${effectiveSceneCount} scenes (~${VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE}s/scene)`
+                },
+              });
+            }
+          }
+
+          sendEvent({
+            event: "progress",
+            data: { batch: 0, total: 0, scenes: 0, message: "Script extracted. Starting scene generation..." },
+          });
+
+          // Step 2: Generate scenes from script
+          const scriptRequest = {
+            ...veoRequest,
+            workflow: "script-to-scenes" as const,
+            scriptText: script.rawText,
+            sceneCount: effectiveSceneCount,
+          };
+
+          let result: {
+            scenes: Scene[];
+            characterRegistry: CharacterRegistry;
+            elapsed: number;
+            failedBatch?: number;
+          };
+
+          if (veoRequest.mode === "direct") {
+            result = await runScriptToScenesDirect(scriptRequest, apiKey, sendEvent);
+          } else {
+            result = await runScriptToScenesHybrid(scriptRequest, apiKey, jobId, sendEvent);
+          }
+
+          // If there was a failure, don't send complete event
+          if (result.failedBatch) {
+            clearInterval(keepAliveInterval);
+            controller.close();
+            return;
+          }
+
+          const totalElapsed = (Date.now() - startTime) / 1000;
+
+          // Build summary
+          const summary: VeoJobSummary = {
+            mode: veoRequest.mode as VeoMode,
+            youtubeUrl: veoRequest.videoUrl!,
+            videoId,
+            targetScenes: effectiveSceneCount,
+            actualScenes: result.scenes.length,
+            batches:
+              veoRequest.mode === "hybrid"
+                ? Math.ceil(effectiveSceneCount / veoRequest.batchSize)
+                : 1,
+            batchSize: veoRequest.batchSize,
+            voice: veoRequest.voice === "no-voice" ? "No voice (silent)" : veoRequest.voice,
+            charactersFound: Object.keys(result.characterRegistry).length,
+            characters: Object.keys(result.characterRegistry),
+            processingTime: `${totalElapsed.toFixed(1)}s`,
+            createdAt: new Date().toISOString(),
+          };
+
+          // Send complete event
+          sendEvent({
+            event: "complete",
+            data: {
+              jobId,
+              scenes: result.scenes,
+              characterRegistry: result.characterRegistry,
+              summary,
+            },
+          });
+
+          // Clean up server progress
+          serverProgress.delete(jobId);
         }
         // Handle Script to Scenes workflow
         else if (veoRequest.workflow === "script-to-scenes") {

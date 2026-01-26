@@ -3,6 +3,7 @@
 import { memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
+import { logger } from "@/lib/logger";
 import { Scene } from "@/lib/veo";
 import styles from "./VeoSceneCard.module.css";
 
@@ -22,7 +23,7 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy:", err);
+      logger.error("Failed to copy:", err);
     }
   };
 

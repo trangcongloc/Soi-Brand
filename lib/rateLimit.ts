@@ -83,8 +83,20 @@ export function checkRateLimit(
 }
 
 /**
+ * Simple hash function for string to create differentiated identifiers
+ */
+function simpleHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
+
+/**
  * Get client identifier from request
- * Uses X-Forwarded-For header for proxied requests, falls back to IP
+ * Uses X-Forwarded-For header for proxied requests, falls back to user-agent hash
  */
 export function getClientIdentifier(request: Request): string {
     const forwarded = request.headers.get("x-forwarded-for");
@@ -93,6 +105,13 @@ export function getClientIdentifier(request: Request): string {
         return forwarded.split(",")[0].trim();
     }
 
-    // Fallback - in Next.js, this won't work directly, but serves as a default
+    // Fallback: use user-agent hash for some differentiation
+    // This prevents all unidentified requests from sharing the same rate limit bucket
+    const userAgent = request.headers.get("user-agent") || "";
+    if (userAgent) {
+        return `ua-${simpleHash(userAgent)}`;
+    }
+
+    // Last resort fallback
     return "unknown";
 }

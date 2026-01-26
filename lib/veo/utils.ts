@@ -3,6 +3,7 @@
  */
 
 import { TimeRange } from "./types";
+import { logger } from "@/lib/logger";
 
 /**
  * Extract video ID from YouTube URL
@@ -121,7 +122,7 @@ export function validatePositiveInt(
   const num = parseInt(String(value), 10);
   if (isNaN(num) || num <= 0) {
     if (value !== undefined && value !== null && value !== "") {
-      console.warn(`Invalid ${name}: "${value}", using default: ${defaultVal}`);
+      logger.warn(`Invalid ${name}: "${value}", using default: ${defaultVal}`);
     }
     return defaultVal;
   }

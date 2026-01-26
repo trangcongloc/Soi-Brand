@@ -71,7 +71,7 @@ export async function callGeminiAPI(
     throw error;
   }
 
-  const url = `${getGeminiApiUrl(model)}?key=${apiKey}`;
+  const url = getGeminiApiUrl(model);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -79,7 +79,10 @@ export async function callGeminiAPI(
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
@@ -254,9 +257,6 @@ export async function generateScenesHybrid(
       const response = await callGeminiAPIWithRetry(requestBody, {
         apiKey,
         model,
-        onRetry: (attempt) => {
-          console.log(`Batch ${batchNum + 1} retry ${attempt}...`);
-        },
       });
 
       const batchScenes = parseGeminiResponse(response);

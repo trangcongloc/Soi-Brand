@@ -9,6 +9,7 @@ import {
   CharacterRegistry,
   VeoJobSummary,
 } from "./types";
+import { logger } from "@/lib/logger";
 
 const CACHE_PREFIX = "veo_job_";
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -169,7 +170,7 @@ export function setCachedJob(
     const key = getCacheKey(jobId);
     localStorage.setItem(key, JSON.stringify(cacheData));
   } catch (error) {
-    console.error("Error writing VEO job to cache", error);
+    logger.error("Error writing VEO job to cache", error);
     if (error instanceof Error && error.name === "QuotaExceededError") {
       clearOldJobs();
     }

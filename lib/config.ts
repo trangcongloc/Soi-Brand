@@ -1,5 +1,19 @@
 // Environment configuration and validation
 
+/**
+ * VEO Pipeline configuration constants
+ */
+export const VEO_CONFIG = {
+    /** Default seconds per scene for auto-calculation */
+    DEFAULT_SECONDS_PER_SCENE: 8,
+    /** Minimum auto-calculated scenes */
+    MIN_AUTO_SCENES: 5,
+    /** Maximum auto-calculated scenes */
+    MAX_AUTO_SCENES: 150,
+    /** Delay between batches in hybrid mode (ms) */
+    BATCH_DELAY_MS: 2000,
+};
+
 export interface EnvConfig {
     YOUTUBE_API_KEY: string;
     GEMINI_API_KEY: string;

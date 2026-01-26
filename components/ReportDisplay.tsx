@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import { MarketingReport } from "@/lib/types";
 import styles from "./ReportDisplay.module.css";
 import { downloadJSON } from "@/lib/utils";
-import { useLang, formatString } from "@/lib/lang";
+import { useLanguage, formatString } from "@/lib/lang";
 import DataTab from "./report/DataTab";
 import AnalysisTab from "./report/AnalysisTab";
 import EvaluationTab from "./report/EvaluationTab";
@@ -34,7 +34,7 @@ interface ReportDisplayProps {
 }
 
 const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
-    const lang = useLang();
+    const { lang, langCode } = useLanguage();
     const [activeTab, setActiveTab] = useState<TabType>("data");
 
     const { report_part_1, report_part_2, report_part_3 } = report;
@@ -190,8 +190,9 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ report, onReset }) => {
                             brandName: report.brand_name,
                             reportDate: (() => {
                                 const date = new Date(report.created_at);
-                                const dateStr = date.toLocaleDateString("vi-VN");
-                                const timeStr = date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                                const locale = langCode === "vi" ? "vi-VN" : "en-US";
+                                const dateStr = date.toLocaleDateString(locale);
+                                const timeStr = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
                                 const tzAbbr = date.toLocaleTimeString("en-US", { timeZoneName: "short" }).split(" ").pop();
                                 return `${dateStr} ${timeStr} (${tzAbbr})`;
                             })(),

@@ -9,6 +9,7 @@ import {
   VeoMode,
   VoiceLanguage,
 } from "./types";
+import { logger } from "@/lib/logger";
 
 const PROGRESS_KEY = "veo_progress_current";
 
@@ -43,7 +44,7 @@ export function saveProgress(progress: VeoProgress): void {
   try {
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
   } catch (error) {
-    console.error("Error saving VEO progress", error);
+    logger.error("Error saving VEO progress", error);
   }
 }
 
