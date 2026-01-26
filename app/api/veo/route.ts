@@ -15,11 +15,13 @@ import {
   generateJobId,
   buildScriptPrompt,
   buildScriptToScenesPrompt,
+  buildScenePrompt,
   buildContinuityContext,
   callGeminiAPIWithRetry,
   parseGeminiResponse,
   parseScriptResponse,
   extractCharacterRegistry,
+  getCharacterDescription,
   mapErrorToType,
   serverProgress,
   createProgress,
@@ -27,17 +29,68 @@ import {
   markProgressFailed,
   markProgressCompleted,
   parseDuration,
+  cleanScriptText,
+  formatTime,
+  // Phase 1: Character extraction
+  extractCharactersFromVideo,
+  extractionResultToRegistry,
   VeoMode,
   VoiceLanguage,
   Scene,
   CharacterRegistry,
+  CharacterSkeleton,
+  DirectBatchInfo,
   VeoSSEEvent,
   VeoJobSummary,
   GeminiApiError,
   GeneratedScript,
 } from "@/lib/veo";
-import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
+import { getVideoInfo, parseISO8601Duration } from "@/lib/youtube";
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  detectApiKeyTier,
+  getTierRateLimit
+} from "@/lib/rateLimit";
 import { VEO_CONFIG } from "@/lib/config";
+import { logger } from "@/lib/logger";
+
+const isDev = process.env.NODE_ENV === "development";
+
+/**
+ * Format error for SSE response with detailed info
+ */
+function formatErrorMessage(error: GeminiApiError, context?: string): string {
+  const parts: string[] = [];
+
+  // Add context if provided
+  if (context) {
+    parts.push(context);
+  }
+
+  // Add status code if available
+  if (error.status) {
+    parts.push(`[${error.status}]`);
+  }
+
+  // Add error message
+  if (error.message) {
+    parts.push(error.message);
+  }
+
+  // Add API error details if available
+  if (error.response?.error?.message) {
+    parts.push(`- ${error.response.error.message}`);
+  }
+
+  // In dev mode, add raw response if available
+  if (isDev && error.response?.raw) {
+    const rawPreview = String(error.response.raw).slice(0, 200);
+    parts.push(`[Raw: ${rawPreview}...]`);
+  }
+
+  return parts.join(" ") || "An unexpected error occurred";
+}
 
 // Request schema validation
 const VeoRequestSchema = z.object({
@@ -47,9 +100,9 @@ const VeoRequestSchema = z.object({
   endTime: z.string().optional(),
   scriptText: z.string().optional(),
   mode: z.enum(["direct", "hybrid"]).default("hybrid"),
-  sceneCount: z.number().int().min(1).max(200).default(40),
+  sceneCount: z.number().int().min(1).max(VEO_CONFIG.MAX_AUTO_SCENES).default(40),
   autoSceneCount: z.boolean().default(true), // Auto-calculate scene count from duration
-  batchSize: z.number().int().min(1).max(50).default(10),
+  batchSize: z.number().int().min(1).max(60).default(VEO_CONFIG.DEFAULT_BATCH_SIZE),
   voice: z
     .enum([
       "no-voice",
@@ -66,6 +119,11 @@ const VeoRequestSchema = z.object({
   resumeJobId: z.string().optional(),
   geminiApiKey: z.string().optional(),
   geminiModel: z.string().optional(),
+  apiKeyTier: z.enum(["free", "paid"]).optional(),
+  // Resume parameters
+  resumeFromBatch: z.number().int().min(0).optional(),
+  existingScenes: z.array(z.any()).optional(),
+  existingCharacters: z.record(z.string(), z.string()).optional(),
 });
 
 type VeoRequest = z.infer<typeof VeoRequestSchema>;
@@ -172,10 +230,10 @@ async function runScriptToScenesDirect(
   const elapsed = (Date.now() - startTime) / 1000;
 
   // Send character events
-  for (const [name, description] of Object.entries(characterRegistry)) {
+  for (const [name, charData] of Object.entries(characterRegistry)) {
     sendEvent({
       event: "character",
-      data: { name, description },
+      data: { name, description: getCharacterDescription(charData) },
     });
   }
 
@@ -184,12 +242,16 @@ async function runScriptToScenesDirect(
 
 /**
  * Run Script to Scenes - Hybrid mode (batched)
+ * Phase 2: Can use pre-extracted characters from Phase 1
  */
 async function runScriptToScenesHybrid(
   request: VeoRequest,
   apiKey: string,
   jobId: string,
-  sendEvent: (event: VeoSSEEvent) => void
+  sendEvent: (event: VeoSSEEvent) => void,
+  // Phase 2: Pre-extracted characters from Phase 1
+  preExtractedCharacters?: CharacterSkeleton[],
+  preExtractedBackground?: string
 ): Promise<{
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
@@ -199,27 +261,49 @@ async function runScriptToScenesHybrid(
   const startTime = Date.now();
   const totalBatches = Math.ceil(request.sceneCount / request.batchSize);
 
-  let allScenes: Scene[] = [];
-  let characterRegistry: CharacterRegistry = {};
+  // Resume support: Initialize with existing data if resuming
+  const startBatch = request.resumeFromBatch ?? 0;
+  let allScenes: Scene[] = request.existingScenes ?? [];
+  let characterRegistry: CharacterRegistry = request.existingCharacters ?? {};
 
   // Initialize progress tracking
   const progress = createProgress({
     jobId,
     mode: "hybrid",
-    youtubeUrl: "",
-    videoId: "",
+    youtubeUrl: request.videoUrl ?? "",
+    videoId: request.videoUrl ? extractVideoId(request.videoUrl) : "",
     sceneCount: request.sceneCount,
     batchSize: request.batchSize,
     voiceLang: request.voice as VoiceLanguage,
     totalBatches,
+    scriptText: request.scriptText,
   });
+
+  // If resuming, update progress to reflect completed batches
+  if (startBatch > 0) {
+    progress.completedBatches = startBatch;
+    progress.scenes = allScenes;
+    progress.characterRegistry = characterRegistry;
+    progress.status = "in_progress";
+
+    sendEvent({
+      event: "progress",
+      data: {
+        batch: startBatch,
+        total: totalBatches,
+        scenes: allScenes.length,
+        message: `Resuming from batch ${startBatch + 1}/${totalBatches} with ${allScenes.length} existing scenes`,
+      },
+    });
+  }
+
   serverProgress.set(jobId, progress);
 
   // Split script into chunks for batching
   const scriptLines = request.scriptText!.split("\n").filter((l) => l.trim());
   const linesPerBatch = Math.ceil(scriptLines.length / totalBatches);
 
-  for (let batchNum = 0; batchNum < totalBatches; batchNum++) {
+  for (let batchNum = startBatch; batchNum < totalBatches; batchNum++) {
     const batchStart = batchNum * request.batchSize + 1;
     const batchEnd = Math.min((batchNum + 1) * request.batchSize, request.sceneCount);
     const batchSceneCount = batchEnd - batchStart + 1;
@@ -239,15 +323,19 @@ async function runScriptToScenesHybrid(
       },
     });
 
-    try {
-      // Build context from previous scenes
-      const continuityContext =
-        allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
+    // Build context from previous scenes (outside try for error logging)
+    const continuityContext =
+      allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
 
+    try {
+      // Build prompt for Phase 2 scene generation with pre-extracted characters
       const requestBody = buildScriptToScenesPrompt({
         scriptText: scriptChunk + (continuityContext ? `\n\n${continuityContext}` : ""),
         sceneCount: batchSceneCount,
         voiceLang: request.voice as VoiceLanguage,
+        // Phase 2: Use pre-extracted characters from Phase 1
+        preExtractedCharacters: preExtractedCharacters && preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
+        preExtractedBackground: preExtractedBackground || undefined,
       });
 
       const response = await callGeminiAPIWithRetry(requestBody, {
@@ -273,11 +361,11 @@ async function runScriptToScenesHybrid(
         const newCharacters = extractCharacterRegistry(batchScenes);
 
         // Send character events for new characters
-        for (const [name, description] of Object.entries(newCharacters)) {
+        for (const [name, charData] of Object.entries(newCharacters)) {
           if (!characterRegistry[name]) {
             sendEvent({
               event: "character",
-              data: { name, description },
+              data: { name, description: getCharacterDescription(charData) },
             });
           }
         }
@@ -286,11 +374,15 @@ async function runScriptToScenesHybrid(
         characterRegistry = { ...characterRegistry, ...newCharacters };
         allScenes = [...allScenes, ...batchScenes];
 
-        // Update progress
+        // Update progress (convert to string format for legacy compatibility)
+        const stringCharacters: Record<string, string> = {};
+        for (const [n, c] of Object.entries(newCharacters)) {
+          stringCharacters[n] = getCharacterDescription(c);
+        }
         const updatedProgress = updateProgressAfterBatch(
           serverProgress.get(jobId)!,
           batchScenes,
-          newCharacters
+          stringCharacters
         );
         serverProgress.set(jobId, updatedProgress);
 
@@ -312,17 +404,370 @@ async function runScriptToScenesHybrid(
     } catch (err) {
       const error = err as GeminiApiError;
       const errorType = mapErrorToType(error);
+      const errorMessage = formatErrorMessage(error, `Batch ${batchNum + 1}/${totalBatches} failed`);
+
+      // Log detailed error for debugging
+      logger.error("VEO Batch Error", {
+        batch: batchNum + 1,
+        totalBatches,
+        type: errorType,
+        status: error.status,
+        message: error.message,
+        apiError: error.response?.error?.message,
+        scenesCompleted: allScenes.length,
+        jobId,
+      });
 
       // Update progress with error
-      const failedProgress = markProgressFailed(serverProgress.get(jobId)!, error.message);
+      const failedProgress = markProgressFailed(serverProgress.get(jobId)!, errorMessage);
       serverProgress.set(jobId, failedProgress);
 
       sendEvent({
         event: "error",
         data: {
           type: errorType,
-          message: `Batch ${batchNum + 1} failed: ${error.message}`,
-          retryable: true,
+          message: errorMessage,
+          retryable: errorType === "GEMINI_RATE_LIMIT" || errorType === "TIMEOUT" || errorType === "NETWORK_ERROR",
+          // Include debug info in dev mode
+          ...(isDev && {
+            debug: {
+              batch: batchNum + 1,
+              status: error.status,
+              apiError: error.response?.error?.message,
+              scenesCompleted: allScenes.length,
+            },
+          }),
+        },
+      });
+
+      const elapsed = (Date.now() - startTime) / 1000;
+      return {
+        scenes: allScenes,
+        characterRegistry,
+        elapsed,
+        failedBatch: batchNum + 1,
+      };
+    }
+  }
+
+  // Mark as completed
+  const completedProgress = markProgressCompleted(serverProgress.get(jobId)!);
+  serverProgress.set(jobId, completedProgress);
+
+  const elapsed = (Date.now() - startTime) / 1000;
+  return { scenes: allScenes, characterRegistry, elapsed };
+}
+
+/**
+ * Run URL to Scenes - Direct mode (video → scenes, no script generation)
+ * Uses time-based batching to analyze video segments directly
+ */
+async function runUrlToScenesDirect(
+  request: VeoRequest,
+  apiKey: string,
+  jobId: string,
+  videoDurationSeconds: number,
+  sendEvent: (event: VeoSSEEvent) => void
+): Promise<{
+  scenes: Scene[];
+  characterRegistry: CharacterRegistry;
+  elapsed: number;
+  failedBatch?: number;
+}> {
+  const startTime = Date.now();
+
+  // Calculate time-based batches
+  // Each scene is ~8 seconds, so batch covers batchSize * 8 seconds of video
+  const secondsPerScene = 8;
+  const secondsPerBatch = request.batchSize * secondsPerScene;
+  const totalBatches = Math.max(1, Math.ceil(videoDurationSeconds / secondsPerBatch));
+
+  // Resume support: Initialize with existing data if resuming
+  const startBatch = request.resumeFromBatch ?? 0;
+  let allScenes: Scene[] = request.existingScenes ?? [];
+  let characterRegistry: CharacterRegistry = request.existingCharacters ?? {};
+
+  // Initialize progress tracking
+  const progress = createProgress({
+    jobId,
+    mode: "direct",
+    youtubeUrl: request.videoUrl ?? "",
+    videoId: request.videoUrl ? extractVideoId(request.videoUrl) : "",
+    sceneCount: request.sceneCount,
+    batchSize: request.batchSize,
+    voiceLang: request.voice as VoiceLanguage,
+    totalBatches,
+  });
+
+  // If resuming, update progress to reflect completed batches
+  if (startBatch > 0) {
+    progress.completedBatches = startBatch;
+    progress.scenes = allScenes;
+    progress.characterRegistry = characterRegistry;
+    progress.status = "in_progress";
+
+    sendEvent({
+      event: "progress",
+      data: {
+        batch: startBatch,
+        total: totalBatches,
+        scenes: allScenes.length,
+        message: `Resuming from batch ${startBatch + 1}/${totalBatches} with ${allScenes.length} existing scenes`,
+      },
+    });
+  }
+
+  serverProgress.set(jobId, progress);
+
+  logger.info("VEO Direct Mode Starting", {
+    jobId,
+    videoDurationSeconds,
+    secondsPerBatch,
+    totalBatches,
+    batchSize: request.batchSize,
+    startBatch,
+  });
+
+  // ============================================================================
+  // PHASE 1: Extract characters FIRST (before scene generation)
+  // ============================================================================
+  let preExtractedCharacters: CharacterSkeleton[] = [];
+  let preExtractedBackground = "";
+
+  // Only run Phase 1 if not resuming (resuming already has characters)
+  if (startBatch === 0 && Object.keys(characterRegistry).length === 0) {
+    try {
+      sendEvent({
+        event: "progress",
+        data: {
+          batch: 0,
+          total: totalBatches,
+          scenes: 0,
+          message: "Phase 1: Identifying characters in video...",
+        },
+      });
+
+      const characterData = await extractCharactersFromVideo(request.videoUrl!, {
+        apiKey,
+        model: request.geminiModel,
+        onProgress: (msg) => {
+          sendEvent({
+            event: "progress",
+            data: { batch: 0, total: totalBatches, scenes: 0, message: msg },
+          });
+        },
+      });
+
+      preExtractedCharacters = characterData.characters;
+      preExtractedBackground = characterData.background;
+
+      // Convert to registry and send character events immediately
+      const extractedRegistry = extractionResultToRegistry(characterData);
+      characterRegistry = { ...characterRegistry, ...extractedRegistry };
+
+      for (const char of characterData.characters) {
+        sendEvent({
+          event: "character",
+          data: { name: char.name, description: getCharacterDescription(char) },
+        });
+      }
+
+      logger.info("VEO Phase 1 Complete", {
+        jobId,
+        charactersFound: characterData.characters.length,
+        characters: characterData.characters.map(c => c.name),
+        hasBackground: !!characterData.background,
+      });
+
+      sendEvent({
+        event: "progress",
+        data: {
+          batch: 0,
+          total: totalBatches,
+          scenes: 0,
+          message: `Phase 1 complete: Found ${characterData.characters.length} character(s). Starting Phase 2...`,
+        },
+      });
+    } catch (phase1Error) {
+      // Phase 1 failed - log but continue with Phase 2 (fallback to inline extraction)
+      const error = phase1Error as GeminiApiError;
+      logger.warn("VEO Phase 1 Failed - falling back to inline extraction", {
+        jobId,
+        error: error.message,
+        status: error.status,
+      });
+
+      sendEvent({
+        event: "progress",
+        data: {
+          batch: 0,
+          total: totalBatches,
+          scenes: 0,
+          message: "Phase 1 character extraction failed, using fallback mode...",
+        },
+      });
+    }
+  } else if (startBatch > 0) {
+    // Resuming - extract characters from existing registry
+    for (const [, charData] of Object.entries(characterRegistry)) {
+      if (typeof charData === "object") {
+        preExtractedCharacters.push(charData);
+      }
+    }
+    logger.info("VEO Resuming with existing characters", {
+      jobId,
+      existingCharacters: preExtractedCharacters.length,
+    });
+  }
+
+  // ============================================================================
+  // PHASE 2: Generate scenes using pre-extracted characters
+  // ============================================================================
+
+  for (let batchNum = startBatch; batchNum < totalBatches; batchNum++) {
+    const batchStartSeconds = batchNum * secondsPerBatch;
+    const batchEndSeconds = Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds);
+    const batchSceneCount = Math.ceil((batchEndSeconds - batchStartSeconds) / secondsPerScene);
+
+    const directBatchInfo: DirectBatchInfo = {
+      batchNum,
+      totalBatches,
+      startSeconds: batchStartSeconds,
+      endSeconds: batchEndSeconds,
+      startTime: formatTime(batchStartSeconds),
+      endTime: formatTime(batchEndSeconds),
+      sceneCount: batchSceneCount,
+    };
+
+    sendEvent({
+      event: "progress",
+      data: {
+        batch: batchNum + 1,
+        total: totalBatches,
+        scenes: allScenes.length,
+        message: `Analyzing video segment ${directBatchInfo.startTime}-${directBatchInfo.endTime} (batch ${batchNum + 1}/${totalBatches})`,
+      },
+    });
+
+    // Build context from previous scenes (outside try for error logging)
+    const continuityContext =
+      allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
+
+    try {
+      // Build prompt for direct video analysis
+      // Build prompt for Phase 2 scene generation with pre-extracted characters
+      const requestBody = buildScenePrompt({
+        videoUrl: request.videoUrl!,
+        sceneCount: batchSceneCount,
+        voiceLang: request.voice as VoiceLanguage,
+        includeCharacterAnalysis: preExtractedCharacters.length === 0, // Fallback only if Phase 1 failed
+        continuityContext,
+        directBatchInfo,
+        // Phase 2: Use pre-extracted characters from Phase 1
+        preExtractedCharacters: preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
+        preExtractedBackground: preExtractedBackground || undefined,
+      });
+
+      const response = await callGeminiAPIWithRetry(requestBody, {
+        apiKey,
+        model: request.geminiModel,
+        onRetry: (attempt) => {
+          sendEvent({
+            event: "progress",
+            data: {
+              batch: batchNum + 1,
+              total: totalBatches,
+              scenes: allScenes.length,
+              message: `Batch ${batchNum + 1} retry ${attempt}...`,
+            },
+          });
+        },
+      });
+
+      const batchScenes = parseGeminiResponse(response);
+
+      if (Array.isArray(batchScenes)) {
+        // Extract new characters
+        const newCharacters = extractCharacterRegistry(batchScenes);
+
+        // Send character events for new characters
+        for (const [name, charData] of Object.entries(newCharacters)) {
+          if (!characterRegistry[name]) {
+            sendEvent({
+              event: "character",
+              data: { name, description: getCharacterDescription(charData) },
+            });
+          }
+        }
+
+        // Update state
+        characterRegistry = { ...characterRegistry, ...newCharacters };
+        allScenes = [...allScenes, ...batchScenes];
+
+        // Update progress (convert to string format for legacy compatibility)
+        const stringCharacters: Record<string, string> = {};
+        for (const [n, c] of Object.entries(newCharacters)) {
+          stringCharacters[n] = getCharacterDescription(c);
+        }
+        const updatedProgress = updateProgressAfterBatch(
+          serverProgress.get(jobId)!,
+          batchScenes,
+          stringCharacters
+        );
+        serverProgress.set(jobId, updatedProgress);
+
+        sendEvent({
+          event: "progress",
+          data: {
+            batch: batchNum + 1,
+            total: totalBatches,
+            scenes: allScenes.length,
+            message: `Batch ${batchNum + 1} complete: ${batchScenes.length} scenes from ${directBatchInfo.startTime}-${directBatchInfo.endTime}`,
+          },
+        });
+      }
+
+      // Delay between batches (except for last batch)
+      if (batchNum < totalBatches - 1) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    } catch (err) {
+      const error = err as GeminiApiError;
+      const errorType = mapErrorToType(error);
+      const errorMessage = formatErrorMessage(error, `Direct batch ${batchNum + 1}/${totalBatches} failed`);
+
+      // Log detailed error for debugging
+      logger.error("VEO Direct Batch Error", {
+        batch: batchNum + 1,
+        totalBatches,
+        type: errorType,
+        status: error.status,
+        message: error.message,
+        apiError: error.response?.error?.message,
+        scenesCompleted: allScenes.length,
+        jobId,
+        timeRange: `${formatTime(batchNum * secondsPerBatch)}-${formatTime(Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds))}`,
+      });
+
+      // Update progress with error
+      const failedProgress = markProgressFailed(serverProgress.get(jobId)!, errorMessage);
+      serverProgress.set(jobId, failedProgress);
+
+      sendEvent({
+        event: "error",
+        data: {
+          type: errorType,
+          message: errorMessage,
+          retryable: errorType === "GEMINI_RATE_LIMIT" || errorType === "TIMEOUT" || errorType === "NETWORK_ERROR",
+          // Include debug info in dev mode
+          ...(isDev && {
+            debug: {
+              batch: batchNum + 1,
+              status: error.status,
+              apiError: error.response?.error?.message,
+              scenesCompleted: allScenes.length,
+            },
+          }),
         },
       });
 
@@ -345,31 +790,7 @@ async function runScriptToScenesHybrid(
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const clientId = getClientIdentifier(request);
-  const rateLimitResult = checkRateLimit(clientId, { limit: 5, windowMs: 60000 });
-
-  if (!rateLimitResult.success) {
-    return new Response(
-      JSON.stringify({
-        event: "error",
-        data: {
-          type: "GEMINI_RATE_LIMIT",
-          message: "Too many requests. Please try again later.",
-          retryable: true,
-        },
-      }),
-      {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          "Retry-After": String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)),
-        },
-      }
-    );
-  }
-
-  // Parse request body
+  // Parse request body first to get API key for tier detection
   let rawBody: unknown;
   try {
     rawBody = await request.json();
@@ -397,6 +818,53 @@ export async function POST(request: NextRequest) {
   }
 
   const veoRequest = parseResult.data;
+
+  // Get API key (from request or environment)
+  const apiKey = veoRequest.geminiApiKey || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({
+        event: "error",
+        data: { type: "GEMINI_API_ERROR", message: "Gemini API key is required", retryable: false },
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Detect API key tier (uses cache or explicit tier from request)
+  const tier = detectApiKeyTier(apiKey, veoRequest.apiKeyTier);
+  const tierRateLimit = getTierRateLimit("veo", tier);
+
+  // Tier-based rate limiting check
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(clientId, tierRateLimit, tier);
+
+  if (!rateLimitResult.success) {
+    const tierLabel = tier === "paid" ? "paid tier" : "free tier";
+    return new Response(
+      JSON.stringify({
+        event: "error",
+        data: {
+          type: "RATE_LIMIT",
+          message: `Rate limit exceeded for ${tierLabel} (${tierRateLimit.limit} requests per minute). Please try again later.`,
+          retryable: true,
+          tier,
+          limit: tierRateLimit.limit,
+        },
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)),
+          "X-RateLimit-Limit": String(tierRateLimit.limit),
+          "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+          "X-RateLimit-Reset": String(rateLimitResult.resetTime),
+          "X-RateLimit-Tier": tier,
+        },
+      }
+    );
+  }
 
   // Workflow-specific validation
   if (veoRequest.workflow === "url-to-script" || veoRequest.workflow === "url-to-scenes") {
@@ -428,18 +896,6 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-  }
-
-  // Get API key (from request or environment)
-  const apiKey = veoRequest.geminiApiKey || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({
-        event: "error",
-        data: { type: "GEMINI_API_ERROR", message: "Gemini API key is required", retryable: false },
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
   }
 
   // Create SSE stream
@@ -503,52 +959,27 @@ export async function POST(request: NextRequest) {
         else if (veoRequest.workflow === "url-to-scenes") {
           const startTime = Date.now();
 
-          // Step 1: Extract script from URL
+          // Step 0: Fetch video duration from YouTube API (required for both modes)
           sendEvent({
             event: "progress",
-            data: { batch: 0, total: 0, scenes: 0, message: "Step 1: Extracting script from video..." },
+            data: { batch: 0, total: 0, scenes: 0, message: "Fetching video metadata from YouTube..." },
           });
 
-          const script = await runUrlToScript(veoRequest, apiKey, sendEvent);
-
-          // Send script event so client can show/download it
-          sendEvent({
-            event: "script",
-            data: { script },
-          });
-
-          // Calculate scene count from duration if auto mode is enabled
-          let effectiveSceneCount = veoRequest.sceneCount;
-          if (veoRequest.autoSceneCount && script.duration) {
-            const durationSeconds = parseDuration(script.duration);
-            if (durationSeconds > 0) {
-              const calculatedCount = Math.ceil(durationSeconds / VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE);
-              effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
-
-              sendEvent({
-                event: "progress",
-                data: {
-                  batch: 0,
-                  total: 0,
-                  scenes: 0,
-                  message: `Video duration: ${script.duration}. Auto-calculated ${effectiveSceneCount} scenes (~${VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE}s/scene)`
-                },
+          let youtubeDurationSeconds = 0;
+          try {
+            const videoInfo = await getVideoInfo(videoId);
+            if (videoInfo?.contentDetails?.duration) {
+              youtubeDurationSeconds = parseISO8601Duration(videoInfo.contentDetails.duration);
+              logger.info("VEO YouTube Duration", {
+                videoId,
+                iso8601: videoInfo.contentDetails.duration,
+                seconds: youtubeDurationSeconds,
+                title: videoInfo.title,
               });
             }
+          } catch (ytError) {
+            logger.warn("Failed to fetch YouTube video info", { videoId, error: ytError });
           }
-
-          sendEvent({
-            event: "progress",
-            data: { batch: 0, total: 0, scenes: 0, message: "Script extracted. Starting scene generation..." },
-          });
-
-          // Step 2: Generate scenes from script
-          const scriptRequest = {
-            ...veoRequest,
-            workflow: "script-to-scenes" as const,
-            scriptText: script.rawText,
-            sceneCount: effectiveSceneCount,
-          };
 
           let result: {
             scenes: Scene[];
@@ -557,10 +988,233 @@ export async function POST(request: NextRequest) {
             failedBatch?: number;
           };
 
+          let script: GeneratedScript | undefined;
+          let effectiveSceneCount = veoRequest.sceneCount;
+
+          // DIRECT MODE: Video → Scenes (no script generation)
           if (veoRequest.mode === "direct") {
-            result = await runScriptToScenesDirect(scriptRequest, apiKey, sendEvent);
-          } else {
-            result = await runScriptToScenesHybrid(scriptRequest, apiKey, jobId, sendEvent);
+            // Calculate scene count from YouTube duration
+            if (veoRequest.autoSceneCount && youtubeDurationSeconds > 0) {
+              const calculatedCount = Math.ceil(youtubeDurationSeconds / VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE);
+              effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
+
+              const durationFormatted = `${Math.floor(youtubeDurationSeconds / 60)}m ${youtubeDurationSeconds % 60}s`;
+              sendEvent({
+                event: "progress",
+                data: {
+                  batch: 0,
+                  total: 0,
+                  scenes: 0,
+                  message: `Video duration: ${durationFormatted}. Auto-calculated ${effectiveSceneCount} scenes (~${VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE}s/scene)`
+                },
+              });
+            } else if (youtubeDurationSeconds === 0) {
+              // Duration not available - use default and warn
+              logger.warn("VEO Direct Mode: No duration available, using default scene count", {
+                videoId,
+                defaultSceneCount: effectiveSceneCount,
+              });
+              sendEvent({
+                event: "progress",
+                data: {
+                  batch: 0,
+                  total: 0,
+                  scenes: 0,
+                  message: `Could not determine video duration. Using ${effectiveSceneCount} scenes.`
+                },
+              });
+              // Estimate ~5 minutes for unknown duration
+              youtubeDurationSeconds = 300;
+            }
+
+            sendEvent({
+              event: "progress",
+              data: { batch: 0, total: 0, scenes: 0, message: "Direct mode: Analyzing video directly (no script generation)..." },
+            });
+
+            // Use direct video analysis with time-based batching
+            const directRequest = {
+              ...veoRequest,
+              sceneCount: effectiveSceneCount,
+            };
+
+            result = await runUrlToScenesDirect(
+              directRequest,
+              apiKey,
+              jobId,
+              youtubeDurationSeconds,
+              sendEvent
+            );
+          }
+          // HYBRID MODE: Video → Script → Scenes
+          else {
+            // Step 1: Extract script from URL
+            sendEvent({
+              event: "progress",
+              data: { batch: 0, total: 0, scenes: 0, message: "Hybrid mode: Extracting script from video..." },
+            });
+
+            script = await runUrlToScript(veoRequest, apiKey, sendEvent);
+
+            // Send script event so client can show/download it
+            sendEvent({
+              event: "script",
+              data: { script },
+            });
+
+            // Calculate scene count from duration if auto mode is enabled
+            // Priority: YouTube API duration > Gemini script duration > default
+            if (veoRequest.autoSceneCount) {
+              let durationSeconds = youtubeDurationSeconds;
+              let durationSource = "YouTube API";
+
+              // Fallback to Gemini's parsed duration if YouTube failed
+              if (durationSeconds === 0 && script.duration) {
+                durationSeconds = parseDuration(script.duration);
+                durationSource = "Gemini script";
+
+                logger.info("VEO Duration Fallback", {
+                  rawDuration: script.duration,
+                  parsedSeconds: durationSeconds,
+                });
+              }
+
+              if (durationSeconds > 0) {
+                const calculatedCount = Math.ceil(durationSeconds / VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE);
+                effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
+
+                const durationFormatted = `${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s`;
+                sendEvent({
+                  event: "progress",
+                  data: {
+                    batch: 0,
+                    total: 0,
+                    scenes: 0,
+                    message: `Video duration: ${durationFormatted} (from ${durationSource}). Auto-calculated ${effectiveSceneCount} scenes (~${VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE}s/scene)`
+                  },
+                });
+
+                logger.info("VEO Scene Count Calculated", {
+                  durationSeconds,
+                  durationSource,
+                  calculatedCount,
+                  effectiveSceneCount,
+                  maxAllowed: VEO_CONFIG.MAX_AUTO_SCENES,
+                });
+              } else {
+                // Duration parsing failed completely
+                logger.warn("VEO Duration parsing failed", {
+                  youtubeDuration: youtubeDurationSeconds,
+                  scriptDuration: script.duration,
+                  fallbackSceneCount: effectiveSceneCount,
+                });
+
+                sendEvent({
+                  event: "progress",
+                  data: {
+                    batch: 0,
+                    total: 0,
+                    scenes: 0,
+                    message: `Could not determine video duration. Using default ${effectiveSceneCount} scenes.`
+                  },
+                });
+              }
+            }
+
+            sendEvent({
+              event: "progress",
+              data: { batch: 0, total: 0, scenes: 0, message: "Script extracted. Starting character extraction..." },
+            });
+
+            // ============================================================================
+            // PHASE 1: Extract characters from video BEFORE scene generation
+            // ============================================================================
+            let hybridPreExtractedCharacters: CharacterSkeleton[] = [];
+            let hybridPreExtractedBackground = "";
+
+            try {
+              sendEvent({
+                event: "progress",
+                data: { batch: 0, total: 0, scenes: 0, message: "Phase 1: Identifying characters in video..." },
+              });
+
+              const characterData = await extractCharactersFromVideo(veoRequest.videoUrl!, {
+                apiKey,
+                model: veoRequest.geminiModel,
+                onProgress: (msg) => {
+                  sendEvent({
+                    event: "progress",
+                    data: { batch: 0, total: 0, scenes: 0, message: msg },
+                  });
+                },
+              });
+
+              hybridPreExtractedCharacters = characterData.characters;
+              hybridPreExtractedBackground = characterData.background;
+
+              // Send character events immediately
+              for (const char of characterData.characters) {
+                sendEvent({
+                  event: "character",
+                  data: { name: char.name, description: getCharacterDescription(char) },
+                });
+              }
+
+              logger.info("VEO Hybrid Phase 1 Complete", {
+                jobId,
+                charactersFound: characterData.characters.length,
+                characters: characterData.characters.map(c => c.name),
+                hasBackground: !!characterData.background,
+              });
+
+              sendEvent({
+                event: "progress",
+                data: {
+                  batch: 0,
+                  total: 0,
+                  scenes: 0,
+                  message: `Phase 1 complete: Found ${characterData.characters.length} character(s). Starting Phase 2...`,
+                },
+              });
+            } catch (phase1Error) {
+              // Phase 1 failed - log but continue with Phase 2 (fallback)
+              const error = phase1Error as GeminiApiError;
+              logger.warn("VEO Hybrid Phase 1 Failed - continuing without pre-extracted characters", {
+                jobId,
+                error: error.message,
+                status: error.status,
+              });
+
+              sendEvent({
+                event: "progress",
+                data: { batch: 0, total: 0, scenes: 0, message: "Phase 1 failed, using fallback mode..." },
+              });
+            }
+
+            // ============================================================================
+            // PHASE 2: Generate scenes from script with pre-extracted characters
+            // ============================================================================
+
+            // Clean the raw text to remove caption timestamp artifacts
+            const cleanedScriptText = cleanScriptText(script.rawText);
+
+            const scriptRequest = {
+              ...veoRequest,
+              workflow: "script-to-scenes" as const,
+              scriptText: cleanedScriptText,
+              sceneCount: effectiveSceneCount,
+            };
+
+            // In hybrid mode, use batched processing for scenes from script
+            result = await runScriptToScenesHybrid(
+              scriptRequest,
+              apiKey,
+              jobId,
+              sendEvent,
+              // Pass Phase 1 results
+              hybridPreExtractedCharacters,
+              hybridPreExtractedBackground
+            );
           }
 
           // If there was a failure, don't send complete event
@@ -572,6 +1226,11 @@ export async function POST(request: NextRequest) {
 
           const totalElapsed = (Date.now() - startTime) / 1000;
 
+          // Calculate batch count based on mode
+          const batchCount = veoRequest.mode === "direct"
+            ? Math.ceil(youtubeDurationSeconds / (veoRequest.batchSize * 8))
+            : Math.ceil(effectiveSceneCount / veoRequest.batchSize);
+
           // Build summary
           const summary: VeoJobSummary = {
             mode: veoRequest.mode as VeoMode,
@@ -579,10 +1238,7 @@ export async function POST(request: NextRequest) {
             videoId,
             targetScenes: effectiveSceneCount,
             actualScenes: result.scenes.length,
-            batches:
-              veoRequest.mode === "hybrid"
-                ? Math.ceil(effectiveSceneCount / veoRequest.batchSize)
-                : 1,
+            batches: batchCount,
             batchSize: veoRequest.batchSize,
             voice: veoRequest.voice === "no-voice" ? "No voice (silent)" : veoRequest.voice,
             charactersFound: Object.keys(result.characterRegistry).length,
@@ -591,7 +1247,7 @@ export async function POST(request: NextRequest) {
             createdAt: new Date().toISOString(),
           };
 
-          // Send complete event
+          // Send complete event (include script only for hybrid mode)
           sendEvent({
             event: "complete",
             data: {
@@ -599,6 +1255,7 @@ export async function POST(request: NextRequest) {
               scenes: result.scenes,
               characterRegistry: result.characterRegistry,
               summary,
+              ...(script && { script }), // Include script for client-side caching (hybrid mode only)
             },
           });
 
@@ -663,13 +1320,33 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         const error = err as GeminiApiError;
         const errorType = mapErrorToType(error);
+        const errorMessage = formatErrorMessage(error, "VEO generation failed");
+
+        // Log detailed error for debugging
+        logger.error("VEO API Error", {
+          type: errorType,
+          status: error.status,
+          message: error.message,
+          response: error.response,
+          workflow: veoRequest.workflow,
+          mode: veoRequest.mode,
+          videoUrl: veoRequest.videoUrl?.slice(0, 50),
+        });
 
         sendEvent({
           event: "error",
           data: {
             type: errorType,
-            message: error.message || "An unexpected error occurred",
+            message: errorMessage,
             retryable: errorType !== "GEMINI_API_ERROR",
+            // Include debug info in dev mode
+            ...(isDev && {
+              debug: {
+                status: error.status,
+                originalMessage: error.message,
+                apiError: error.response?.error?.message,
+              },
+            }),
           },
         });
       } finally {

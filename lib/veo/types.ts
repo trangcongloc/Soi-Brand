@@ -62,14 +62,72 @@ export interface Scene {
   technical: Technical;
   prompt: string;
   voice?: string; // Optional voice narration
+  // Character skeleton system - scene-specific variations
+  characterVariations?: {
+    [characterName: string]: {
+      outfit?: string;       // "now wearing casual clothes"
+      accessories?: string;  // "wearing gloves, holding knife"
+      expression?: string;   // "smiling", "angry"
+      pose?: string;         // "sitting", "leaning on counter"
+      injuries?: string;     // "bandaged hand"
+    };
+  };
+}
+
+// ============================================================================
+// Character Skeleton System
+// ============================================================================
+
+/**
+ * Fixed character attributes that never change across scenes.
+ * Used to maintain consistency for recurring characters.
+ */
+export interface CharacterSkeleton {
+  name: string;              // "Chef Marco"
+  gender: string;            // "male"
+  age: string;               // "40s"
+  ethnicity: string;         // "Italian, olive skin"
+  bodyType: string;          // "tall, stocky build"
+  faceShape: string;         // "square jaw, prominent nose"
+  hair: string;              // "salt-and-pepper, short, slicked back"
+  facialHair?: string;       // "trimmed goatee"
+  distinctiveFeatures?: string; // "scar on left cheek, gold tooth"
+  baseOutfit: string;        // "white chef coat, black apron"
+  firstAppearance?: string;  // "0:15" - timestamp of first appearance
+}
+
+/**
+ * Result from Phase 1: Character extraction from video.
+ * Characters are identified BEFORE scene generation to ensure consistency.
+ */
+export interface CharacterExtractionResult {
+  characters: CharacterSkeleton[];
+  background: string;  // Main environment/setting description
+}
+
+/**
+ * Per-scene changes for a character (temporary state).
+ */
+export interface CharacterVariation {
+  outfit?: string;       // "now wearing casual clothes"
+  accessories?: string;  // "wearing gloves, holding knife"
+  expression?: string;   // "smiling", "angry"
+  pose?: string;         // "sitting", "leaning on counter"
+  injuries?: string;     // "bandaged hand"
 }
 
 // ============================================================================
 // Character Registry
 // ============================================================================
 
+/**
+ * Registry of all characters found in the video.
+ * Maps character name to either:
+ * - Legacy: string description (for backward compatibility)
+ * - New: CharacterSkeleton object (for skeleton system)
+ */
 export interface CharacterRegistry {
-  [characterName: string]: string; // Full character description
+  [characterName: string]: string | CharacterSkeleton;
 }
 
 // ============================================================================
@@ -83,13 +141,27 @@ export interface TimeRange {
   sceneCount: number;
 }
 
+/**
+ * Batch info for direct video-to-scenes processing.
+ * Used to tell AI which segment of the video to analyze.
+ */
+export interface DirectBatchInfo {
+  batchNum: number;         // Current batch number (0-indexed)
+  totalBatches: number;     // Total number of batches
+  startSeconds: number;     // Start time in seconds
+  endSeconds: number;       // End time in seconds
+  startTime: string;        // Formatted start time (MM:SS)
+  endTime: string;          // Formatted end time (MM:SS)
+  sceneCount: number;       // Target scenes for this batch
+}
+
 // ============================================================================
 // VEO Generation Modes
 // ============================================================================
 
 export type VeoMode = "direct" | "hybrid";
 
-export type VeoWorkflow = "url-to-script" | "script-to-scenes";
+export type VeoWorkflow = "url-to-script" | "script-to-scenes" | "url-to-scenes";
 
 export type VoiceLanguage =
   | "no-voice"
@@ -140,6 +212,10 @@ export interface VeoGenerateRequest {
   resumeJobId?: string;
   geminiApiKey?: string;
   geminiModel?: string;
+  // Resume parameters
+  resumeFromBatch?: number;
+  existingScenes?: Scene[];
+  existingCharacters?: CharacterRegistry;
 }
 
 export interface VeoScriptEvent {
@@ -174,6 +250,7 @@ export interface VeoCompleteEvent {
     scenes: Scene[];
     characterRegistry: CharacterRegistry;
     summary: VeoJobSummary;
+    script?: GeneratedScript; // Script for caching (only in url-to-scenes workflow)
   };
 }
 
@@ -183,6 +260,13 @@ export interface VeoErrorEvent {
     type: VeoErrorType;
     message: string;
     retryable: boolean;
+    debug?: {
+      batch?: number;
+      status?: number;
+      originalMessage?: string;
+      apiError?: string;
+      scenesCompleted?: number;
+    };
   };
 }
 
@@ -241,11 +325,33 @@ export interface VeoProgress {
   lastError?: string;
   lastUpdated: string;
   status: "pending" | "in_progress" | "completed" | "failed";
+  // Resume support
+  scriptText?: string;
+}
+
+// ============================================================================
+// Resume Data
+// ============================================================================
+
+export interface VeoResumeData {
+  jobId: string;
+  videoUrl: string;
+  scriptText: string;
+  mode: VeoMode;
+  sceneCount: number;
+  batchSize: number;
+  voice: VoiceLanguage;
+  completedBatches: number;
+  totalBatches: number;
+  existingScenes: Scene[];
+  existingCharacters: CharacterRegistry;
 }
 
 // ============================================================================
 // Cached VEO Job
 // ============================================================================
+
+export type VeoJobStatus = "completed" | "failed" | "partial";
 
 export interface CachedVeoJob {
   jobId: string;
@@ -255,6 +361,26 @@ export interface CachedVeoJob {
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
   timestamp: number;
+  script?: GeneratedScript; // Cached script for regeneration
+  status: VeoJobStatus; // Job completion status
+  error?: {
+    message: string;
+    type: VeoErrorType;
+    failedBatch?: number; // Which batch failed (for retry)
+    totalBatches?: number; // Total batches in the job
+    retryable: boolean; // Whether the job can be retried
+  };
+  // Resume data for partial/failed jobs
+  resumeData?: {
+    completedBatches: number;
+    existingScenes: Scene[];
+    existingCharacters: CharacterRegistry;
+    workflow: "url-to-script" | "script-to-scenes" | "url-to-scenes";
+    mode: VeoMode;
+    batchSize: number;
+    sceneCount: number;
+    voice: VoiceLanguage;
+  };
 }
 
 export interface CachedVeoJobInfo {
@@ -267,6 +393,15 @@ export interface CachedVeoJobInfo {
   voice: string;
   timestamp: number;
   createdAt: string;
+  hasScript: boolean; // Whether script is cached for regeneration
+  status: VeoJobStatus; // Job completion status
+  error?: {
+    message: string;
+    type: VeoErrorType;
+    failedBatch?: number;
+    totalBatches?: number;
+    retryable: boolean;
+  };
 }
 
 // ============================================================================
@@ -281,6 +416,7 @@ export interface GeminiRequestBody {
   };
   generationConfig?: {
     temperature?: number;
+    maxOutputTokens?: number;
     responseMimeType?: string;
     responseSchema?: Record<string, unknown>;
   };

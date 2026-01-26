@@ -22,6 +22,7 @@ export {
   formatProcessingTime,
   truncateText,
   getYouTubeThumbnail,
+  cleanScriptText,
 } from "./utils";
 
 // Prompt building
@@ -33,6 +34,9 @@ export {
   buildScriptPrompt,
   buildScriptToScenesPrompt,
   parseScriptResponse,
+  // Phase 1: Character extraction
+  buildCharacterExtractionPrompt,
+  parseCharacterExtractionResponse,
 } from "./prompts";
 
 // Gemini API
@@ -43,8 +47,12 @@ export {
   generateScenesDirect,
   generateScenesHybrid,
   extractCharacterRegistry,
+  getCharacterDescription,
   mapErrorToType,
   isRetryableError,
+  // Phase 1: Character extraction
+  extractCharactersFromVideo,
+  extractionResultToRegistry,
 } from "./gemini";
 
 // Caching
@@ -73,4 +81,7 @@ export {
   serverProgress,
   calculateProgressPercent,
   getProgressMessage,
+  updateProgressWithScript,
+  getResumeData,
+  canResumeProgress,
 } from "./progress";
