@@ -109,6 +109,77 @@
   background: rgba(239, 68, 68, 0.05);
 }
 
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.searchInputWrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: var(--fs-sm);
+  transition: var(--transition);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.1);
+}
+
+.clearSearchBtn {
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.clearSearchBtn:hover {
+  background: var(--border);
+  color: var(--text-secondary);
+}
+
+.searchResultCount {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .confirmBanner {
   display: flex;
   align-items: center;
@@ -243,6 +314,22 @@
   text-transform: capitalize;
 }
 
+.scriptBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: #22c55e;
+}
+
+.scriptBadge svg {
+  flex-shrink: 0;
+}
+
 .jobMeta {
   display: flex;
   align-items: center;
@@ -266,23 +353,6 @@
   font-size: var(--fs-xs);
   color: var(--text-muted);
   opacity: 0.8;
-}
-
-.scriptIndicator {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.35rem;
-  padding: 0.2rem 0.5rem;
-  background: rgba(34, 197, 94, 0.08);
-  border-radius: var(--radius-sm);
-  font-size: var(--fs-xs);
-  color: #22c55e;
-  width: fit-content;
-}
-
-.scriptIndicator svg {
-  flex-shrink: 0;
 }
 
 .errorIndicator {
@@ -499,5 +569,15 @@
   .confirmActions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .searchRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .searchResultCount {
+    text-align: right;
   }
 }

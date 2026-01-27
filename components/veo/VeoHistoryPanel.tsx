@@ -25,6 +25,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [showAll, setShowAll] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const refreshJobs = useCallback(() => {
     setJobs(getCachedJobList());
@@ -156,8 +157,20 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     return { completed, partial, failed, total: jobs.length };
   }, [jobs]);
 
+  // Filter jobs by search query (videoId or jobId)
+  const filteredJobs = useMemo(() => {
+    if (!searchQuery.trim()) return jobs;
+    const query = searchQuery.toLowerCase().trim();
+    return jobs.filter((job) => {
+      const videoIdMatch = job.videoId?.toLowerCase().includes(query);
+      const jobIdMatch = job.jobId.toLowerCase().includes(query);
+      const videoUrlMatch = job.videoUrl?.toLowerCase().includes(query);
+      return videoIdMatch || jobIdMatch || videoUrlMatch;
+    });
+  }, [jobs, searchQuery]);
+
   const sortedJobs = useMemo(() => {
-    const jobsCopy = [...jobs];
+    const jobsCopy = [...filteredJobs];
 
     switch (sortBy) {
       case "date-desc":
@@ -189,7 +202,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
       default:
         return jobsCopy.sort((a, b) => b.timestamp - a.timestamp);
     }
-  }, [jobs, sortBy]);
+  }, [filteredJobs, sortBy]);
 
   // Filter jobs for display
   const visibleJobs = showAll ? sortedJobs : sortedJobs.slice(0, VISIBLE_COUNT);
@@ -266,6 +279,50 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
         </div>
       </div>
 
+      {/* Search Bar */}
+      {jobs.length > 0 && (
+        <div className={styles.searchRow}>
+          <div className={styles.searchInputWrapper}>
+            <svg
+              className={styles.searchIcon}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder={lang.veo.history.searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                className={styles.clearSearchBtn}
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <span className={styles.searchResultCount}>
+              {filteredJobs.length} / {jobs.length}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Clear All Confirmation */}
       <AnimatePresence>
         {confirmClearAll && (
@@ -310,6 +367,15 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                   {getStatusIcon(job.status)}
                   <span className={styles.jobVideoId}>{truncateUrl(job.videoUrl)}</span>
                   <span className={styles.jobMode}>{job.mode}</span>
+                  {job.hasScript && !job.error && (
+                    <span className={styles.scriptBadge} title={lang.veo.history.scriptCached}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      {lang.veo.history.scriptCached}
+                    </span>
+                  )}
                 </div>
                 <div className={styles.jobMeta}>
                   <span>{job.sceneCount} scenes</span>
@@ -333,17 +399,6 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                     {job.error.retryable && (
                       <span className={styles.retryableHint}>• {lang.veo.history.retryable}</span>
                     )}
-                  </div>
-                )}
-                {job.hasScript && !job.error && (
-                  <div className={styles.scriptIndicator}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                    </svg>
-                    <span>{lang.veo.history.scriptCached}</span>
                   </div>
                 )}
               </div>

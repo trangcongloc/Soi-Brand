@@ -560,6 +560,7 @@ export const en = {
             summary: "Summary",
             scenes: "Scenes",
             characters: "Characters",
+            color: "Color",
             download: "Download",
 
             summaryStats: {
@@ -638,6 +639,7 @@ export const en = {
         history: {
             title: "History",
             noJobs: "No jobs yet",
+            searchPlaceholder: "Search by video ID or job ID...",
             viewResult: "View Result",
             deleteJob: "Delete",
             clearAll: "Clear All",

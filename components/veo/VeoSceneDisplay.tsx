@@ -23,7 +23,7 @@ interface VeoSceneDisplayProps {
   onJobsChange?: () => void;
 }
 
-type TabType = "scenes" | "characters" | "history";
+type TabType = "scenes" | "characters" | "color" | "history";
 
 function VeoSceneDisplay({
   scenes,
@@ -99,6 +99,8 @@ function VeoSceneDisplay({
   const tabs: { key: TabType; label: string }[] = [
     { key: "scenes", label: lang.veo.result.scenes },
     { key: "characters", label: lang.veo.result.characters },
+    // Only show color tab if colorProfile is available
+    ...(colorProfile ? [{ key: "color" as TabType, label: lang.veo.result.color }] : []),
     // Only show history tab if onViewJob handler is provided
     ...(onViewJob ? [{ key: "history" as TabType, label: lang.veo.history.title }] : []),
   ];
@@ -171,15 +173,6 @@ function VeoSceneDisplay({
         </div>
       </div>
 
-      {/* Color Profile Panel */}
-      {colorProfile && (
-        <VeoColorProfilePanel
-          profile={colorProfile}
-          confidence={colorProfileConfidence ?? 0}
-          defaultExpanded={false}
-        />
-      )}
-
       {/* Tabs */}
       <div className={styles.tabs}>
         {tabs.map((tab) => (
@@ -217,6 +210,15 @@ function VeoSceneDisplay({
           <VeoCharacterPanel
             characterRegistry={characterRegistry}
             scenes={scenes}
+          />
+        )}
+
+        {/* Color Tab */}
+        {activeTab === "color" && colorProfile && (
+          <VeoColorProfilePanel
+            profile={colorProfile}
+            confidence={colorProfileConfidence ?? 0}
+            defaultExpanded={true}
           />
         )}
 

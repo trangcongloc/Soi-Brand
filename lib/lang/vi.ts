@@ -565,6 +565,7 @@ export const vi = {
             summary: "Tổng quan",
             scenes: "Scenes",
             characters: "Nhân vật",
+            color: "Màu sắc",
             download: "Tải xuống",
 
             summaryStats: {
@@ -643,6 +644,7 @@ export const vi = {
         history: {
             title: "Lịch sử",
             noJobs: "Chưa có job nào",
+            searchPlaceholder: "Tìm theo video ID hoặc job ID...",
             viewResult: "Xem kết quả",
             deleteJob: "Xóa",
             clearAll: "Xóa tất cả",
