@@ -497,6 +497,11 @@ export const en = {
 
         settings: {
             title: "Settings",
+            // Section titles
+            generationTitle: "Generation",
+            contentTitle: "Content Analysis",
+            qualityTitle: "Quality & Filtering",
+            // Settings
             sceneCount: "Scene Count",
             sceneCountDesc: "Target number of scenes to generate",
             sceneCountAutoDesc: "Auto-calculated based on video duration (~8s/scene)",
@@ -657,6 +662,9 @@ export const en = {
             retryable: "Retryable",
             cancelled: "Cancelled",
             jobCancelled: "Job cancelled by user",
+            // Show more/less
+            showMore: "Show more",
+            showLess: "Show less",
         },
 
         resume: {

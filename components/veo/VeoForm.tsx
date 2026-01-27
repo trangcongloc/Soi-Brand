@@ -480,9 +480,10 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className={styles.settingsGrid}>
-                    {/* Basic Settings Section */}
-                    <div className={styles.settingsSection}>
+                  {/* Section 1: Generation Settings */}
+                  <div className={styles.settingsSection}>
+                    <h4 className={styles.sectionTitle}>{lang.veo.settings.generationTitle}</h4>
+                    <div className={styles.sectionContent}>
                       {/* Scene Count - with auto toggle for url-to-scenes */}
                       <div className={styles.settingItem}>
                         <div className={styles.settingHeader}>
@@ -545,73 +546,6 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
                         </div>
                       )}
 
-                      {/* Voice Selection */}
-                      <div className={styles.settingItem}>
-                        <label htmlFor="voice">{lang.veo.settings.voice}</label>
-                        <select
-                          id="voice"
-                          value={voice}
-                          onChange={(e) => setVoice(e.target.value as VoiceLanguage)}
-                          disabled={isLoading}
-                        >
-                          {voiceOptions.map((v) => (
-                            <option key={v} value={v}>
-                              {lang.veo.settings.voiceOptions[v]}
-                            </option>
-                          ))}
-                        </select>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.voiceDesc}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Advanced Settings Section */}
-                    <div className={styles.settingsSection}>
-                      {/* Include Video Chapters Toggle (only for url-to-scenes workflow) */}
-                      {workflow === "url-to-scenes" && (
-                        <div className={styles.settingItem}>
-                          <div className={styles.settingHeader}>
-                            <label htmlFor="use-chapters">{lang.veo.settings.useVideoChapters}</label>
-                            <label className={styles.toggleSwitch}>
-                              <input
-                                id="use-chapters"
-                                type="checkbox"
-                                checked={useVideoChapters}
-                                onChange={(e) => setUseVideoChapters(e.target.checked)}
-                                disabled={isLoading}
-                              />
-                              <span className={styles.toggleSlider}></span>
-                            </label>
-                          </div>
-                          <span className={styles.settingDesc}>
-                            {lang.veo.settings.useVideoChaptersDesc}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Extract Color Profile Toggle (only for url-to-scenes workflow) */}
-                      {workflow === "url-to-scenes" && (
-                        <div className={styles.settingItem}>
-                          <div className={styles.settingHeader}>
-                            <label htmlFor="extract-color-profile">{lang.veo.settings.extractColorProfile}</label>
-                            <label className={styles.toggleSwitch}>
-                              <input
-                                id="extract-color-profile"
-                                type="checkbox"
-                                checked={extractColorProfile}
-                                onChange={(e) => setExtractColorProfile(e.target.checked)}
-                                disabled={isLoading}
-                              />
-                              <span className={styles.toggleSlider}></span>
-                            </label>
-                          </div>
-                          <span className={styles.settingDesc}>
-                            {lang.veo.settings.extractColorProfileDesc}
-                          </span>
-                        </div>
-                      )}
-
                       {/* Media Type Toggle (Image vs Video) */}
                       <div className={styles.settingItem}>
                         <div className={styles.settingHeader}>
@@ -650,7 +584,83 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
                             : lang.veo.settings.videoModeHint}
                         </span>
                       </div>
+                    </div>
+                  </div>
 
+                  {/* Section 2: Content Analysis */}
+                  <div className={styles.settingsSection}>
+                    <h4 className={styles.sectionTitle}>{lang.veo.settings.contentTitle}</h4>
+                    <div className={styles.sectionContent}>
+                      {/* Extract Color Profile Toggle (only for url-to-scenes workflow) */}
+                      {workflow === "url-to-scenes" && (
+                        <div className={styles.settingItem}>
+                          <div className={styles.settingHeader}>
+                            <label htmlFor="extract-color-profile">{lang.veo.settings.extractColorProfile}</label>
+                            <label className={styles.toggleSwitch}>
+                              <input
+                                id="extract-color-profile"
+                                type="checkbox"
+                                checked={extractColorProfile}
+                                onChange={(e) => setExtractColorProfile(e.target.checked)}
+                                disabled={isLoading}
+                              />
+                              <span className={styles.toggleSlider}></span>
+                            </label>
+                          </div>
+                          <span className={styles.settingDesc}>
+                            {lang.veo.settings.extractColorProfileDesc}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Include Video Chapters Toggle (only for url-to-scenes workflow) */}
+                      {workflow === "url-to-scenes" && (
+                        <div className={styles.settingItem}>
+                          <div className={styles.settingHeader}>
+                            <label htmlFor="use-chapters">{lang.veo.settings.useVideoChapters}</label>
+                            <label className={styles.toggleSwitch}>
+                              <input
+                                id="use-chapters"
+                                type="checkbox"
+                                checked={useVideoChapters}
+                                onChange={(e) => setUseVideoChapters(e.target.checked)}
+                                disabled={isLoading}
+                              />
+                              <span className={styles.toggleSlider}></span>
+                            </label>
+                          </div>
+                          <span className={styles.settingDesc}>
+                            {lang.veo.settings.useVideoChaptersDesc}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Voice Selection */}
+                      <div className={styles.settingItem}>
+                        <label htmlFor="voice">{lang.veo.settings.voice}</label>
+                        <select
+                          id="voice"
+                          value={voice}
+                          onChange={(e) => setVoice(e.target.value as VoiceLanguage)}
+                          disabled={isLoading}
+                        >
+                          {voiceOptions.map((v) => (
+                            <option key={v} value={v}>
+                              {lang.veo.settings.voiceOptions[v]}
+                            </option>
+                          ))}
+                        </select>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.voiceDesc}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Quality & Filtering */}
+                  <div className={styles.settingsSection}>
+                    <h4 className={styles.sectionTitle}>{lang.veo.settings.qualityTitle}</h4>
+                    <div className={styles.sectionContent}>
                       {/* Deduplication Threshold Slider */}
                       <div className={styles.settingItem}>
                         <div className={styles.settingHeader}>

@@ -501,6 +501,11 @@ export const vi = {
 
         settings: {
             title: "Cài đặt",
+            // Section titles
+            generationTitle: "Tạo scene",
+            contentTitle: "Phân tích nội dung",
+            qualityTitle: "Chất lượng & Lọc",
+            // Settings
             sceneCount: "Số lượng scene",
             sceneCountDesc: "Số scene mục tiêu cần tạo",
             sceneCountAutoDesc:
@@ -662,6 +667,9 @@ export const vi = {
             retryable: "Có thể thử lại",
             cancelled: "Đã hủy",
             jobCancelled: "Job đã hủy bởi người dùng",
+            // Show more/less
+            showMore: "Xem thêm",
+            showLess: "Thu gọn",
         },
 
         resume: {

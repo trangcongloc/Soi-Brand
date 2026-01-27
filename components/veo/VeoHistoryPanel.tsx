@@ -16,12 +16,15 @@ interface VeoHistoryPanelProps {
 
 type SortOption = "date-desc" | "date-asc" | "status" | "scenes-desc" | "scenes-asc";
 
+const VISIBLE_COUNT = 5;
+
 function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId, onJobsChange }: VeoHistoryPanelProps) {
   const lang = useLang();
   const [jobs, setJobs] = useState<CachedVeoJobInfo[]>(() => getCachedJobList());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
+  const [showAll, setShowAll] = useState(false);
 
   const refreshJobs = useCallback(() => {
     setJobs(getCachedJobList());
@@ -188,6 +191,11 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     }
   }, [jobs, sortBy]);
 
+  // Filter jobs for display
+  const visibleJobs = showAll ? sortedJobs : sortedJobs.slice(0, VISIBLE_COUNT);
+  const hasMore = sortedJobs.length > VISIBLE_COUNT;
+  const hiddenCount = sortedJobs.length - VISIBLE_COUNT;
+
   if (jobs.length === 0) {
     return (
       <div className={styles.empty}>
@@ -288,7 +296,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
 
       <div className={styles.list}>
         <AnimatePresence>
-          {sortedJobs.map((job, index) => (
+          {visibleJobs.map((job, index) => (
             <motion.div
               key={job.jobId}
               className={`${styles.jobCard} ${currentJobId === job.jobId ? styles.active : ""}`}
@@ -431,6 +439,18 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
             </motion.div>
           ))}
         </AnimatePresence>
+
+        {/* Show more/less toggle */}
+        {hasMore && (
+          <button
+            className={styles.showMoreBtn}
+            onClick={() => setShowAll(!showAll)}
+          >
+            {showAll
+              ? lang.veo.history.showLess
+              : `${lang.veo.history.showMore} (${hiddenCount})`}
+          </button>
+        )}
       </div>
     </div>
   );
