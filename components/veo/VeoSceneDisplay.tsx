@@ -2,10 +2,11 @@
 
 import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { useLang } from "@/lib/lang";
-import { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript } from "@/lib/veo";
+import { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript, CinematicProfile } from "@/lib/veo";
 import VeoSceneCard from "./VeoSceneCard";
 import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoHistoryPanel from "./VeoHistoryPanel";
+import VeoColorProfilePanel from "./VeoColorProfilePanel";
 import styles from "./VeoSceneDisplay.module.css";
 
 interface VeoSceneDisplayProps {
@@ -14,6 +15,8 @@ interface VeoSceneDisplayProps {
   summary: VeoJobSummary;
   jobId: string;
   script?: GeneratedScript;
+  colorProfile?: CinematicProfile;
+  colorProfileConfidence?: number;
   onViewJob?: (jobId: string) => void;
   onRegenerateJob?: (jobId: string) => void;
   onRetryJob?: (jobId: string) => void;
@@ -28,6 +31,8 @@ function VeoSceneDisplay({
   summary,
   jobId,
   script,
+  colorProfile,
+  colorProfileConfidence,
   onViewJob,
   onRegenerateJob,
   onRetryJob,
@@ -165,6 +170,15 @@ function VeoSceneDisplay({
           )}
         </div>
       </div>
+
+      {/* Color Profile Panel */}
+      {colorProfile && (
+        <VeoColorProfilePanel
+          profile={colorProfile}
+          confidence={colorProfileConfidence ?? 0}
+          defaultExpanded={false}
+        />
+      )}
 
       {/* Tabs */}
       <div className={styles.tabs}>

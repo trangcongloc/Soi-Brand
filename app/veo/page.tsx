@@ -28,7 +28,6 @@ import {
   extractVideoId,
 } from "@/lib/veo";
 import { VeoForm, VeoLoadingState, VeoSceneDisplay, VeoHistoryPanel } from "@/components/veo";
-import VeoColorProfilePanel from "@/components/veo/VeoColorProfilePanel";
 import { getCachedJobList } from "@/lib/veo";
 import styles from "./page.module.css";
 
@@ -908,21 +907,14 @@ export default function VeoPage() {
                 </button>
               </div>
 
-              {/* Color Profile Panel (Phase 0) */}
-              {colorProfile && (
-                <VeoColorProfilePanel
-                  profile={colorProfile}
-                  confidence={colorProfileConfidence}
-                  defaultExpanded={false}
-                />
-              )}
-
               <VeoSceneDisplay
                 scenes={scenes}
                 characterRegistry={characterRegistry}
                 summary={summary}
                 jobId={jobId}
                 script={generatedScript ?? undefined}
+                colorProfile={colorProfile ?? undefined}
+                colorProfileConfidence={colorProfileConfidence}
                 onViewJob={handleViewJob}
                 onRegenerateJob={handleRegenerateJob}
                 onRetryJob={handleRetryJob}
