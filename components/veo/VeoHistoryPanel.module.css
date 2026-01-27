@@ -243,6 +243,13 @@
   color: var(--text-muted);
 }
 
+.jobIdText {
+  font-family: monospace;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
 .scriptIndicator {
   display: flex;
   align-items: center;

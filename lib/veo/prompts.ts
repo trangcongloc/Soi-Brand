@@ -637,21 +637,57 @@ function formatCharacterForContext(charData: string | CharacterSkeleton): string
  * Build continuity context for batched processing (both direct and hybrid modes)
  * Supports both legacy string descriptions and CharacterSkeleton objects
  */
+/**
+ * Extract unique locations from scene list
+ */
+function extractLocations(scenes: Array<{ visual_specs?: { environment?: string } }>): string[] {
+  const locations = new Set<string>();
+  scenes.forEach((scene) => {
+    if (scene.visual_specs?.environment) {
+      locations.add(scene.visual_specs.environment);
+    }
+  });
+  return Array.from(locations);
+}
+
+/**
+ * Extract unique actions/activities from scene descriptions
+ */
+function extractActions(scenes: Array<{ description: string }>): string[] {
+  const actions = new Set<string>();
+  scenes.forEach((scene) => {
+    // Extract key action words (simple heuristic: look for verbs)
+    const desc = scene.description.toLowerCase();
+    const actionWords = [
+      "cooking", "preparing", "mixing", "chopping", "grilling", "serving",
+      "walking", "talking", "presenting", "demonstrating", "explaining",
+      "tasting", "stirring", "pouring", "cutting", "slicing", "baking"
+    ];
+    actionWords.forEach((word) => {
+      if (desc.includes(word)) {
+        actions.add(word);
+      }
+    });
+  });
+  return Array.from(actions);
+}
+
 export function buildContinuityContext(
   previousScenes: Array<{
     description: string;
     character?: string;
     visual_specs?: { environment?: string };
   }>,
-  characterRegistry: Record<string, string | CharacterSkeleton>
+  characterRegistry: Record<string, string | CharacterSkeleton>,
+  summaryMode: boolean = false,  // Enable summary mode for large scene counts
+  detailSceneCount: number = 5   // How many recent scenes to show in detail
 ): string {
   if (!previousScenes || previousScenes.length === 0) return "";
 
-  const lastScene = previousScenes[previousScenes.length - 1];
-
   let context = `\n\n=== CONTINUITY CONTEXT (CRITICAL - MUST MAINTAIN) ===\n`;
-  context += `\nESTABLISHED CHARACTERS (use EXACT descriptions when they reappear):\n`;
 
+  // 1. Character Registry
+  context += `\nESTABLISHED CHARACTERS (use EXACT descriptions when they reappear):\n`;
   for (const [, charData] of Object.entries(characterRegistry)) {
     const formatted = formatCharacterForContext(charData);
     // If skeleton, show structured format; if string, show as-is
@@ -662,18 +698,63 @@ export function buildContinuityContext(
     }
   }
 
-  context += `\nPREVIOUS SCENE ENDED WITH:\n`;
-  context += `- Description: ${lastScene.description}\n`;
+  // 2. Scene History
+  // Use summary mode if we have more than 10 scenes
+  const useSummary = summaryMode || previousScenes.length > 10;
 
-  if (lastScene.character) {
-    context += `- Character present: ${lastScene.character.split("-")[0].trim()}\n`;
+  if (useSummary) {
+    // Summary mode: Overview + last N scenes in detail
+    context += `\n--- PREVIOUS SCENES (Summary) ---\n`;
+    context += `Total scenes generated: ${previousScenes.length}\n`;
+
+    const locations = extractLocations(previousScenes);
+    if (locations.length > 0) {
+      context += `Locations covered: ${locations.slice(0, 5).join(", ")}`;
+      if (locations.length > 5) context += `, and ${locations.length - 5} more`;
+      context += `\n`;
+    }
+
+    const actions = extractActions(previousScenes);
+    if (actions.length > 0) {
+      context += `Actions covered: ${actions.join(", ")}\n`;
+    }
+
+    // Show last N scenes in detail
+    const recentScenes = previousScenes.slice(-detailSceneCount);
+    context += `\n--- LAST ${recentScenes.length} SCENES (Full Detail) ---\n`;
+    for (let i = 0; i < recentScenes.length; i++) {
+      const sceneNum = previousScenes.length - detailSceneCount + i + 1;
+      const scene = recentScenes[i];
+      context += `Scene ${sceneNum}: ${scene.description}\n`;
+      if (scene.character) {
+        context += `  Characters: ${scene.character}\n`;
+      }
+      if (scene.visual_specs?.environment) {
+        context += `  Location: ${scene.visual_specs.environment}\n`;
+      }
+    }
+  } else {
+    // Full history mode: Show all scenes
+    context += `\n--- ALL PREVIOUS SCENES ---\n`;
+    for (let i = 0; i < previousScenes.length; i++) {
+      const scene = previousScenes[i];
+      context += `Scene ${i + 1}: ${scene.description}\n`;
+      if (scene.character) {
+        context += `  Characters: ${scene.character}\n`;
+      }
+      if (scene.visual_specs?.environment) {
+        context += `  Location: ${scene.visual_specs.environment}\n`;
+      }
+    }
   }
 
-  if (lastScene.visual_specs?.environment) {
-    context += `- Location: ${lastScene.visual_specs.environment}\n`;
-  }
-
-  context += `\nMAINTAIN CONTINUITY: Same characters must have identical skeleton descriptions.\n`;
+  // 3. Critical Instructions
+  context += `\n--- CRITICAL INSTRUCTIONS ---\n`;
+  context += `- Do NOT repeat any scene description from above\n`;
+  context += `- Maintain character consistency using EXACT skeleton descriptions\n`;
+  context += `- Continue the narrative flow from where previous scenes ended\n`;
+  context += `- If a location/action was already covered, move to new content\n`;
+  context += `- Avoid creating similar or duplicate scenes\n`;
   context += `=== END CONTINUITY CONTEXT ===\n`;
 
   return context;
@@ -942,8 +1023,19 @@ export function buildScriptPrompt(options: {
   videoUrl: string;
   startTime?: string;
   endTime?: string;
+  videoDescription?: { fullText: string; chapters?: Array<{ timestamp: string; seconds: number; title: string }> };
 }): GeminiRequestBody {
   let userPrompt = SCRIPT_USER_PROMPT;
+  let systemInstruction = SCRIPT_SYSTEM_INSTRUCTION;
+
+  // Add video chapters to system instruction if available
+  if (options.videoDescription?.chapters && options.videoDescription.chapters.length > 0) {
+    systemInstruction += `\n\nVIDEO CHAPTERS (from video description):\n`;
+    for (const chapter of options.videoDescription.chapters) {
+      systemInstruction += `- ${chapter.timestamp} (${chapter.seconds}s): ${chapter.title}\n`;
+    }
+    systemInstruction += `\nCRITICAL: Use these chapter timestamps to structure your script segments. Ensure all chapter topics are covered in the transcript.`;
+  }
 
   // Add time range instruction if provided
   if (options.startTime || options.endTime) {
@@ -974,7 +1066,7 @@ export function buildScriptPrompt(options: {
       },
     ],
     systemInstruction: {
-      parts: [{ text: SCRIPT_SYSTEM_INSTRUCTION }],
+      parts: [{ text: systemInstruction }],
       role: "user",
     },
     generationConfig: {

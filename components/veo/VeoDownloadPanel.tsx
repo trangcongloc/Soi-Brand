@@ -10,6 +10,7 @@ interface VeoDownloadPanelProps {
   characterRegistry: CharacterRegistry;
   summary: VeoJobSummary;
   script?: GeneratedScript;
+  jobId: string;
 }
 
 function VeoDownloadPanel({
@@ -17,6 +18,7 @@ function VeoDownloadPanel({
   characterRegistry,
   summary,
   script,
+  jobId,
 }: VeoDownloadPanelProps) {
   const lang = useLang();
 
@@ -39,10 +41,10 @@ function VeoDownloadPanel({
   const handleDownloadScenesJson = useCallback(() => {
     downloadFile(
       JSON.stringify(scenes, null, 2),
-      `veo-scenes-${summary.videoId}.json`,
+      `${scenes.length}-${summary.videoId}-${jobId}.json`,
       "application/json"
     );
-  }, [scenes, summary.videoId, downloadFile]);
+  }, [scenes, summary.videoId, jobId, downloadFile]);
 
   // 2. All Scenes (TXT) - each scene as JSON separated by blank lines
   const handleDownloadScenesTxt = useCallback(() => {
@@ -51,20 +53,20 @@ function VeoDownloadPanel({
       .join("\n\n");
     downloadFile(
       content,
-      `veo-scenes-${summary.videoId}.txt`,
+      `${scenes.length}-${summary.videoId}-${jobId}.txt`,
       "text/plain"
     );
-  }, [scenes, summary.videoId, downloadFile]);
+  }, [scenes, summary.videoId, jobId, downloadFile]);
 
   // 3. Script - the generated script/transcript
   const handleDownloadScript = useCallback(() => {
     if (!script) return;
     downloadFile(
       JSON.stringify(script, null, 2),
-      `veo-script-${summary.videoId}.json`,
+      `script-${summary.videoId}-${jobId}.json`,
       "application/json"
     );
-  }, [script, summary.videoId, downloadFile]);
+  }, [script, summary.videoId, jobId, downloadFile]);
 
   // 4. Characters - all characters with their variations from scenes
   const handleDownloadCharacters = useCallback(() => {
@@ -89,12 +91,13 @@ function VeoDownloadPanel({
       characters: characterRegistry,
       sceneVariations: characterVariations,
     };
+    const charCount = Object.keys(characterRegistry).length;
     downloadFile(
       JSON.stringify(data, null, 2),
-      `veo-characters-${summary.videoId}.json`,
+      `chars-${charCount}-${summary.videoId}-${jobId}.json`,
       "application/json"
     );
-  }, [characterRegistry, scenes, summary.videoId, downloadFile]);
+  }, [characterRegistry, scenes, summary.videoId, jobId, downloadFile]);
 
   const downloadOptions = [
     {

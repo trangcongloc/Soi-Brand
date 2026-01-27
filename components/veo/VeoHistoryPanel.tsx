@@ -86,6 +86,15 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     }
   }, []);
 
+  const formatJobId = useCallback((jobId: string) => {
+    // jobId format: veo_1706371200000_abc123
+    const parts = jobId.split("_");
+    if (parts.length >= 3) {
+      return `${parts[1].slice(-7)}_${parts[2]}`;  // "1200000_abc123"
+    }
+    return jobId.slice(-15);
+  }, []);
+
   const getStatusIcon = useCallback((status: string) => {
     if (status === "failed") {
       return (
@@ -300,6 +309,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                   <span>{job.charactersFound} chars</span>
                   <span className={styles.separator}>•</span>
                   <span className={styles.jobDate}>{formatDate(job.timestamp)}</span>
+                  <span className={styles.separator}>•</span>
+                  <span className={styles.jobIdText}>{formatJobId(job.jobId)}</span>
                 </div>
                 {job.error && (
                   <div className={styles.errorIndicator}>

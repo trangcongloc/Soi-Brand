@@ -133,6 +133,7 @@ function VeoSceneDisplay({
             characterRegistry={characterRegistry}
             summary={summary}
             script={script}
+            jobId={jobId}
           />
         )}
 

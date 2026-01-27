@@ -18,7 +18,6 @@ import type {
   CachedVeoJob,
   VeoJobSummary,
   Scene,
-  CharacterRegistry,
 } from "@/lib/veo/types";
 
 describe("VEO Cache", () => {

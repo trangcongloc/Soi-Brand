@@ -459,3 +459,54 @@ export interface GeminiApiError extends Error {
     raw?: string;
   };
 }
+
+// ============================================================================
+// Deduplication Types
+// ============================================================================
+
+export interface SceneSimilarity {
+  scene1Index: number;
+  scene2Index: number;
+  similarity: number; // 0.0 to 1.0
+  reason: string;
+}
+
+export interface DeduplicationResult {
+  unique: Scene[];
+  duplicates: Scene[];
+  similarities: SceneSimilarity[];
+}
+
+export interface DeduplicationConfig {
+  enabled: boolean;
+  similarityThreshold: number; // 0.0-1.0, default 0.75
+  algorithm: "word-overlap" | "tfidf" | "semantic";
+}
+
+// ============================================================================
+// VEO Settings (extended)
+// ============================================================================
+
+/**
+ * Extended VEO settings including deduplication, description parsing,
+ * continuity mode, and other quality improvements.
+ */
+export interface VeoSettings {
+  // Deduplication settings
+  deduplication: DeduplicationConfig;
+
+  // Description parsing (Phase 2)
+  useVideoDescription: boolean; // Default: true
+  useVideoChapters: boolean; // Default: true
+
+  // Continuity settings (Phase 3)
+  continuityMode: "last-scene" | "full-history" | "summary"; // Default: full-history
+  continuitySceneLimit: number; // If summary mode, how many recent scenes to include (default: 10)
+
+  // Timestamp handling (Phase 4)
+  preserveCookingTimings: boolean; // Default: true
+
+  // Scene count flexibility (Phase 5)
+  allowFewerScenes: boolean; // Default: true
+  minSceneCountRatio: number; // Default: 0.7 (70% of target)
+}

@@ -11,6 +11,22 @@ import {
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
+// ============================================================================
+// Video Description Parsing Types
+// ============================================================================
+
+export interface VideoChapter {
+  timestamp: string;  // "00:00", "01:50", etc.
+  seconds: number;    // Parsed to seconds
+  title: string;      // "Preparing Beef", "Grill & Meat Searing"
+  endSeconds?: number; // Calculated from next chapter
+}
+
+export interface VideoDescription {
+  fullText: string;
+  chapters?: VideoChapter[];  // Parsed timestamp sections
+}
+
 /**
  * Type guard for axios-like errors
  */
@@ -400,6 +416,73 @@ export function parseISO8601Duration(duration: string): number {
     const seconds = parseInt(match[3] || "0", 10);
 
     return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Parse timestamp string (e.g., "1:23" or "01:23:45") to seconds
+ */
+function parseTimestampToSeconds(timestamp: string): number {
+    const parts = timestamp.split(":").map((p) => parseInt(p, 10));
+
+    if (parts.length === 2) {
+        // MM:SS
+        return parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+        // HH:MM:SS
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+
+    return 0;
+}
+
+/**
+ * Parse video description for chapter timestamps
+ * Supports formats:
+ * - "00:00 – 01:50 Title" (range format)
+ * - "0:00 Title" (simple format)
+ * - "00:00 - Title" (dash separator)
+ * - "00:00 Title" (space separator)
+ */
+export function parseVideoDescription(descText: string): VideoDescription {
+    const chapters: VideoChapter[] = [];
+    const lines = descText.split("\n");
+
+    // Regex patterns for different timestamp formats
+    // Pattern 1: "00:00 – 01:50 Title" (range with end time)
+    const rangeTimestampRegex = /^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—]\s*\d{1,2}:\d{2}(?::\d{2})?\s+(.+)$/;
+    // Pattern 2: "00:00 - Title" or "00:00 – Title" (with dash)
+    const dashTimestampRegex = /^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—]\s*(.+)$/;
+    // Pattern 3: "00:00 Title" (simple space separator)
+    const simpleTimestampRegex = /^(\d{1,2}:\d{2}(?::\d{2})?)\s+(.+)$/;
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        let match =
+            trimmedLine.match(rangeTimestampRegex) ||
+            trimmedLine.match(dashTimestampRegex) ||
+            trimmedLine.match(simpleTimestampRegex);
+
+        if (match) {
+            const [, timestamp, title] = match;
+            chapters.push({
+                timestamp,
+                seconds: parseTimestampToSeconds(timestamp),
+                title: title.trim(),
+            });
+        }
+    }
+
+    // Calculate end times based on next chapter's start time
+    for (let i = 0; i < chapters.length - 1; i++) {
+        chapters[i].endSeconds = chapters[i + 1].seconds;
+    }
+
+    return {
+        fullText: descText,
+        chapters: chapters.length > 0 ? chapters : undefined,
+    };
 }
 
 /**

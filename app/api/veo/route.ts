@@ -45,7 +45,11 @@ import {
   GeminiApiError,
   GeneratedScript,
 } from "@/lib/veo";
-import { getVideoInfo, parseISO8601Duration } from "@/lib/youtube";
+import {
+  deduplicateScenes,
+  getDeduplicationStats,
+} from "@/lib/veo/deduplication";
+import { getVideoInfo, parseISO8601Duration, parseVideoDescription, type VideoDescription } from "@/lib/youtube";
 import {
   checkRateLimit,
   getClientIdentifier,
@@ -151,17 +155,19 @@ function createSSEEncoder() {
 async function runUrlToScript(
   request: VeoRequest,
   apiKey: string,
-  sendEvent: (event: VeoSSEEvent) => void
+  sendEvent: (event: VeoSSEEvent) => void,
+  videoDescription?: VideoDescription
 ): Promise<GeneratedScript> {
   sendEvent({
     event: "progress",
-    data: { batch: 1, total: 1, scenes: 0, message: "Analyzing video content..." },
+    data: { batch: 1, total: 1, scenes: 0, message: "Analyzing video and generating script transcript..." },
   });
 
   const requestBody = buildScriptPrompt({
     videoUrl: request.videoUrl!,
     startTime: request.startTime,
     endTime: request.endTime,
+    videoDescription,
   });
 
   const response = await callGeminiAPIWithRetry(requestBody, {
@@ -177,7 +183,7 @@ async function runUrlToScript(
 
   sendEvent({
     event: "progress",
-    data: { batch: 1, total: 1, scenes: 0, message: "Parsing script..." },
+    data: { batch: 1, total: 1, scenes: 0, message: "Script extraction complete, preparing for scene generation..." },
   });
 
   const script = parseScriptResponse(response);
@@ -200,7 +206,7 @@ async function runScriptToScenesDirect(
 
   sendEvent({
     event: "progress",
-    data: { batch: 1, total: 1, scenes: 0, message: "Generating scenes from script..." },
+    data: { batch: 1, total: 1, scenes: 0, message: "Converting script to scene descriptions..." },
   });
 
   const requestBody = buildScriptToScenesPrompt({
@@ -222,7 +228,7 @@ async function runScriptToScenesDirect(
 
   sendEvent({
     event: "progress",
-    data: { batch: 1, total: 1, scenes: 0, message: "Parsing response..." },
+    data: { batch: 1, total: 1, scenes: 0, message: "Processing response and extracting scene data..." },
   });
 
   const scenes = parseGeminiResponse(response);
@@ -319,7 +325,7 @@ async function runScriptToScenesHybrid(
         batch: batchNum + 1,
         total: totalBatches,
         scenes: allScenes.length,
-        message: `Processing batch ${batchNum + 1}/${totalBatches} (scenes ${batchStart}-${batchEnd})`,
+        message: `Generating scenes ${batchStart}-${batchEnd} (batch ${batchNum + 1}/${totalBatches})`,
       },
     });
 
@@ -370,9 +376,32 @@ async function runScriptToScenesHybrid(
           }
         }
 
+        // Deduplicate scenes before adding to collection
+        const deduplicationResult = deduplicateScenes(
+          allScenes,
+          batchScenes,
+          0.75 // Similarity threshold (configurable in future)
+        );
+
+        // Log deduplication stats if duplicates were found
+        if (deduplicationResult.duplicates.length > 0) {
+          const stats = getDeduplicationStats(deduplicationResult);
+          console.log(
+            `[VEO] Batch ${batchNum + 1} deduplication: ` +
+              `${stats.duplicateCount} duplicates removed ` +
+              `(${(stats.removalRate * 100).toFixed(1)}% removal rate, ` +
+              `avg similarity: ${(stats.averageSimilarity * 100).toFixed(1)}%)`
+          );
+
+          // Log first few duplicate reasons for debugging
+          deduplicationResult.similarities.slice(0, 3).forEach((sim) => {
+            console.log(`  - ${sim.reason}`);
+          });
+        }
+
         // Update state
         characterRegistry = { ...characterRegistry, ...newCharacters };
-        allScenes = [...allScenes, ...batchScenes];
+        allScenes = [...allScenes, ...deduplicationResult.unique];
 
         // Update progress (convert to string format for legacy compatibility)
         const stringCharacters: Record<string, string> = {};
@@ -381,7 +410,7 @@ async function runScriptToScenesHybrid(
         }
         const updatedProgress = updateProgressAfterBatch(
           serverProgress.get(jobId)!,
-          batchScenes,
+          deduplicationResult.unique,  // Use unique scenes for progress update
           stringCharacters
         );
         serverProgress.set(jobId, updatedProgress);
@@ -392,7 +421,10 @@ async function runScriptToScenesHybrid(
             batch: batchNum + 1,
             total: totalBatches,
             scenes: allScenes.length,
-            message: `Batch ${batchNum + 1} complete: ${batchScenes.length} scenes`,
+            message: `Batch ${batchNum + 1} complete: ${deduplicationResult.unique.length} scenes` +
+              (deduplicationResult.duplicates.length > 0
+                ? ` (${deduplicationResult.duplicates.length} duplicates removed)`
+                : ""),
           },
         });
       }
@@ -543,7 +575,7 @@ async function runUrlToScenesDirect(
           batch: 0,
           total: totalBatches,
           scenes: 0,
-          message: "Phase 1: Identifying characters in video...",
+          message: "Analyzing video to identify characters and settings...",
         },
       });
 
@@ -585,7 +617,7 @@ async function runUrlToScenesDirect(
           batch: 0,
           total: totalBatches,
           scenes: 0,
-          message: `Phase 1 complete: Found ${characterData.characters.length} character(s). Starting Phase 2...`,
+          message: `Character analysis complete: Found ${characterData.characters.length} character(s). Generating scene descriptions...`,
         },
       });
     } catch (phase1Error) {
@@ -603,7 +635,7 @@ async function runUrlToScenesDirect(
           batch: 0,
           total: totalBatches,
           scenes: 0,
-          message: "Phase 1 character extraction failed, using fallback mode...",
+          message: "Character extraction skipped, continuing with scene generation...",
         },
       });
     }
@@ -645,7 +677,7 @@ async function runUrlToScenesDirect(
         batch: batchNum + 1,
         total: totalBatches,
         scenes: allScenes.length,
-        message: `Analyzing video segment ${directBatchInfo.startTime}-${directBatchInfo.endTime} (batch ${batchNum + 1}/${totalBatches})`,
+        message: `Generating scenes for video segment ${directBatchInfo.startTime}-${directBatchInfo.endTime} (batch ${batchNum + 1}/${totalBatches})`,
       },
     });
 
@@ -700,9 +732,32 @@ async function runUrlToScenesDirect(
           }
         }
 
+        // Deduplicate scenes before adding to collection
+        const deduplicationResult = deduplicateScenes(
+          allScenes,
+          batchScenes,
+          0.75 // Similarity threshold (configurable in future)
+        );
+
+        // Log deduplication stats if duplicates were found
+        if (deduplicationResult.duplicates.length > 0) {
+          const stats = getDeduplicationStats(deduplicationResult);
+          console.log(
+            `[VEO Direct] Batch ${batchNum + 1} deduplication: ` +
+              `${stats.duplicateCount} duplicates removed ` +
+              `(${(stats.removalRate * 100).toFixed(1)}% removal rate, ` +
+              `avg similarity: ${(stats.averageSimilarity * 100).toFixed(1)}%)`
+          );
+
+          // Log first few duplicate reasons for debugging
+          deduplicationResult.similarities.slice(0, 3).forEach((sim) => {
+            console.log(`  - ${sim.reason}`);
+          });
+        }
+
         // Update state
         characterRegistry = { ...characterRegistry, ...newCharacters };
-        allScenes = [...allScenes, ...batchScenes];
+        allScenes = [...allScenes, ...deduplicationResult.unique];
 
         // Update progress (convert to string format for legacy compatibility)
         const stringCharacters: Record<string, string> = {};
@@ -711,7 +766,7 @@ async function runUrlToScenesDirect(
         }
         const updatedProgress = updateProgressAfterBatch(
           serverProgress.get(jobId)!,
-          batchScenes,
+          deduplicationResult.unique,  // Use unique scenes for progress update
           stringCharacters
         );
         serverProgress.set(jobId, updatedProgress);
@@ -722,7 +777,10 @@ async function runUrlToScenesDirect(
             batch: batchNum + 1,
             total: totalBatches,
             scenes: allScenes.length,
-            message: `Batch ${batchNum + 1} complete: ${batchScenes.length} scenes from ${directBatchInfo.startTime}-${directBatchInfo.endTime}`,
+            message: `Batch ${batchNum + 1} complete: ${deduplicationResult.unique.length} scenes from ${directBatchInfo.startTime}-${directBatchInfo.endTime}` +
+              (deduplicationResult.duplicates.length > 0
+                ? ` (${deduplicationResult.duplicates.length} duplicates removed)`
+                : ""),
           },
         });
       }
@@ -966,6 +1024,7 @@ export async function POST(request: NextRequest) {
           });
 
           let youtubeDurationSeconds = 0;
+          let videoDescription: VideoDescription | undefined;
           try {
             const videoInfo = await getVideoInfo(videoId);
             if (videoInfo?.contentDetails?.duration) {
@@ -976,6 +1035,17 @@ export async function POST(request: NextRequest) {
                 seconds: youtubeDurationSeconds,
                 title: videoInfo.title,
               });
+            }
+            // Parse video description for chapters
+            if (videoInfo?.description) {
+              videoDescription = parseVideoDescription(videoInfo.description);
+              if (videoDescription.chapters && videoDescription.chapters.length > 0) {
+                logger.info("VEO Video Chapters Found", {
+                  videoId,
+                  chapterCount: videoDescription.chapters.length,
+                  chapters: videoDescription.chapters.map(c => `${c.timestamp}: ${c.title}`),
+                });
+              }
             }
           } catch (ytError) {
             logger.warn("Failed to fetch YouTube video info", { videoId, error: ytError });
@@ -1029,7 +1099,7 @@ export async function POST(request: NextRequest) {
 
             sendEvent({
               event: "progress",
-              data: { batch: 0, total: 0, scenes: 0, message: "Direct mode: Analyzing video directly (no script generation)..." },
+              data: { batch: 0, total: 0, scenes: 0, message: "Direct mode: Generating scenes directly from video (skipping script extraction)..." },
             });
 
             // Use direct video analysis with time-based batching
@@ -1051,10 +1121,10 @@ export async function POST(request: NextRequest) {
             // Step 1: Extract script from URL
             sendEvent({
               event: "progress",
-              data: { batch: 0, total: 0, scenes: 0, message: "Hybrid mode: Extracting script from video..." },
+              data: { batch: 0, total: 0, scenes: 0, message: "Step 1/2: Analyzing video and extracting transcript..." },
             });
 
-            script = await runUrlToScript(veoRequest, apiKey, sendEvent);
+            script = await runUrlToScript(veoRequest, apiKey, sendEvent, videoDescription);
 
             // Send script event so client can show/download it
             sendEvent({
@@ -1123,7 +1193,7 @@ export async function POST(request: NextRequest) {
 
             sendEvent({
               event: "progress",
-              data: { batch: 0, total: 0, scenes: 0, message: "Script extracted. Starting character extraction..." },
+              data: { batch: 0, total: 0, scenes: 0, message: "Step 2/2: Script extracted. Identifying characters and generating scenes..." },
             });
 
             // ============================================================================
@@ -1173,7 +1243,7 @@ export async function POST(request: NextRequest) {
                   batch: 0,
                   total: 0,
                   scenes: 0,
-                  message: `Phase 1 complete: Found ${characterData.characters.length} character(s). Starting Phase 2...`,
+                  message: `Character analysis complete: Found ${characterData.characters.length} character(s). Generating scene descriptions...`,
                 },
               });
             } catch (phase1Error) {
@@ -1187,7 +1257,7 @@ export async function POST(request: NextRequest) {
 
               sendEvent({
                 event: "progress",
-                data: { batch: 0, total: 0, scenes: 0, message: "Phase 1 failed, using fallback mode..." },
+                data: { batch: 0, total: 0, scenes: 0, message: "Character extraction skipped, continuing with scene generation..." },
               });
             }
 

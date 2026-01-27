@@ -67,3 +67,6 @@ lerna-debug.log*
 .claude/
 
 progress/
+
+# Test and scratch data
+etc/

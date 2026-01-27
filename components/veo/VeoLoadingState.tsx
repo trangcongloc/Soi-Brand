@@ -49,6 +49,11 @@ function VeoLoadingState({
 
   const progressPercent = totalBatches > 0 ? (batch / totalBatches) * 100 : 0;
 
+  // Only show batch progress when generating scenes (not during script generation)
+  // Script generation: totalBatches === 1 && scenesGenerated === 0 → hide
+  // Scene generation: totalBatches > 1 || scenesGenerated > 0 → show
+  const showBatchProgress = totalBatches > 1 || scenesGenerated > 0;
+
   const handleDownloadScript = useCallback(() => {
     if (!generatedScript) return;
 
@@ -95,11 +100,13 @@ function VeoLoadingState({
             />
           </div>
           <div className={styles.progressInfo}>
-            <span>
-              {lang.veo.loading.batchProgress
-                .replace("{current}", String(batch))
-                .replace("{total}", String(totalBatches))}
-            </span>
+            {showBatchProgress && (
+              <span>
+                {lang.veo.loading.batchProgress
+                  .replace("{current}", String(batch))
+                  .replace("{total}", String(totalBatches))}
+              </span>
+            )}
             <span>
               {lang.veo.loading.scenesGenerated.replace(
                 "{count}",
