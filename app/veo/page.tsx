@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { getUserSettingsAsync } from "@/lib/userSettings";
+import { getUserSettingsAsync, SETTINGS_CHANGE_EVENT, SettingsChangeEvent } from "@/lib/userSettings";
 import { GeminiModel } from "@/lib/types";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import {
@@ -15,12 +15,19 @@ import {
   VeoJobSummary,
   VeoSSEEvent,
   GeneratedScript,
+  VeoErrorType,
   setCachedJob,
+  getCachedJob,
   hasProgress,
   loadProgress,
   clearProgress,
+  getResumeData,
+  canResumeProgress,
+  VeoProgress,
+  extractVideoId,
 } from "@/lib/veo";
-import { VeoForm, VeoLoadingState, VeoSceneDisplay } from "@/components/veo";
+import { VeoForm, VeoLoadingState, VeoSceneDisplay, VeoHistoryPanel } from "@/components/veo";
+import { getCachedJobList } from "@/lib/veo";
 import styles from "./page.module.css";
 
 type PageState = "idle" | "loading" | "script-complete" | "complete" | "error";
@@ -79,12 +86,24 @@ export default function VeoPage() {
   const [summary, setSummary] = useState<VeoJobSummary | null>(null);
   const [jobId, setJobId] = useState<string>("");
 
+  // Current form data (for retry/resume)
+  const [currentFormData, setCurrentFormData] = useState<{
+    workflow: VeoWorkflow;
+    videoUrl?: string;
+    videoId?: string;
+    mode: VeoMode;
+    sceneCount: number;
+    batchSize: number;
+    voice: VoiceLanguage;
+    scriptText?: string;
+  } | null>(null);
+
   // Resume dialog state
   const [showResumeDialog, setShowResumeDialog] = useState(false);
-  const [resumeProgress, setResumeProgress] = useState<{
-    batch: number;
-    total: number;
-  } | null>(null);
+  const [resumeProgressData, setResumeProgressData] = useState<VeoProgress | null>(null);
+
+  // History state - check if there are cached jobs
+  const [hasHistory, setHasHistory] = useState(() => getCachedJobList().length > 0);
 
   // Abort controller ref
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -100,37 +119,127 @@ export default function VeoPage() {
     loadSettings();
   }, []);
 
+  // Listen for settings changes (when user updates settings while on VEO page)
+  useEffect(() => {
+    const handleSettingsChange = (event: Event) => {
+      const customEvent = event as SettingsChangeEvent;
+      const newSettings = customEvent.detail;
+
+      // Update state with new settings
+      if (newSettings.geminiApiKey !== undefined) {
+        setGeminiApiKey(newSettings.geminiApiKey);
+      }
+      if (newSettings.geminiModel !== undefined) {
+        setGeminiModel(newSettings.geminiModel);
+      }
+    };
+
+    window.addEventListener(SETTINGS_CHANGE_EVENT, handleSettingsChange);
+    return () => window.removeEventListener(SETTINGS_CHANGE_EVENT, handleSettingsChange);
+  }, []);
+
   // Check for resumable progress on mount
   useEffect(() => {
     if (hasProgress()) {
       const progress = loadProgress();
-      if (progress && progress.status === "in_progress") {
-        setResumeProgress({
-          batch: progress.completedBatches,
-          total: progress.totalBatches,
-        });
+      if (progress && canResumeProgress(progress)) {
+        setResumeProgressData(progress);
         setShowResumeDialog(true);
       }
     }
   }, []);
 
-  // Auto dismiss error after 5 seconds
+  // Auto dismiss error after 5 seconds (only for toast notifications, not error state)
   useEffect(() => {
-    if (error && state !== "loading") {
+    if (error && state !== "loading" && state !== "error") {
       const timer = setTimeout(() => setError(null), 5000);
       return () => clearTimeout(timer);
     }
   }, [error, state]);
 
   const handleError = useCallback(
-    (errorType: string, message?: string) => {
+    (errorType: string, message?: string, debug?: Record<string, unknown>, retryable = false) => {
+      // Use the detailed message from API if available, fallback to translated error
       const errorKey = errorType as keyof typeof lang.veo.errors;
-      const errorMessage =
-        lang.veo.errors[errorKey] || message || lang.veo.errors.UNKNOWN_ERROR;
+      const translatedError = lang.veo.errors[errorKey];
+
+      // Prefer detailed message over generic translation for debugging
+      let errorMessage: string;
+      if (message && message !== "An unexpected error occurred") {
+        errorMessage = message;
+      } else {
+        errorMessage = translatedError || lang.veo.errors.UNKNOWN_ERROR;
+      }
+
+      // Log debug info to console in development
+      if (debug) {
+        console.error("[VEO Error Debug]", { errorType, message, debug });
+      }
+
       setError(errorMessage);
       setState("error");
+
+      // Save failed job to cache if we have enough context
+      if (jobId && currentFormData) {
+        const failedBatch = debug?.batch as number | undefined;
+        const totalBatchesCalc = (debug?.totalBatches as number | undefined)
+          || (summary && typeof summary.batches === 'number' ? summary.batches : undefined)
+          || Math.ceil(currentFormData.sceneCount / currentFormData.batchSize);
+
+        // Determine status: partial if some scenes were generated, failed if none
+        const status = scenes.length > 0 ? "partial" : "failed";
+
+        // Create minimal summary if not available
+        const effectiveSummary: VeoJobSummary = summary || {
+          mode: currentFormData.mode,
+          videoId: currentFormData.videoId || "",
+          youtubeUrl: currentFormData.videoUrl || "",
+          targetScenes: currentFormData.sceneCount,
+          actualScenes: scenes.length,
+          batches: totalBatchesCalc,
+          batchSize: currentFormData.batchSize,
+          voice: currentFormData.voice === "no-voice" ? "No voice (silent)" : currentFormData.voice,
+          charactersFound: Object.keys(characterRegistry).length,
+          characters: Object.keys(characterRegistry),
+          processingTime: "N/A",
+          createdAt: new Date().toISOString(),
+        };
+
+        setCachedJob(jobId, {
+          videoId: currentFormData.videoId || "",
+          videoUrl: currentFormData.videoUrl || "",
+          summary: {
+            ...effectiveSummary,
+            actualScenes: scenes.length,
+          },
+          scenes: scenes,
+          characterRegistry: characterRegistry,
+          script: generatedScript || undefined,
+          status,
+          error: {
+            message: errorMessage,
+            type: errorType as VeoErrorType,
+            failedBatch,
+            totalBatches: totalBatchesCalc,
+            retryable,
+          },
+          resumeData: retryable ? {
+            completedBatches: failedBatch ? failedBatch - 1 : 0,
+            existingScenes: scenes,
+            existingCharacters: characterRegistry,
+            workflow: currentFormData.workflow,
+            mode: currentFormData.mode,
+            batchSize: currentFormData.batchSize,
+            sceneCount: currentFormData.sceneCount,
+            voice: currentFormData.voice,
+          } : undefined,
+        });
+
+        // Update history state
+        setHasHistory(true);
+      }
     },
-    [lang]
+    [lang, jobId, currentFormData, summary, scenes, characterRegistry, generatedScript]
   );
 
   const handleSubmit = useCallback(
@@ -145,6 +254,10 @@ export default function VeoPage() {
       sceneCount: number;
       batchSize: number;
       voice: VoiceLanguage;
+      // Resume parameters
+      resumeFromBatch?: number;
+      existingScenes?: Scene[];
+      existingCharacters?: CharacterRegistry;
     }) => {
       // Reset state
       setState("loading");
@@ -159,6 +272,18 @@ export default function VeoPage() {
       setLoadingMessage(lang.veo.loading.steps.initializing);
       setCharacters([]);
       setGeneratedScript(null);
+
+      // Save current form data for retry/error handling
+      setCurrentFormData({
+        workflow: options.workflow,
+        videoUrl: options.videoUrl,
+        videoId: options.videoUrl ? extractVideoId(options.videoUrl) : undefined,
+        mode: options.mode,
+        sceneCount: options.sceneCount,
+        batchSize: options.batchSize,
+        voice: options.voice,
+        scriptText: options.scriptText,
+      });
 
       // Create abort controller
       abortControllerRef.current = new AbortController();
@@ -240,7 +365,7 @@ export default function VeoPage() {
                       setJobId(event.data.jobId);
                       setState("complete");
 
-                      // Cache the result
+                      // Cache the result with script for regeneration
                       if (event.data.scenes.length > 0) {
                         setCachedJob(event.data.jobId, {
                           videoId: event.data.summary.videoId,
@@ -248,7 +373,11 @@ export default function VeoPage() {
                           summary: event.data.summary,
                           scenes: event.data.scenes,
                           characterRegistry: event.data.characterRegistry,
+                          script: event.data.script, // Cache script for regeneration
+                          status: "completed",
                         });
+                        // Update history state to reflect new job
+                        setHasHistory(true);
                       }
                     }
 
@@ -257,7 +386,12 @@ export default function VeoPage() {
                     break;
 
                   case "error":
-                    handleError(event.data.type, event.data.message);
+                    handleError(
+                      event.data.type,
+                      event.data.message,
+                      event.data.debug,
+                      event.data.retryable
+                    );
                     break;
                 }
               } catch {
@@ -279,18 +413,159 @@ export default function VeoPage() {
 
   const handleCancel = useCallback(() => {
     abortControllerRef.current?.abort();
-    setState("idle");
-  }, []);
 
-  const handleResumeYes = useCallback(() => {
+    // Save cancelled job to history if we have partial progress
+    if (jobId && currentFormData && scenes.length > 0) {
+      const cancelledSummary: VeoJobSummary = summary || {
+        mode: currentFormData.mode,
+        youtubeUrl: currentFormData.videoUrl || "",
+        videoId: currentFormData.videoId || "",
+        targetScenes: currentFormData.sceneCount,
+        actualScenes: scenes.length,
+        batches: Math.ceil(currentFormData.sceneCount / currentFormData.batchSize),
+        batchSize: currentFormData.batchSize,
+        voice: currentFormData.voice === "no-voice" ? "No voice (silent)" : currentFormData.voice,
+        charactersFound: Object.keys(characterRegistry).length,
+        characters: Object.keys(characterRegistry),
+        processingTime: "Cancelled",
+        createdAt: new Date().toISOString(),
+      };
+
+      setCachedJob(jobId, {
+        videoId: currentFormData.videoId || "",
+        videoUrl: currentFormData.videoUrl || "",
+        summary: cancelledSummary,
+        scenes: scenes,
+        characterRegistry: characterRegistry,
+        script: generatedScript || undefined,
+        status: "partial",
+        error: {
+          message: "Job cancelled by user",
+          type: "UNKNOWN_ERROR",
+          failedBatch: batch,
+          totalBatches: totalBatches,
+          retryable: true,
+        },
+        resumeData: {
+          completedBatches: batch - 1,
+          existingScenes: scenes,
+          existingCharacters: characterRegistry,
+          workflow: currentFormData.workflow,
+          mode: currentFormData.mode,
+          batchSize: currentFormData.batchSize,
+          sceneCount: currentFormData.sceneCount,
+          voice: currentFormData.voice,
+        },
+      });
+
+      setHasHistory(true);
+    }
+
+    setState("idle");
+  }, [jobId, currentFormData, scenes, characterRegistry, summary, generatedScript, batch, totalBatches]);
+
+  const handleResumeYes = useCallback(async () => {
+    if (!resumeProgressData) {
+      setShowResumeDialog(false);
+      return;
+    }
+
+    const resumeData = getResumeData(resumeProgressData);
+    if (!resumeData) {
+      setShowResumeDialog(false);
+      clearProgress();
+      return;
+    }
+
     setShowResumeDialog(false);
-    clearProgress();
-  }, []);
+
+    // Pre-populate state with existing data
+    setScenes(resumeData.existingScenes);
+    setCharacterRegistry(resumeData.existingCharacters);
+    setCharacters(Object.keys(resumeData.existingCharacters));
+
+    // Submit with resume parameters
+    handleSubmit({
+      workflow: "script-to-scenes",
+      scriptText: resumeData.scriptText,
+      mode: resumeData.mode,
+      autoSceneCount: false,
+      sceneCount: resumeData.sceneCount,
+      batchSize: resumeData.batchSize,
+      voice: resumeData.voice,
+      videoUrl: resumeData.videoUrl,
+      resumeFromBatch: resumeData.completedBatches,
+      existingScenes: resumeData.existingScenes,
+      existingCharacters: resumeData.existingCharacters,
+    });
+  }, [resumeProgressData, handleSubmit]);
 
   const handleResumeNo = useCallback(() => {
     setShowResumeDialog(false);
+    setResumeProgressData(null);
     clearProgress();
   }, []);
+
+  // Handle viewing a job from history
+  const handleViewJob = useCallback((viewJobId: string) => {
+    const cached = getCachedJob(viewJobId);
+    if (cached) {
+      setScenes(cached.scenes);
+      setCharacterRegistry(cached.characterRegistry);
+      setSummary(cached.summary);
+      setJobId(viewJobId);
+      setGeneratedScript(cached.script ?? null);
+      setState("complete");
+    }
+  }, []);
+
+  // Handle regenerating scenes from cached script
+  const handleRegenerateJob = useCallback((viewJobId: string) => {
+    const cached = getCachedJob(viewJobId);
+    if (cached?.script) {
+      // Pre-populate the script for regeneration
+      setGeneratedScript(cached.script);
+      setState("idle");
+      // The VeoForm will use the script for script-to-scenes workflow
+    }
+  }, []);
+
+  // Handle retrying a failed job from the last successful batch
+  const handleRetryJob = useCallback(async (retryJobId: string) => {
+    const cached = getCachedJob(retryJobId);
+    if (!cached || !cached.resumeData) {
+      console.error("Cannot retry job: missing cache or resume data");
+      return;
+    }
+
+    const resumeData = cached.resumeData;
+
+    // Pre-populate state with existing data
+    setScenes(resumeData.existingScenes);
+    setCharacterRegistry(resumeData.existingCharacters);
+    setCharacters(Object.keys(resumeData.existingCharacters));
+    if (cached.script) {
+      setGeneratedScript(cached.script);
+    }
+
+    // Retry from the failed batch
+    await handleSubmit({
+      workflow: resumeData.workflow,
+      videoUrl: cached.videoUrl,
+      scriptText: resumeData.workflow === "script-to-scenes" || resumeData.workflow === "url-to-scenes"
+        ? cached.script?.rawText
+        : undefined,
+      mode: resumeData.mode,
+      autoSceneCount: false,
+      sceneCount: resumeData.sceneCount,
+      batchSize: resumeData.batchSize,
+      voice: resumeData.voice,
+      // Resume parameters
+      resumeFromBatch: resumeData.completedBatches,
+      existingScenes: resumeData.existingScenes,
+      existingCharacters: resumeData.existingCharacters,
+    });
+  }, [handleSubmit]);
 
   const handleNewAnalysis = useCallback(() => {
     setState("idle");
@@ -335,55 +610,73 @@ export default function VeoPage() {
               variants={staggerContainer}
               transition={{ duration: 0.12 }}
             >
-              <div className={styles.container}>
-                {/* Header */}
-                <motion.h1 className={styles.title} variants={fadeInUp}>
-                  {lang.veo.title}
-                </motion.h1>
+              <div className={hasHistory ? styles.containerWithHistory : styles.container}>
+                {/* Main content area */}
+                <div className={styles.mainContent}>
+                  {/* Header */}
+                  <motion.h1 className={styles.title} variants={fadeInUp}>
+                    {lang.veo.title}
+                  </motion.h1>
 
-                {/* Form */}
-                <motion.div className={styles.formWrapper} variants={fadeInUp}>
-                  {/* Resume Dialog */}
-                  <AnimatePresence>
-                    {showResumeDialog && resumeProgress && (
-                      <motion.div
-                        className={styles.resumeDialog}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                      >
-                        <h3>{lang.veo.resume.title}</h3>
-                        <p>
-                          {lang.veo.resume.message
-                            .replace("{batch}", String(resumeProgress.batch))
-                            .replace("{total}", String(resumeProgress.total))}
-                        </p>
-                        <div className={styles.resumeButtons}>
-                          <button
-                            className={styles.primaryButton}
-                            onClick={handleResumeYes}
-                          >
-                            {lang.veo.resume.continueButton}
-                          </button>
-                          <button
-                            className={styles.secondaryButton}
-                            onClick={handleResumeNo}
-                          >
-                            {lang.veo.resume.startNew}
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Form */}
+                  <motion.div className={styles.formWrapper} variants={fadeInUp}>
+                    {/* Resume Dialog */}
+                    <AnimatePresence>
+                      {showResumeDialog && resumeProgressData && (
+                        <motion.div
+                          className={styles.resumeDialog}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                        >
+                          <h3>{lang.veo.resume.title}</h3>
+                          <p>
+                            {lang.veo.resume.message
+                              .replace("{batch}", String(resumeProgressData.completedBatches))
+                              .replace("{total}", String(resumeProgressData.totalBatches))}
+                          </p>
+                          <p className={styles.resumeDetails}>
+                            {resumeProgressData.scenes.length} scenes, {Object.keys(resumeProgressData.characterRegistry).length} characters
+                          </p>
+                          <div className={styles.resumeButtons}>
+                            <button
+                              className={styles.primaryButton}
+                              onClick={handleResumeYes}
+                            >
+                              {lang.veo.resume.continueButton}
+                            </button>
+                            <button
+                              className={styles.secondaryButton}
+                              onClick={handleResumeNo}
+                            >
+                              {lang.veo.resume.startNew}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                  <VeoForm
-                    onSubmit={handleSubmit}
-                    onError={setError}
-                    isLoading={false}
-                    hasApiKey={settingsLoaded ? !!geminiApiKey : true}
-                    geminiModel={geminiModel}
-                  />
-                </motion.div>
+                    <VeoForm
+                      onSubmit={handleSubmit}
+                      onError={setError}
+                      isLoading={false}
+                      hasApiKey={settingsLoaded ? !!geminiApiKey : true}
+                      geminiModel={geminiModel}
+                    />
+                  </motion.div>
+                </div>
+
+                {/* History sidebar - only show if there are cached jobs */}
+                {hasHistory && (
+                  <motion.div className={styles.historySidebar} variants={fadeInUp}>
+                    <VeoHistoryPanel
+                      onViewJob={handleViewJob}
+                      onRegenerateJob={handleRegenerateJob}
+                      onRetryJob={handleRetryJob}
+                      onJobsChange={() => setHasHistory(getCachedJobList().length > 0)}
+                    />
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           )}
@@ -557,6 +850,10 @@ export default function VeoPage() {
                 characterRegistry={characterRegistry}
                 summary={summary}
                 jobId={jobId}
+                script={generatedScript ?? undefined}
+                onViewJob={handleViewJob}
+                onRegenerateJob={handleRegenerateJob}
+                onRetryJob={handleRetryJob}
               />
             </motion.div>
           )}

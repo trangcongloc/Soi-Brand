@@ -8,6 +8,11 @@ import {
   Scene,
   CharacterRegistry,
   VeoJobSummary,
+  GeneratedScript,
+  VeoJobStatus,
+  VeoErrorType,
+  VoiceLanguage,
+  VeoMode,
 } from "./types";
 import { logger } from "@/lib/logger";
 
@@ -57,19 +62,22 @@ export function getCachedJobsForVideo(videoId: string): CachedVeoJobInfo[] {
   for (const key of keys) {
     try {
       const data: CachedVeoJob = JSON.parse(localStorage.getItem(key) || "{}");
-      if (data.videoId === videoId && data.scenes) {
+      if (data.videoId === videoId) {
         // Check if not expired
         if (Date.now() - data.timestamp <= CACHE_TTL) {
           jobs.push({
             jobId: data.jobId,
             videoId: data.videoId,
             videoUrl: data.videoUrl,
-            sceneCount: data.scenes.length,
+            sceneCount: data.scenes?.length || 0,
             charactersFound: Object.keys(data.characterRegistry || {}).length,
             mode: data.summary.mode,
             voice: data.summary.voice,
             timestamp: data.timestamp,
             createdAt: data.summary.createdAt,
+            hasScript: !!data.script,
+            status: data.status || "completed", // Backward compatibility
+            error: data.error,
           });
         } else {
           localStorage.removeItem(key);
@@ -129,6 +137,25 @@ export function setCachedJob(
     summary: VeoJobSummary;
     scenes: Scene[];
     characterRegistry: CharacterRegistry;
+    script?: GeneratedScript; // Optional script for regeneration
+    status?: VeoJobStatus;
+    error?: {
+      message: string;
+      type: VeoErrorType;
+      failedBatch?: number;
+      totalBatches?: number;
+      retryable: boolean;
+    };
+    resumeData?: {
+      completedBatches: number;
+      existingScenes: Scene[];
+      existingCharacters: CharacterRegistry;
+      workflow: "url-to-script" | "script-to-scenes" | "url-to-scenes";
+      mode: VeoMode;
+      batchSize: number;
+      sceneCount: number;
+      voice: VoiceLanguage;
+    };
   }
 ): void {
   if (!isBrowser()) return;
@@ -165,10 +192,17 @@ export function setCachedJob(
       scenes: data.scenes,
       characterRegistry: data.characterRegistry,
       timestamp,
+      script: data.script,
+      status: data.status || "completed",
+      error: data.error,
+      resumeData: data.resumeData,
     };
 
     const key = getCacheKey(jobId);
     localStorage.setItem(key, JSON.stringify(cacheData));
+
+    // Dispatch custom event to notify other components of the change
+    window.dispatchEvent(new CustomEvent("veo-job-updated", { detail: { jobId } }));
   } catch (error) {
     logger.error("Error writing VEO job to cache", error);
     if (error instanceof Error && error.name === "QuotaExceededError") {
@@ -235,6 +269,9 @@ export function clearAllJobs(): void {
   for (const key of keys) {
     localStorage.removeItem(key);
   }
+
+  // Notify listeners that all jobs were cleared
+  window.dispatchEvent(new CustomEvent("veo-job-updated", { detail: { jobId: null } }));
 }
 
 /**
@@ -245,6 +282,9 @@ export function deleteCachedJob(jobId: string): void {
 
   const key = getCacheKey(jobId);
   localStorage.removeItem(key);
+
+  // Notify listeners of the deletion
+  window.dispatchEvent(new CustomEvent("veo-job-updated", { detail: { jobId } }));
 }
 
 /**
@@ -259,19 +299,22 @@ export function getCachedJobList(): CachedVeoJobInfo[] {
   for (const key of keys) {
     try {
       const data: CachedVeoJob = JSON.parse(localStorage.getItem(key) || "{}");
-      if (data.jobId && data.scenes) {
+      if (data.jobId) {
         // Check if not expired
         if (Date.now() - data.timestamp <= CACHE_TTL) {
           jobs.push({
             jobId: data.jobId,
             videoId: data.videoId,
             videoUrl: data.videoUrl,
-            sceneCount: data.scenes.length,
+            sceneCount: data.scenes?.length || 0,
             charactersFound: Object.keys(data.characterRegistry || {}).length,
-            mode: data.summary.mode,
-            voice: data.summary.voice,
+            mode: data.summary?.mode || "hybrid",
+            voice: data.summary?.voice || "no-voice",
             timestamp: data.timestamp,
-            createdAt: data.summary.createdAt,
+            createdAt: data.summary?.createdAt || new Date(data.timestamp).toISOString(),
+            hasScript: !!data.script,
+            status: data.status || "completed", // Backward compatibility
+            error: data.error,
           });
         } else {
           localStorage.removeItem(key);

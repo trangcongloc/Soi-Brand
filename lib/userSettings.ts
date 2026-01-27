@@ -21,9 +21,27 @@ interface StoredSettings {
 }
 
 const SETTINGS_KEY = "soibrand_user_settings";
+export const SETTINGS_CHANGE_EVENT = "soibrand_settings_changed";
 
 // In-memory cache for decrypted settings
 let cachedSettings: UserSettings | null = null;
+
+/**
+ * Custom event for settings changes
+ */
+export interface SettingsChangeEvent extends CustomEvent {
+    detail: UserSettings;
+}
+
+/**
+ * Dispatch a settings change event
+ */
+function notifySettingsChange(settings: UserSettings): void {
+    if (isBrowser()) {
+        const event = new CustomEvent<UserSettings>(SETTINGS_CHANGE_EVENT, { detail: settings });
+        window.dispatchEvent(event);
+    }
+}
 
 /**
  * Get user settings from localStorage (async for decryption)
@@ -159,6 +177,9 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
 
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(stored));
         cachedSettings = settings;
+
+        // Notify listeners that settings changed
+        notifySettingsChange(settings);
     } catch (error) {
         logger.error("[UserSettings] Error saving user settings", error);
     }

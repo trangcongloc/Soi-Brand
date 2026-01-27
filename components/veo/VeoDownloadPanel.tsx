@@ -2,21 +2,21 @@
 
 import { memo, useCallback } from "react";
 import { useLang } from "@/lib/lang";
-import { Scene, CharacterRegistry, VeoJobSummary } from "@/lib/veo";
+import { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript } from "@/lib/veo";
 import styles from "./VeoDownloadPanel.module.css";
 
 interface VeoDownloadPanelProps {
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
   summary: VeoJobSummary;
-  jobId: string;
+  script?: GeneratedScript;
 }
 
 function VeoDownloadPanel({
   scenes,
   characterRegistry,
   summary,
-  jobId,
+  script,
 }: VeoDownloadPanelProps) {
   const lang = useLang();
 
@@ -35,62 +35,71 @@ function VeoDownloadPanel({
     []
   );
 
-  const handleDownloadScenes = useCallback(() => {
-    const data = {
-      jobId,
-      summary,
-      scenes,
-      generatedAt: new Date().toISOString(),
-    };
+  // 1. All Scenes (JSON) - all scenes in JSON format
+  const handleDownloadScenesJson = useCallback(() => {
     downloadFile(
-      JSON.stringify(data, null, 2),
+      JSON.stringify(scenes, null, 2),
       `veo-scenes-${summary.videoId}.json`,
       "application/json"
     );
-  }, [scenes, summary, jobId, downloadFile]);
+  }, [scenes, summary.videoId, downloadFile]);
 
+  // 2. All Scenes (TXT) - each scene as JSON separated by blank lines
+  const handleDownloadScenesTxt = useCallback(() => {
+    const content = scenes
+      .map((scene) => JSON.stringify(scene, null, 2))
+      .join("\n\n");
+    downloadFile(
+      content,
+      `veo-scenes-${summary.videoId}.txt`,
+      "text/plain"
+    );
+  }, [scenes, summary.videoId, downloadFile]);
+
+  // 3. Script - the generated script/transcript
+  const handleDownloadScript = useCallback(() => {
+    if (!script) return;
+    downloadFile(
+      JSON.stringify(script, null, 2),
+      `veo-script-${summary.videoId}.json`,
+      "application/json"
+    );
+  }, [script, summary.videoId, downloadFile]);
+
+  // 4. Characters - all characters with their variations from scenes
   const handleDownloadCharacters = useCallback(() => {
+    // Collect all character variations from scenes
+    const characterVariations: Record<string, Array<{ sceneIndex: number; variations: Record<string, string> }>> = {};
+
+    scenes.forEach((scene, index) => {
+      if (scene.characterVariations) {
+        for (const [charName, variations] of Object.entries(scene.characterVariations)) {
+          if (!characterVariations[charName]) {
+            characterVariations[charName] = [];
+          }
+          characterVariations[charName].push({
+            sceneIndex: index + 1,
+            variations: variations as Record<string, string>,
+          });
+        }
+      }
+    });
+
     const data = {
-      jobId,
-      videoId: summary.videoId,
       characters: characterRegistry,
-      generatedAt: new Date().toISOString(),
+      sceneVariations: characterVariations,
     };
     downloadFile(
       JSON.stringify(data, null, 2),
       `veo-characters-${summary.videoId}.json`,
       "application/json"
     );
-  }, [characterRegistry, summary, jobId, downloadFile]);
-
-  const handleDownloadSummary = useCallback(() => {
-    const data = {
-      jobId,
-      ...summary,
-      generatedAt: new Date().toISOString(),
-    };
-    downloadFile(
-      JSON.stringify(data, null, 2),
-      `veo-summary-${summary.videoId}.json`,
-      "application/json"
-    );
-  }, [summary, jobId, downloadFile]);
-
-  const handleDownloadPrompts = useCallback(() => {
-    const prompts = scenes
-      .map((scene, index) => `=== SCENE ${index + 1} ===\n\n${scene.prompt}\n`)
-      .join("\n");
-    downloadFile(
-      prompts,
-      `veo-prompts-${summary.videoId}.txt`,
-      "text/plain"
-    );
-  }, [scenes, summary.videoId, downloadFile]);
+  }, [characterRegistry, scenes, summary.videoId, downloadFile]);
 
   const downloadOptions = [
     {
-      label: lang.veo.result.downloadOptions.allScenes,
-      description: `${scenes.length} scenes with all metadata`,
+      label: lang.veo.result.downloadOptions.scenesJson,
+      description: lang.veo.result.downloadOptions.scenesJsonDesc.replace("{count}", String(scenes.length)),
       icon: (
         <svg
           width="20"
@@ -105,29 +114,11 @@ function VeoDownloadPanel({
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
       ),
-      onClick: handleDownloadScenes,
+      onClick: handleDownloadScenesJson,
     },
     {
-      label: lang.veo.result.downloadOptions.characters,
-      description: `${Object.keys(characterRegistry).length} characters`,
-      icon: (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-      ),
-      onClick: handleDownloadCharacters,
-    },
-    {
-      label: lang.veo.result.downloadOptions.summary,
-      description: "Job metadata and statistics",
+      label: lang.veo.result.downloadOptions.scenesTxt,
+      description: lang.veo.result.downloadOptions.scenesTxtDesc.replace("{count}", String(scenes.length)),
       icon: (
         <svg
           width="20"
@@ -141,14 +132,13 @@ function VeoDownloadPanel({
           <polyline points="14 2 14 8 20 8" />
           <line x1="16" y1="13" x2="8" y2="13" />
           <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
         </svg>
       ),
-      onClick: handleDownloadSummary,
+      onClick: handleDownloadScenesTxt,
     },
-    {
-      label: lang.veo.result.downloadOptions.prompts,
-      description: "Plain text prompts for generation",
+    ...(script ? [{
+      label: lang.veo.result.downloadOptions.script,
+      description: lang.veo.result.downloadOptions.scriptDesc,
       icon: (
         <svg
           width="20"
@@ -163,7 +153,25 @@ function VeoDownloadPanel({
           <path d="M12 4v16" />
         </svg>
       ),
-      onClick: handleDownloadPrompts,
+      onClick: handleDownloadScript,
+    }] : []),
+    {
+      label: lang.veo.result.downloadOptions.characters,
+      description: lang.veo.result.downloadOptions.charactersDesc.replace("{count}", String(Object.keys(characterRegistry).length)),
+      icon: (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      ),
+      onClick: handleDownloadCharacters,
     },
   ];
 

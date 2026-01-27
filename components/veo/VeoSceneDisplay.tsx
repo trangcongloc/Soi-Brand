@@ -2,10 +2,11 @@
 
 import { memo, useState } from "react";
 import { useLang } from "@/lib/lang";
-import { Scene, CharacterRegistry, VeoJobSummary } from "@/lib/veo";
+import { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript } from "@/lib/veo";
 import VeoSceneCard from "./VeoSceneCard";
 import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoDownloadPanel from "./VeoDownloadPanel";
+import VeoHistoryPanel from "./VeoHistoryPanel";
 import styles from "./VeoSceneDisplay.module.css";
 
 interface VeoSceneDisplayProps {
@@ -13,15 +14,25 @@ interface VeoSceneDisplayProps {
   characterRegistry: CharacterRegistry;
   summary: VeoJobSummary;
   jobId: string;
+  script?: GeneratedScript;
+  onViewJob?: (jobId: string) => void;
+  onRegenerateJob?: (jobId: string) => void;
+  onRetryJob?: (jobId: string) => void;
+  onJobsChange?: () => void;
 }
 
-type TabType = "summary" | "scenes" | "characters" | "download";
+type TabType = "summary" | "scenes" | "characters" | "download" | "history";
 
 function VeoSceneDisplay({
   scenes,
   characterRegistry,
   summary,
   jobId,
+  script,
+  onViewJob,
+  onRegenerateJob,
+  onRetryJob,
+  onJobsChange,
 }: VeoSceneDisplayProps) {
   const lang = useLang();
   const [activeTab, setActiveTab] = useState<TabType>("summary");
@@ -31,6 +42,8 @@ function VeoSceneDisplay({
     { key: "scenes", label: lang.veo.result.scenes },
     { key: "characters", label: lang.veo.result.characters },
     { key: "download", label: lang.veo.result.download },
+    // Only show history tab if onViewJob handler is provided
+    ...(onViewJob ? [{ key: "history" as TabType, label: lang.veo.history.title }] : []),
   ];
 
   return (
@@ -119,7 +132,18 @@ function VeoSceneDisplay({
             scenes={scenes}
             characterRegistry={characterRegistry}
             summary={summary}
-            jobId={jobId}
+            script={script}
+          />
+        )}
+
+        {/* History Tab */}
+        {activeTab === "history" && onViewJob && (
+          <VeoHistoryPanel
+            onViewJob={onViewJob}
+            onRegenerateJob={onRegenerateJob}
+            onRetryJob={onRetryJob}
+            currentJobId={jobId}
+            onJobsChange={onJobsChange}
           />
         )}
       </div>
