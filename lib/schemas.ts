@@ -16,6 +16,7 @@ export const AnalyzeRequestSchema = z.object({
     youtubeApiKey: z.string().optional(),
     geminiApiKey: z.string().optional(),
     geminiModel: z.enum(VALID_GEMINI_MODELS).optional(),
+    apiKeyTier: z.enum(["free", "paid"]).optional(),
     language: z.enum(["vi", "en"]).optional().default("vi"),
 });
 

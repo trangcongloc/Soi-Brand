@@ -261,6 +261,19 @@ export const en = {
             contentType: "Content Type:",
             specificTopics: "Specific Topics:",
             exampleVideos: "Example Videos:",
+            // Additional keys for ContentStructureSection
+            currentStats: "Current Channel Stats",
+            postingFrequencyLabel: "POSTING FREQUENCY",
+            mostActiveDays: "MOST ACTIVE DAYS",
+            mostActiveTimes: "MOST ACTIVE TIMES",
+            videosOverDays: "{count} videos over {days} days",
+            recommendedSchedule: "Recommended Schedule",
+            optimalFrequency: "OPTIMAL FREQUENCY",
+            bestDaysToPost: "BEST DAYS TO POST",
+            bestTimesToPost: "BEST TIMES TO POST",
+            performanceOverview: "Content Performance Overview",
+            strategicPurpose: "Strategic Purpose:",
+            performanceInsight: "Performance Insight:",
         },
         growthOpportunities: {
             title: "Growth Opportunities",
@@ -424,11 +437,18 @@ export const en = {
             submitButtonLoading: "Processing...",
             uploadScript: "Upload File",
             generateScenes: "Generate Scenes",
+            generateFromUrl: "Generate from URL",
             extractScript: "Extract Script",
             processing: "Processing...",
-            timeRange: "Time Range (optional)",
+            duration: "Video Duration",
+            durationAuto: "Entire Video",
+            durationCustom: "Custom Range",
+            durationAutoHint: "AI will analyze the entire video automatically",
+            durationCustomHint: "Specify start and end time for a specific segment",
             from: "From",
             to: "To",
+            noApiKey: "Configure your Gemini API key in Settings to use VEO",
+            usingModel: "Using model",
             errors: {
                 emptyUrl: "Please enter a YouTube video link",
                 invalidUrl: "Invalid YouTube link. Please enter a video link (e.g., youtube.com/watch?v=xxx)",
@@ -440,11 +460,14 @@ export const en = {
         },
 
         workflow: {
+            urlToScenes: "Full Pipeline",
+            urlToScenesDesc: "URL to Script to Scenes (all-in-one)",
             urlToScript: "URL to Script",
             urlToScriptDesc: "Extract script from video",
             scriptToScenes: "Script to Scenes",
             scriptToScenesDesc: "Generate scenes from script",
             urlHint: "Enter a YouTube URL to extract the script/transcript from the video",
+            urlToScenesHint: "Enter a YouTube URL to extract script and generate scenes automatically",
             scriptHint: "Paste your script or upload a text file to generate visual scenes",
         },
 
@@ -466,15 +489,18 @@ export const en = {
         modes: {
             title: "Processing Mode",
             direct: "Direct",
-            directDesc: "Fast, simple - single API call processing",
+            directDesc: "Video → Scenes (faster, no script)",
             hybrid: "Hybrid",
-            hybridDesc: "Batched with character tracking (recommended)",
+            hybridDesc: "Video → Script → Scenes (script cached, can regenerate)",
         },
 
         settings: {
             title: "Settings",
             sceneCount: "Scene Count",
             sceneCountDesc: "Target number of scenes to generate",
+            sceneCountAutoDesc: "Auto-calculated based on video duration (~8s/scene)",
+            auto: "Auto",
+            manual: "Manual",
             batchSize: "Batch Size",
             batchSizeDesc: "Scenes per batch (hybrid mode only)",
             voice: "Voice",
@@ -505,6 +531,8 @@ export const en = {
             batchProgress: "Batch {current}/{total}",
             scenesGenerated: "{count} scenes generated",
             estimatedTime: "Estimated time: {time}",
+            showScript: "Show",
+            hideScript: "Hide",
         },
 
         result: {
@@ -534,19 +562,37 @@ export const en = {
                 prompt: "Prompt",
                 copyPrompt: "Copy Prompt",
                 copied: "Copied!",
+                // Additional keys for VeoSceneCard
+                expand: "Expand",
+                collapse: "Collapse",
+                primarySubject: "Primary Subject",
+                environment: "Environment",
+                keyDetails: "Key Details",
+                mood: "Mood",
+                source: "Source",
+                shadows: "Shadows",
+                angle: "Angle",
+                framing: "Framing",
+                focus: "Focus",
             },
 
             characterCard: {
                 appearances: "Appearances",
                 description: "Full Description",
+                noCharacters: "No characters detected in this video",
             },
 
             downloadOptions: {
                 title: "Download",
-                allScenes: "All Scenes (JSON)",
-                characters: "Character Registry (JSON)",
-                summary: "Summary (JSON)",
-                prompts: "Prompts Only (TXT)",
+                scenesJson: "All Scenes (JSON)",
+                scenesTxt: "All Scenes (TXT)",
+                script: "Script (JSON)",
+                characters: "Characters (JSON)",
+                // Description keys
+                scenesJsonDesc: "{count} scenes with all metadata",
+                scenesTxtDesc: "{count} scenes, JSON separated by blank lines",
+                scriptDesc: "Video transcript and script data",
+                charactersDesc: "{count} characters with all variations",
             },
         },
 
@@ -556,6 +602,10 @@ export const en = {
             viewResult: "View Result",
             deleteJob: "Delete",
             clearAll: "Clear All",
+            confirmDelete: "Confirm Delete",
+            cancelAction: "Cancel",
+            scriptCached: "Script cached",
+            regenerate: "Regenerate",
         },
 
         resume: {

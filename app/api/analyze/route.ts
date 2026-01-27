@@ -8,7 +8,12 @@ import { isOriginAllowed, validateEnv } from "@/lib/config";
 import { withRetry } from "@/lib/retry";
 import { logger } from "@/lib/logger";
 import { AnalyzeRequestSchema } from "@/lib/schemas";
-import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  detectApiKeyTier,
+  getTierRateLimit
+} from "@/lib/rateLimit";
 
 // CORS headers helper
 function getCorsHeaders(origin: string | null): HeadersInit {
@@ -48,31 +53,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Rate limiting check (10 requests per minute per IP)
-        const clientId = getClientIdentifier(request);
-        const rateLimitResult = checkRateLimit(clientId, { limit: 10, windowMs: 60000 });
-
-        if (!rateLimitResult.success) {
-            const retryAfter = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: isVi ? "Quá nhiều yêu cầu. Vui lòng thử lại sau." : "Too many requests. Please try again later.",
-                    errorType: "RATE_LIMIT",
-                } as AnalyzeResponse,
-                {
-                    status: 429,
-                    headers: {
-                        ...corsHeaders,
-                        "Retry-After": String(retryAfter),
-                        "X-RateLimit-Remaining": "0",
-                        "X-RateLimit-Reset": String(rateLimitResult.resetTime),
-                    },
-                }
-            );
-        }
-
-        // Parse and validate request body with Zod
+        // Parse and validate request body with Zod first to get API key for tier detection
         let rawBody: unknown;
         try {
             rawBody = await request.json();
@@ -102,8 +83,56 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { channelUrl, youtubeApiKey, geminiApiKey, geminiModel, language } = parseResult.data;
+        const { channelUrl, youtubeApiKey, geminiApiKey, geminiModel, apiKeyTier, language } = parseResult.data;
         isVi = language !== 'en';
+
+        // Get API key (from request or environment)
+        const effectiveGeminiKey = geminiApiKey || process.env.GEMINI_API_KEY;
+        if (!effectiveGeminiKey) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: isVi ? "Thiếu Gemini API key" : "Gemini API key is required",
+                    errorType: "API_CONFIG",
+                } as AnalyzeResponse,
+                { status: 400, headers: corsHeaders }
+            );
+        }
+
+        // Detect API key tier and get appropriate rate limit
+        const tier = detectApiKeyTier(effectiveGeminiKey, apiKeyTier);
+        const tierRateLimit = getTierRateLimit("analyze", tier);
+
+        // Tier-based rate limiting check
+        const clientId = getClientIdentifier(request);
+        const rateLimitResult = checkRateLimit(clientId, tierRateLimit, tier);
+
+        if (!rateLimitResult.success) {
+            const retryAfter = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+            const tierLabel = tier === "paid" ? (isVi ? "trả phí" : "paid tier") : (isVi ? "miễn phí" : "free tier");
+            const limitText = isVi
+                ? `Vượt quá giới hạn cho tài khoản ${tierLabel} (${tierRateLimit.limit} yêu cầu/phút)`
+                : `Rate limit exceeded for ${tierLabel} (${tierRateLimit.limit} requests per minute)`;
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: limitText,
+                    errorType: "RATE_LIMIT",
+                } as AnalyzeResponse,
+                {
+                    status: 429,
+                    headers: {
+                        ...corsHeaders,
+                        "Retry-After": String(retryAfter),
+                        "X-RateLimit-Limit": String(tierRateLimit.limit),
+                        "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+                        "X-RateLimit-Reset": String(rateLimitResult.resetTime),
+                        "X-RateLimit-Tier": tier,
+                    },
+                }
+            );
+        }
 
         // Validate YouTube URL format
         if (!isValidYouTubeUrl(channelUrl)) {

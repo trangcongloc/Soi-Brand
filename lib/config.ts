@@ -8,10 +8,12 @@ export const VEO_CONFIG = {
     DEFAULT_SECONDS_PER_SCENE: 8,
     /** Minimum auto-calculated scenes */
     MIN_AUTO_SCENES: 5,
-    /** Maximum auto-calculated scenes */
-    MAX_AUTO_SCENES: 150,
+    /** Maximum auto-calculated scenes (Gemini 2.5/3.x supports 65K tokens) */
+    MAX_AUTO_SCENES: 200,
     /** Delay between batches in hybrid mode (ms) */
     BATCH_DELAY_MS: 2000,
+    /** Recommended batch size for scene generation (balanced speed vs reliability) */
+    DEFAULT_BATCH_SIZE: 30, // Balanced: 30 scenes per batch (safer for long videos)
 };
 
 export interface EnvConfig {

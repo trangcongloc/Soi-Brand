@@ -41,7 +41,7 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
           className={styles.expandButton}
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? "Collapse" : "Expand"}
+{expanded ? lang.veo.result.sceneCard.collapse : lang.veo.result.sceneCard.expand}
           <svg
             className={`${styles.chevron} ${expanded ? styles.open : ""}`}
             width="12"
@@ -109,15 +109,15 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
                 <h4>{lang.veo.result.sceneCard.visualSpecs}</h4>
                 <div className={styles.specGrid}>
                   <div>
-                    <span className={styles.specLabel}>Primary Subject</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.primarySubject}</span>
                     <span>{scene.visual_specs.primary_subject}</span>
                   </div>
                   <div>
-                    <span className={styles.specLabel}>Environment</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.environment}</span>
                     <span>{scene.visual_specs.environment}</span>
                   </div>
                   <div>
-                    <span className={styles.specLabel}>Key Details</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.keyDetails}</span>
                     <span>{scene.visual_specs.key_details}</span>
                   </div>
                 </div>
@@ -130,15 +130,15 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
                 <h4>{lang.veo.result.sceneCard.lighting}</h4>
                 <div className={styles.specGrid}>
                   <div>
-                    <span className={styles.specLabel}>Mood</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.mood}</span>
                     <span>{scene.lighting.mood}</span>
                   </div>
                   <div>
-                    <span className={styles.specLabel}>Source</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.source}</span>
                     <span>{scene.lighting.source}</span>
                   </div>
                   <div>
-                    <span className={styles.specLabel}>Shadows</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.shadows}</span>
                     <span>{scene.lighting.shadows}</span>
                   </div>
                 </div>
@@ -151,15 +151,15 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
                 <h4>{lang.veo.result.sceneCard.composition}</h4>
                 <div className={styles.specGrid}>
                   <div>
-                    <span className={styles.specLabel}>Angle</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.angle}</span>
                     <span>{scene.composition.angle}</span>
                   </div>
                   <div>
-                    <span className={styles.specLabel}>Framing</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.framing}</span>
                     <span>{scene.composition.framing}</span>
                   </div>
                   <div>
-                    <span className={styles.specLabel}>Focus</span>
+                    <span className={styles.specLabel}>{lang.veo.result.sceneCard.focus}</span>
                     <span>{scene.composition.focus}</span>
                   </div>
                 </div>

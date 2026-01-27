@@ -38,13 +38,16 @@ export function sanitizeForFolder(str: string, maxLength = 50): string {
 }
 
 /**
- * Parse duration string (MM:SS or HH:MM:SS) to seconds
+ * Parse duration string to seconds
+ * Supports formats: MM:SS, HH:MM:SS, "X minutes", "Xm Ys", "X min Y sec", plain seconds
  */
 export function parseDuration(durationStr: string | undefined): number {
   if (!durationStr) return 0;
 
+  const str = durationStr.trim().toLowerCase();
+
   // Handle HH:MM:SS format
-  const matchHMS = durationStr.match(/(\d+):(\d+):(\d+)/);
+  const matchHMS = str.match(/(\d+):(\d+):(\d+)/);
   if (matchHMS) {
     return (
       parseInt(matchHMS[1], 10) * 3600 +
@@ -54,9 +57,41 @@ export function parseDuration(durationStr: string | undefined): number {
   }
 
   // Handle MM:SS format
-  const matchMS = durationStr.match(/(\d+):(\d+)/);
+  const matchMS = str.match(/(\d+):(\d+)/);
   if (matchMS) {
     return parseInt(matchMS[1], 10) * 60 + parseInt(matchMS[2], 10);
+  }
+
+  // Handle text formats: "X hours Y minutes Z seconds" or variations
+  let totalSeconds = 0;
+
+  // Extract hours
+  const hourMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/);
+  if (hourMatch) {
+    totalSeconds += parseFloat(hourMatch[1]) * 3600;
+  }
+
+  // Extract minutes
+  const minMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/);
+  if (minMatch) {
+    totalSeconds += parseFloat(minMatch[1]) * 60;
+  }
+
+  // Extract seconds
+  const secMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/);
+  if (secMatch) {
+    totalSeconds += parseFloat(secMatch[1]);
+  }
+
+  if (totalSeconds > 0) {
+    return Math.round(totalSeconds);
+  }
+
+  // Handle plain number (assume seconds if small, minutes if larger)
+  const plainNum = parseFloat(str);
+  if (!isNaN(plainNum) && plainNum > 0) {
+    // If number is > 300, assume it's seconds; otherwise assume minutes
+    return plainNum > 300 ? Math.round(plainNum) : Math.round(plainNum * 60);
   }
 
   return 0;
@@ -206,4 +241,47 @@ export function getYouTubeThumbnail(
     maxres: "maxresdefault",
   };
   return `https://img.youtube.com/vi/${videoId}/${qualityMap[quality]}.jpg`;
+}
+
+/**
+ * Clean script text by removing caption timestamp artifacts
+ * Gemini sometimes includes on-screen caption timestamps when analyzing videos
+ * This removes patterns like: "00:00 00:01 00:05" or inline "10:24 text 10:32"
+ */
+export function cleanScriptText(text: string): string {
+  if (!text) return "";
+
+  // Remove sequences of standalone timestamps (e.g., "00:00 00:01 00:05 00:08")
+  // These are caption timing markers that got extracted from video overlays
+  let cleaned = text.replace(
+    /(?:^|\s)(?:\d{1,2}:\d{2}(?:\s+|$)){2,}/gm,
+    " "
+  );
+
+  // Remove inline timestamps that appear before/after content
+  // Pattern: timestamp followed by text, then another timestamp
+  // e.g., "10:24 Super! 10:32" -> "Super!"
+  cleaned = cleaned.replace(
+    /\b\d{1,2}:\d{2}\b\s*(?=[A-Za-z\u0080-\uFFFF])/g,
+    ""
+  );
+
+  // Remove trailing timestamps at end of sentences/phrases
+  cleaned = cleaned.replace(/\s+\d{1,2}:\d{2}\s*(?=\s|$)/g, " ");
+
+  // Remove any remaining orphan timestamp sequences
+  cleaned = cleaned.replace(/(?:^|\s)\d{1,2}:\d{2}(?:\s+\d{1,2}:\d{2})+/gm, " ");
+
+  // Clean up excessive whitespace
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
+
+  // If the result is mostly timestamps (very short after cleaning), log warning
+  if (cleaned.length < text.length * 0.3 && text.length > 100) {
+    logger.warn("Script text heavily contaminated with timestamps", {
+      originalLength: text.length,
+      cleanedLength: cleaned.length,
+    });
+  }
+
+  return cleaned;
 }

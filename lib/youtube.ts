@@ -336,6 +336,73 @@ export async function getChannelVideos(
 }
 
 /**
+ * Get video information by video ID
+ * Returns detailed video info including duration in ISO 8601 format
+ */
+export async function getVideoInfo(
+    videoId: string,
+    customApiKey?: string
+): Promise<YouTubeVideo | null> {
+    const apiKey = customApiKey || process.env.YOUTUBE_API_KEY;
+    if (!apiKey) {
+        throw new Error("YouTube API key not configured");
+    }
+
+    try {
+        const response = await apiClient.get(`${YOUTUBE_API_BASE}/videos`, {
+            params: {
+                part: "snippet,statistics,contentDetails",
+                id: videoId,
+                key: apiKey,
+            },
+        });
+
+        if (!response.data.items || response.data.items.length === 0) {
+            return null;
+        }
+
+        const video = response.data.items[0];
+        return {
+            id: video.id,
+            title: video.snippet.title,
+            description: video.snippet.description,
+            publishedAt: video.snippet.publishedAt,
+            thumbnails: video.snippet.thumbnails,
+            statistics: {
+                viewCount: video.statistics.viewCount || "0",
+                likeCount: video.statistics.likeCount || "0",
+                commentCount: video.statistics.commentCount || "0",
+            },
+            tags: video.snippet.tags || [],
+            contentDetails: {
+                duration: video.contentDetails.duration,
+            },
+        };
+    } catch (error: unknown) {
+        if (error instanceof APIError) {
+            throw error;
+        }
+        handleYouTubeError(error, "getVideoInfo");
+    }
+}
+
+/**
+ * Parse ISO 8601 duration (e.g., "PT25M30S") to seconds
+ */
+export function parseISO8601Duration(duration: string): number {
+    if (!duration) return 0;
+
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+
+    const hours = parseInt(match[1] || "0", 10);
+    const minutes = parseInt(match[2] || "0", 10);
+    const seconds = parseInt(match[3] || "0", 10);
+
+    return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
  * Get full channel data (info + videos)
  * Videos: All from last 30 days, or minimum 50 videos if fewer
  */

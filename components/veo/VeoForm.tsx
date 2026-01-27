@@ -14,23 +14,27 @@ interface VeoFormProps {
     endTime?: string;
     scriptText?: string;
     mode: VeoMode;
+    autoSceneCount: boolean;
     sceneCount: number;
     batchSize: number;
     voice: VoiceLanguage;
   }) => void;
   onError: (msg: string) => void;
   isLoading: boolean;
+  hasApiKey?: boolean;
+  geminiModel?: string;
 }
 
-function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
+function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }: VeoFormProps) {
   const lang = useLang();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Workflow selection
-  const [workflow, setWorkflow] = useState<VeoWorkflow>("url-to-script");
+  // Workflow selection - default to combined workflow
+  const [workflow, setWorkflow] = useState<VeoWorkflow>("url-to-scenes");
 
   // URL input (for step 1)
   const [url, setUrl] = useState("");
+  const [durationMode, setDurationMode] = useState<"auto" | "custom">("auto");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -40,8 +44,9 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
 
   // Settings
   const [mode, setMode] = useState<VeoMode>("hybrid");
+  const [autoSceneCount, setAutoSceneCount] = useState(true);
   const [sceneCount, setSceneCount] = useState(40);
-  const [batchSize, setBatchSize] = useState(10);
+  const [batchSize, setBatchSize] = useState(30);
   const [voice, setVoice] = useState<VoiceLanguage>("no-voice");
   const [showSettings, setShowSettings] = useState(false);
 
@@ -91,7 +96,7 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
     (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (workflow === "url-to-script") {
+      if (workflow === "url-to-script" || workflow === "url-to-scenes") {
         if (!url.trim()) {
           onError(lang.veo.form.errors.emptyUrl);
           return;
@@ -101,11 +106,13 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
           return;
         }
         onSubmit({
-          workflow: "url-to-script",
+          workflow,
           videoUrl: url,
-          startTime: startTime.trim() || undefined,
-          endTime: endTime.trim() || undefined,
+          // Only send time range in custom mode
+          startTime: durationMode === "custom" && startTime.trim() ? startTime.trim() : undefined,
+          endTime: durationMode === "custom" && endTime.trim() ? endTime.trim() : undefined,
           mode,
+          autoSceneCount: workflow === "url-to-scenes" ? autoSceneCount : false,
           sceneCount,
           batchSize,
           voice,
@@ -119,13 +126,14 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
           workflow: "script-to-scenes",
           scriptText,
           mode,
+          autoSceneCount: false,
           sceneCount,
           batchSize,
           voice,
         });
       }
     },
-    [workflow, url, startTime, endTime, scriptText, mode, sceneCount, batchSize, voice, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, onError, onSubmit, lang]
   );
 
   const voiceOptions: VoiceLanguage[] = [
@@ -140,7 +148,9 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
     "chinese",
   ];
 
-  const hasInput = workflow === "url-to-script" ? url.trim().length > 0 : scriptText.trim().length > 0;
+  const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
+  const showUrlInput = workflow === "url-to-script" || workflow === "url-to-scenes";
+  const showSceneSettings = workflow === "script-to-scenes" || workflow === "url-to-scenes";
 
   return (
     <div className={styles.container}>
@@ -148,34 +158,66 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
       <div className={styles.workflowSelector}>
         <button
           type="button"
+          className={`${styles.workflowTab} ${workflow === "url-to-scenes" ? styles.active : ""}`}
+          onClick={() => setWorkflow("url-to-scenes")}
+          disabled={isLoading}
+          title={lang.veo.workflow.urlToScenesDesc}
+        >
+          <span className={styles.workflowNumber}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </span>
+          <span className={styles.workflowName}>{lang.veo.workflow.urlToScenes}</span>
+        </button>
+        <button
+          type="button"
           className={`${styles.workflowTab} ${workflow === "url-to-script" ? styles.active : ""}`}
           onClick={() => setWorkflow("url-to-script")}
           disabled={isLoading}
+          title={lang.veo.workflow.urlToScriptDesc}
         >
           <span className={styles.workflowNumber}>1</span>
-          <div className={styles.workflowInfo}>
-            <span className={styles.workflowName}>{lang.veo.workflow.urlToScript}</span>
-            <span className={styles.workflowDesc}>{lang.veo.workflow.urlToScriptDesc}</span>
-          </div>
+          <span className={styles.workflowName}>{lang.veo.workflow.urlToScript}</span>
         </button>
         <button
           type="button"
           className={`${styles.workflowTab} ${workflow === "script-to-scenes" ? styles.active : ""}`}
           onClick={() => setWorkflow("script-to-scenes")}
           disabled={isLoading}
+          title={lang.veo.workflow.scriptToScenesDesc}
         >
           <span className={styles.workflowNumber}>2</span>
-          <div className={styles.workflowInfo}>
-            <span className={styles.workflowName}>{lang.veo.workflow.scriptToScenes}</span>
-            <span className={styles.workflowDesc}>{lang.veo.workflow.scriptToScenesDesc}</span>
-          </div>
+          <span className={styles.workflowName}>{lang.veo.workflow.scriptToScenes}</span>
         </button>
       </div>
 
+      {/* API Key Status Notice */}
+      {!hasApiKey && (
+        <div className={styles.apiKeyNotice}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{lang.veo.form.noApiKey}</span>
+        </div>
+      )}
+
+      {/* Model indicator when API key is set */}
+      {hasApiKey && geminiModel && (
+        <div className={styles.modelIndicator}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+          </svg>
+          <span>{lang.veo.form.usingModel}: {geminiModel}</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className={styles.form}>
         <AnimatePresence mode="wait">
-          {/* Step 1: URL Input */}
-          {workflow === "url-to-script" && (
+          {/* URL Input (for url-to-script and url-to-scenes) */}
+          {showUrlInput && (
             <motion.div
               key="url-input"
               initial={{ opacity: 0, y: 10 }}
@@ -199,52 +241,94 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
                 />
               </div>
 
-              {/* Time Range Input */}
-              <div className={styles.timeRangeRow}>
-                <label className={styles.timeRangeLabel}>
-                  {lang.veo.form.timeRange}
-                </label>
-                <div className={styles.timeInputs}>
-                  <span className={styles.timeLabel}>{lang.veo.form.from}</span>
-                  <input
-                    id="start-time"
-                    type="text"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    placeholder="00:00"
-                    className={styles.timeInput}
-                    disabled={isLoading}
-                  />
-                  <span className={styles.timeLabel}>{lang.veo.form.to}</span>
-                  <input
-                    id="end-time"
-                    type="text"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    placeholder="05:30"
-                    className={styles.timeInput}
-                    disabled={isLoading}
-                  />
+              {/* Duration Mode Toggle */}
+              <div className={styles.durationSection}>
+                <div className={styles.durationHeader}>
+                  <span className={styles.durationLabel}>{lang.veo.form.duration}</span>
+                  <div className={styles.durationToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.durationToggleBtn} ${durationMode === "auto" ? styles.active : ""}`}
+                      onClick={() => setDurationMode("auto")}
+                      disabled={isLoading}
+                    >
+                      {lang.veo.form.durationAuto}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.durationToggleBtn} ${durationMode === "custom" ? styles.active : ""}`}
+                      onClick={() => setDurationMode("custom")}
+                      disabled={isLoading}
+                    >
+                      {lang.veo.form.durationCustom}
+                    </button>
+                  </div>
                 </div>
+
+                {/* Time Range Input - only show in custom mode */}
+                <AnimatePresence>
+                  {durationMode === "custom" && (
+                    <motion.div
+                      className={styles.timeRangeRow}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className={styles.timeInputs}>
+                        <span className={styles.timeLabel}>{lang.veo.form.from}</span>
+                        <input
+                          id="start-time"
+                          type="text"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          placeholder="00:00"
+                          className={styles.timeInput}
+                          disabled={isLoading}
+                        />
+                        <span className={styles.timeLabel}>{lang.veo.form.to}</span>
+                        <input
+                          id="end-time"
+                          type="text"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          placeholder="05:30"
+                          className={styles.timeInput}
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <p className={styles.durationHint}>
+                  {durationMode === "auto"
+                    ? lang.veo.form.durationAutoHint
+                    : lang.veo.form.durationCustomHint}
+                </p>
               </div>
 
-              <p className={styles.inputHint}>{lang.veo.workflow.urlHint}</p>
+              <p className={styles.inputHint}>
+                {workflow === "url-to-scenes" ? lang.veo.workflow.urlToScenesHint : lang.veo.workflow.urlHint}
+              </p>
 
-              {/* Submit Button */}
-              <AnimatePresence>
-                {url.trim().length > 0 && (
-                  <motion.button
-                    type="submit"
-                    className={styles.submitButtonLarge}
-                    disabled={isLoading}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                  >
-                    {isLoading ? lang.veo.form.processing : lang.veo.form.extractScript}
-                  </motion.button>
-                )}
-              </AnimatePresence>
+              {/* Submit Button for url-to-script only */}
+              {workflow === "url-to-script" && (
+                <AnimatePresence>
+                  {url.trim().length > 0 && (
+                    <motion.button
+                      type="submit"
+                      className={styles.submitButtonLarge}
+                      disabled={isLoading}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                    >
+                      {isLoading ? lang.veo.form.processing : lang.veo.form.extractScript}
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              )}
             </motion.div>
           )}
 
@@ -305,8 +389,8 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
           )}
         </AnimatePresence>
 
-        {/* Settings only for script-to-scenes */}
-        {workflow === "script-to-scenes" && (
+        {/* Settings for scene generation (script-to-scenes and url-to-scenes) */}
+        {showSceneSettings && (
           <>
             {/* Mode Selector */}
             <div className={styles.modeSelector}>
@@ -375,20 +459,46 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
                   transition={{ duration: 0.2 }}
                 >
                   <div className={styles.settingsGrid}>
-                    {/* Scene Count */}
+                    {/* Scene Count - with auto toggle for url-to-scenes */}
                     <div className={styles.settingItem}>
-                      <label htmlFor="scene-count">{lang.veo.settings.sceneCount}</label>
-                      <input
-                        id="scene-count"
-                        type="number"
-                        min={1}
-                        max={200}
-                        value={sceneCount}
-                        onChange={(e) => setSceneCount(parseInt(e.target.value) || 40)}
-                        disabled={isLoading}
-                      />
+                      <div className={styles.settingHeader}>
+                        <label htmlFor="scene-count">{lang.veo.settings.sceneCount}</label>
+                        {workflow === "url-to-scenes" && (
+                          <div className={styles.autoToggle}>
+                            <button
+                              type="button"
+                              className={`${styles.autoToggleBtn} ${autoSceneCount ? styles.active : ""}`}
+                              onClick={() => setAutoSceneCount(true)}
+                              disabled={isLoading}
+                            >
+                              {lang.veo.settings.auto}
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.autoToggleBtn} ${!autoSceneCount ? styles.active : ""}`}
+                              onClick={() => setAutoSceneCount(false)}
+                              disabled={isLoading}
+                            >
+                              {lang.veo.settings.manual}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {(workflow !== "url-to-scenes" || !autoSceneCount) && (
+                        <input
+                          id="scene-count"
+                          type="number"
+                          min={1}
+                          max={200}
+                          value={sceneCount}
+                          onChange={(e) => setSceneCount(parseInt(e.target.value) || 40)}
+                          disabled={isLoading}
+                        />
+                      )}
                       <span className={styles.settingDesc}>
-                        {lang.veo.settings.sceneCountDesc}
+                        {workflow === "url-to-scenes" && autoSceneCount
+                          ? lang.veo.settings.sceneCountAutoDesc
+                          : lang.veo.settings.sceneCountDesc}
                       </span>
                     </div>
 
@@ -402,7 +512,7 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
                           min={1}
                           max={50}
                           value={batchSize}
-                          onChange={(e) => setBatchSize(parseInt(e.target.value) || 10)}
+                          onChange={(e) => setBatchSize(parseInt(e.target.value) || 30)}
                           disabled={isLoading}
                         />
                         <span className={styles.settingDesc}>
@@ -435,7 +545,7 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
               )}
             </AnimatePresence>
 
-            {/* Submit button for script-to-scenes */}
+            {/* Submit button */}
             <AnimatePresence>
               {hasInput && (
                 <motion.button
@@ -446,7 +556,11 @@ function VeoForm({ onSubmit, onError, isLoading }: VeoFormProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                 >
-                  {isLoading ? lang.veo.form.processing : lang.veo.form.generateScenes}
+                  {isLoading
+                    ? lang.veo.form.processing
+                    : workflow === "url-to-scenes"
+                    ? lang.veo.form.generateFromUrl
+                    : lang.veo.form.generateScenes}
                 </motion.button>
               )}
             </AnimatePresence>

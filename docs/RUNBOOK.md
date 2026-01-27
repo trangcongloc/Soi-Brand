@@ -60,7 +60,15 @@ Deployment, monitoring, troubleshooting, and rollback procedures.
 
 1. **API Quota Usage**
    - YouTube: 10,000 units/day (resets midnight PT)
-   - Gemini: Model-dependent RPM/RPD limits
+   - Gemini Free Tier:
+     - gemini-2.5-flash: 5 RPM, 20 RPD
+     - gemini-2.5-flash-lite: 10 RPM, 20 RPD
+   - Gemini Paid Tier:
+     - gemini-2.5-flash: 1,000 RPM, 10,000 RPD
+     - gemini-2.5-flash-lite: 4,000 RPM
+     - gemini-2.5-pro: 150 RPM, 10,000 RPD
+     - gemini-3-flash: 1,000 RPM, 10,000 RPD
+     - gemini-3-pro: 25 RPM, 250 RPD
 
 2. **Response Times**
    - Target: < 30s for full analysis
@@ -200,12 +208,54 @@ If API keys are compromised:
 
 ## Rate Limiting
 
-The API implements rate limiting:
-- **Limit**: 10 requests per minute per IP
-- **Response**: 429 with `Retry-After` header
-- **Headers included**:
-  - `X-RateLimit-Remaining`
-  - `X-RateLimit-Reset`
+The API implements **tier-based rate limiting** that automatically adjusts limits based on your Gemini API key tier.
+
+### Rate Limits by Tier
+
+**Free Tier:**
+- **VEO API (`/api/veo`)**: 5 requests per minute per IP
+- **Analyze API (`/api/analyze`)**: 10 requests per minute per IP
+
+**Paid Tier:**
+- **VEO API (`/api/veo`)**: 50 requests per minute per IP
+- **Analyze API (`/api/analyze`)**: 100 requests per minute per IP
+
+### Usage
+
+To leverage paid tier limits, include `apiKeyTier: 'paid'` in your API request:
+
+```javascript
+fetch('/api/veo', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    videoUrl: 'https://youtube.com/watch?v=...',
+    workflow: 'url-to-scenes',
+    apiKeyTier: 'paid', // ← Specify your tier
+    geminiApiKey: 'your-key'
+  })
+})
+```
+
+### Response Headers
+
+All responses include rate limit metadata:
+
+- **Status 200/201**:
+  - `X-RateLimit-Limit` - Maximum requests per minute for your tier
+  - `X-RateLimit-Remaining` - Requests remaining in current window
+  - `X-RateLimit-Reset` - Timestamp when limit resets
+  - `X-RateLimit-Tier` - Your current tier (`free` or `paid`)
+
+- **Status 429 (Rate Limited)**:
+  - `Retry-After` - Seconds to wait before retrying
+  - All headers above
+
+### Notes
+- Tier is **cached per API key** after first request
+- If no tier specified, defaults to "free" (conservative)
+- Application limits account for Gemini API **TPM constraints** (video analysis uses 50K-150K tokens/request)
+- See [TIER_RATE_LIMITING.md](./TIER_RATE_LIMITING.md) for detailed documentation
 
 ## Security Checklist
 

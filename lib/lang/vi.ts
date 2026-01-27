@@ -219,10 +219,10 @@ export const vi = {
         },
         topContentAnalysis: {
             title: "Phân tích Nội dung Nổi bật",
-            bestPerforming: "Nội dung hoạt động tốt nhất",
+            bestPerforming: "Video hiệu suất tốt nhất",
             overview: "Tổng quan:",
             reasonsForSuccess: "Lý do thành công:",
-            worstPerforming: "Nội dung hoạt động kém nhất",
+            worstPerforming: "Video hiệu suất thấp",
             reasonsForFailure: "Lý do hoạt động kém:",
         },
         contentStructureAnalysis: {
@@ -254,10 +254,23 @@ export const vi = {
             bestDays: "Ngày đăng tốt nhất:",
             bestTimes: "Giờ đăng tốt nhất:",
             recommendedFrequency: "Tần suất đề xuất:",
-            contentMix: "Cấu trúc Nội dung",
+            contentMix: "Phối hợp nội dung",
             contentType: "Loại nội dung:",
             specificTopics: "Chủ đề cụ thể:",
             exampleVideos: "Video ví dụ:",
+            // Additional keys for ContentStructureSection
+            currentStats: "Hiện trạng kênh",
+            postingFrequencyLabel: "TẦN SUẤT ĐĂNG",
+            mostActiveDays: "NGÀY HAY ĐĂNG NHẤT",
+            mostActiveTimes: "GIỜ HAY ĐĂNG NHẤT",
+            videosOverDays: "{count} video trong {days} ngày",
+            recommendedSchedule: "Lịch đề xuất",
+            optimalFrequency: "TẦN SUẤT TỐI ƯU",
+            bestDaysToPost: "NGÀY TỐT NHẤT",
+            bestTimesToPost: "KHUNG GIỜ VÀNG",
+            performanceOverview: "Tổng quan hiệu suất nội dung",
+            strategicPurpose: "Mục đích chiến lược:",
+            performanceInsight: "Phân tích hiệu suất:",
         },
         growthOpportunities: {
             title: "Cơ hội tăng trưởng",
@@ -410,7 +423,7 @@ export const vi = {
     },
 
     veo: {
-        title: "VEO - Tạo Scene Video",
+        title: "VEO - Workflow",
         subtitle: "Phân tích video YouTube và tạo scene cho video generation",
 
         form: {
@@ -420,28 +433,45 @@ export const vi = {
             submitButtonLoading: "Đang xử lý...",
             uploadScript: "Tải File",
             generateScenes: "Tạo Scenes",
+            generateFromUrl: "Tạo từ URL",
             extractScript: "Trích xuất Script",
             processing: "Đang xử lý...",
-            timeRange: "Khoảng thời gian (tùy chọn)",
+            duration: "Thời lượng Video",
+            durationAuto: "Toàn bộ Video",
+            durationCustom: "Tùy chỉnh",
+            durationAutoHint: "AI sẽ tự động phân tích toàn bộ video",
+            durationCustomHint:
+                "Chỉ định thời gian bắt đầu và kết thúc cho đoạn cụ thể",
             from: "Từ",
             to: "Đến",
+            noApiKey: "Cấu hình Gemini API key trong Cài đặt để sử dụng VEO",
+            usingModel: "Đang sử dụng model",
             errors: {
                 emptyUrl: "Vui lòng nhập link video YouTube",
-                invalidUrl: "Link YouTube không hợp lệ. Hãy nhập link video (ví dụ: youtube.com/watch?v=xxx)",
-                apiKeyRequired: "Cần có Gemini API key để sử dụng tính năng này",
+                invalidUrl:
+                    "Link YouTube không hợp lệ. Hãy nhập link video (ví dụ: youtube.com/watch?v=xxx)",
+                apiKeyRequired:
+                    "Cần có Gemini API key để sử dụng tính năng này",
                 emptyScript: "Vui lòng nhập hoặc tải lên script",
-                invalidFileType: "Loại file không hợp lệ. Vui lòng tải lên file .txt hoặc .json",
+                invalidFileType:
+                    "Loại file không hợp lệ. Vui lòng tải lên file .txt hoặc .json",
                 cannotReadFile: "Không thể đọc file. Vui lòng thử lại.",
             },
         },
 
         workflow: {
+            urlToScenes: "Toàn bộ quy trình",
+            urlToScenesDesc: "URL thành Script thành Scenes (tất cả trong một)",
             urlToScript: "URL thành Script",
             urlToScriptDesc: "Trích xuất script từ video",
             scriptToScenes: "Script thành Scenes",
             scriptToScenesDesc: "Tạo scenes từ script",
-            urlHint: "Nhập URL YouTube để trích xuất script/transcript từ video",
-            scriptHint: "Dán script của bạn hoặc tải file text để tạo scenes hình ảnh",
+            urlHint:
+                "Nhập URL YouTube để trích xuất script/transcript từ video",
+            urlToScenesHint:
+                "Nhập URL YouTube để trích xuất script và tạo scenes tự động",
+            scriptHint:
+                "Dán script của bạn hoặc tải file text để tạo scenes hình ảnh",
         },
 
         script: {
@@ -456,21 +486,26 @@ export const vi = {
             transcript: "Transcript",
             copy: "Copy",
             download: "Tải xuống",
-            nextStepHint: "Copy script và sử dụng Bước 2 để tạo scenes hình ảnh từ nó",
+            nextStepHint:
+                "Copy script và sử dụng Bước 2 để tạo scenes hình ảnh từ nó",
         },
 
         modes: {
             title: "Chế độ xử lý",
             direct: "Trực tiếp",
-            directDesc: "Nhanh, đơn giản - xử lý trong 1 lần gọi API",
+            directDesc: "Video → Scenes",
             hybrid: "Hybrid",
-            hybridDesc: "Theo batch với theo dõi nhân vật (khuyến nghị)",
+            hybridDesc: "Video → Script → Scenes",
         },
 
         settings: {
             title: "Cài đặt",
             sceneCount: "Số lượng scene",
             sceneCountDesc: "Số scene mục tiêu cần tạo",
+            sceneCountAutoDesc:
+                "Tự động tính dựa trên thời lượng video (~8s/scene)",
+            auto: "Tự động",
+            manual: "Thủ công",
             batchSize: "Kích thước batch",
             batchSizeDesc: "Số scene mỗi batch (chỉ cho hybrid mode)",
             voice: "Giọng nói",
@@ -501,6 +536,8 @@ export const vi = {
             batchProgress: "Batch {current}/{total}",
             scenesGenerated: "{count} scenes đã tạo",
             estimatedTime: "Thời gian ước tính: {time}",
+            showScript: "Xem",
+            hideScript: "Ẩn",
         },
 
         result: {
@@ -530,19 +567,37 @@ export const vi = {
                 prompt: "Prompt",
                 copyPrompt: "Copy Prompt",
                 copied: "Đã copy!",
+                // Additional keys for VeoSceneCard
+                expand: "Mở rộng",
+                collapse: "Thu gọn",
+                primarySubject: "Chủ thể chính",
+                environment: "Môi trường",
+                keyDetails: "Chi tiết quan trọng",
+                mood: "Tâm trạng",
+                source: "Nguồn sáng",
+                shadows: "Bóng đổ",
+                angle: "Góc máy",
+                framing: "Khung hình",
+                focus: "Tiêu điểm",
             },
 
             characterCard: {
                 appearances: "Xuất hiện",
                 description: "Mô tả chi tiết",
+                noCharacters: "Không phát hiện nhân vật trong video này",
             },
 
             downloadOptions: {
                 title: "Tải xuống",
-                allScenes: "Tất cả Scenes (JSON)",
-                characters: "Registry Nhân vật (JSON)",
-                summary: "Tổng quan (JSON)",
-                prompts: "Chỉ Prompts (TXT)",
+                scenesJson: "Tất cả Scenes (JSON)",
+                scenesTxt: "Tất cả Scenes (TXT)",
+                script: "Script (JSON)",
+                characters: "Nhân vật (JSON)",
+                // Description keys
+                scenesJsonDesc: "{count} scene với đầy đủ metadata",
+                scenesTxtDesc: "{count} scene, JSON phân cách bằng dòng trống",
+                scriptDesc: "Transcript và dữ liệu script video",
+                charactersDesc: "{count} nhân vật với tất cả biến thể",
             },
         },
 
@@ -552,11 +607,16 @@ export const vi = {
             viewResult: "Xem kết quả",
             deleteJob: "Xóa",
             clearAll: "Xóa tất cả",
+            confirmDelete: "Xác nhận xóa",
+            cancelAction: "Hủy",
+            scriptCached: "Có script",
+            regenerate: "Tạo lại",
         },
 
         resume: {
             title: "Có job chưa hoàn thành",
-            message: "Job trước đó bị gián đoạn tại batch {batch}/{total}. Bạn có muốn tiếp tục?",
+            message:
+                "Job trước đó bị gián đoạn tại batch {batch}/{total}. Bạn có muốn tiếp tục?",
             continueButton: "Tiếp tục",
             startNew: "Bắt đầu mới",
         },
@@ -565,7 +625,8 @@ export const vi = {
             INVALID_URL: "URL video không hợp lệ",
             GEMINI_API_ERROR: "Lỗi Gemini API",
             GEMINI_QUOTA: "Đã hết quota Gemini API",
-            GEMINI_RATE_LIMIT: "Vượt quá giới hạn request. Vui lòng thử lại sau.",
+            GEMINI_RATE_LIMIT:
+                "Vượt quá giới hạn request. Vui lòng thử lại sau.",
             NETWORK_ERROR: "Lỗi kết nối mạng",
             PARSE_ERROR: "Không thể phân tích phản hồi từ AI",
             TIMEOUT: "Yêu cầu quá thời gian chờ",

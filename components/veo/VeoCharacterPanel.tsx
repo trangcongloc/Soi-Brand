@@ -3,7 +3,7 @@
 import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { Scene, CharacterRegistry } from "@/lib/veo";
+import { Scene, CharacterRegistry, getCharacterDescription } from "@/lib/veo";
 import styles from "./VeoCharacterPanel.module.css";
 
 interface VeoCharacterPanelProps {
@@ -43,14 +43,14 @@ function VeoCharacterPanel({ characterRegistry, scenes }: VeoCharacterPanelProps
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
         </svg>
-        <p>No characters detected in this video</p>
+        <p>{lang.veo.result.characterCard.noCharacters}</p>
       </div>
     );
   }
 
   return (
     <div className={styles.container}>
-      {characters.map(([name, description], index) => (
+      {characters.map(([name, charData], index) => (
         <motion.div
           key={name}
           className={styles.card}
@@ -84,7 +84,7 @@ function VeoCharacterPanel({ characterRegistry, scenes }: VeoCharacterPanelProps
             <h4 className={styles.descriptionLabel}>
               {lang.veo.result.characterCard.description}
             </h4>
-            <p className={styles.description}>{description}</p>
+            <p className={styles.description}>{getCharacterDescription(charData)}</p>
           </div>
         </motion.div>
       ))}

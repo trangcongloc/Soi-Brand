@@ -4,6 +4,7 @@
 
 import {
   VeoProgress,
+  VeoResumeData,
   Scene,
   CharacterRegistry,
   VeoMode,
@@ -76,6 +77,7 @@ export function createProgress(options: {
   batchSize: number;
   voiceLang: VoiceLanguage;
   totalBatches: number;
+  scriptText?: string;
 }): VeoProgress {
   return {
     ...options,
@@ -84,6 +86,7 @@ export function createProgress(options: {
     scenes: [],
     lastUpdated: new Date().toISOString(),
     status: "pending",
+    scriptText: options.scriptText,
   };
 }
 
@@ -165,6 +168,60 @@ export const serverProgress = {
   getAll: (): Map<string, VeoProgress> => serverProgressMap,
   clear: (): void => serverProgressMap.clear(),
 };
+
+/**
+ * Update progress with script text
+ */
+export function updateProgressWithScript(
+  progress: VeoProgress,
+  scriptText: string
+): VeoProgress {
+  return {
+    ...progress,
+    scriptText,
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
+/**
+ * Get resume data from progress
+ */
+export function getResumeData(progress: VeoProgress): VeoResumeData | null {
+  if (
+    progress.status === "completed" ||
+    !progress.scriptText ||
+    progress.completedBatches === 0
+  ) {
+    return null;
+  }
+
+  return {
+    jobId: progress.jobId,
+    videoUrl: progress.youtubeUrl,
+    scriptText: progress.scriptText,
+    mode: progress.mode,
+    sceneCount: progress.sceneCount,
+    batchSize: progress.batchSize,
+    voice: progress.voiceLang,
+    completedBatches: progress.completedBatches,
+    totalBatches: progress.totalBatches,
+    existingScenes: progress.scenes,
+    existingCharacters: progress.characterRegistry,
+  };
+}
+
+/**
+ * Check if progress can be resumed
+ */
+export function canResumeProgress(progress: VeoProgress | null): boolean {
+  if (!progress) return false;
+  return (
+    progress.status === "in_progress" &&
+    progress.completedBatches > 0 &&
+    progress.completedBatches < progress.totalBatches &&
+    !!progress.scriptText
+  );
+}
 
 /**
  * Calculate progress percentage

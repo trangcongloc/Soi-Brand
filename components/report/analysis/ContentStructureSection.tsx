@@ -3,7 +3,7 @@
 import React from "react";
 import { Post, ReportPart2 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
-import { useLang, useLanguage } from "@/lib/lang";
+import { useLang } from "@/lib/lang";
 
 interface CurrentStats {
     frequency: string;
@@ -24,7 +24,6 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
     currentStats,
 }) => {
     const lang = useLang();
-    const { langCode } = useLanguage();
 
     return (
         <>
@@ -91,9 +90,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                             <line x1="8" y1="2" x2="8" y2="6"></line>
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
-                        {langCode === "vi"
-                            ? "Lich dang noi dung"
-                            : "Content Calendar Insights"}
+{lang.analysis.contentCalendar.title}
                     </h3>
 
                     <div className={styles.grid2} style={{ gap: "1rem" }}>
@@ -111,9 +108,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     >
                                         <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
-                                    {langCode === "vi"
-                                        ? "Hien trang kenh"
-                                        : "Current Channel Stats"}
+{lang.analysis.contentCalendar.currentStats}
                                 </h4>
                                 <div
                                     style={{
@@ -124,9 +119,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                 >
                                     <div>
                                         <p className={styles.statLabelSmall}>
-                                            {langCode === "vi"
-                                                ? "TAN SUAT DANG"
-                                                : "POSTING FREQUENCY"}
+{lang.analysis.contentCalendar.postingFrequencyLabel}
                                         </p>
                                         <p className={styles.statValueBrand}>
                                             {currentStats.frequency}
@@ -134,9 +127,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     </div>
                                     <div>
                                         <p className={styles.statLabelSmall}>
-                                            {langCode === "vi"
-                                                ? "NGAY HAY DANG NHAT"
-                                                : "MOST ACTIVE DAYS"}
+{lang.analysis.contentCalendar.mostActiveDays}
                                         </p>
                                         <p className={styles.statValueDefault}>
                                             {currentStats.bestDays.join(", ") ||
@@ -145,9 +136,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     </div>
                                     <div>
                                         <p className={styles.statLabelSmall}>
-                                            {langCode === "vi"
-                                                ? "GIO HAY DANG NHAT"
-                                                : "MOST ACTIVE TIMES"}
+{lang.analysis.contentCalendar.mostActiveTimes}
                                         </p>
                                         <p className={styles.statValueDefault}>
                                             {currentStats.bestTimes.join(
@@ -170,9 +159,9 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                                 margin: 0,
                                             }}
                                         >
-                                            {langCode === "vi"
-                                                ? `${currentStats.totalPosts} video trong ${currentStats.analyzedPeriod} ngay`
-                                                : `${currentStats.totalPosts} videos over ${currentStats.analyzedPeriod} days`}
+{lang.analysis.contentCalendar.videosOverDays
+                                                .replace("{count}", String(currentStats.totalPosts))
+                                                .replace("{days}", String(currentStats.analyzedPeriod))}
                                         </p>
                                     </div>
                                 </div>
@@ -193,9 +182,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     >
                                         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                                     </svg>
-                                    {langCode === "vi"
-                                        ? "Lich de xuat"
-                                        : "Recommended Schedule"}
+{lang.analysis.contentCalendar.recommendedSchedule}
                                 </h4>
                                 <div
                                     style={{
@@ -206,9 +193,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                 >
                                     <div>
                                         <p className={styles.statLabelSmall}>
-                                            {langCode === "vi"
-                                                ? "TAN SUAT TOI UU"
-                                                : "OPTIMAL FREQUENCY"}
+{lang.analysis.contentCalendar.optimalFrequency}
                                         </p>
                                         <p className={styles.statValueSuccess}>
                                             {
@@ -219,9 +204,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     </div>
                                     <div>
                                         <p className={styles.statLabelSmall}>
-                                            {langCode === "vi"
-                                                ? "NGAY TOT NHAT"
-                                                : "BEST DAYS TO POST"}
+{lang.analysis.contentCalendar.bestDaysToPost}
                                         </p>
                                         <p className={styles.statValueDefault}>
                                             {report_part_2.content_calendar.best_posting_days.join(
@@ -231,9 +214,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     </div>
                                     <div>
                                         <p className={styles.statLabelSmall}>
-                                            {langCode === "vi"
-                                                ? "KHUNG GIO VANG"
-                                                : "BEST TIMES TO POST"}
+{lang.analysis.contentCalendar.bestTimesToPost}
                                         </p>
                                         <p className={styles.statValueDefault}>
                                             {report_part_2.content_calendar.best_posting_times.join(
@@ -258,9 +239,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                             <line x1="12" y1="20" x2="12" y2="4"></line>
                             <line x1="6" y1="20" x2="6" y2="14"></line>
                         </svg>
-                        {langCode === "vi"
-                            ? "Tong quan hieu suat noi dung"
-                            : "Content Performance Overview"}
+{lang.analysis.contentCalendar.performanceOverview}
                     </h3>
                     <div className={styles.grid2}>
                         {report_part_2.content_calendar.best_performing_overview && (
@@ -269,7 +248,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
                                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                                     </svg>
-                                    {langCode === "vi" ? "Video hieu suat tot nhat" : "Best Performing Videos"}
+{lang.analysis.topContentAnalysis.bestPerforming}
                                 </h4>
                                 <p className={styles.analysisText} style={{ marginTop: "0.75rem" }}>
                                     {report_part_2.content_calendar.best_performing_overview}
@@ -284,7 +263,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                         <line x1="12" y1="9" x2="12" y2="13"></line>
                                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                     </svg>
-                                    {langCode === "vi" ? "Video hieu suat thap" : "Underperforming Videos"}
+{lang.analysis.topContentAnalysis.worstPerforming}
                                 </h4>
                                 <p className={styles.analysisText} style={{ marginTop: "0.75rem" }}>
                                     {report_part_2.content_calendar.worst_performing_overview}
@@ -306,9 +285,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                 <rect x="14" y="14" width="7" height="7"></rect>
                                 <rect x="3" y="14" width="7" height="7"></rect>
                             </svg>
-                            {langCode === "vi"
-                                ? "Phoi hop noi dung"
-                                : "Content Mix"}
+{lang.analysis.contentCalendar.contentMix}
                         </h3>
                         <div className={styles.card}>
                             <div style={{ display: "grid", gap: "1rem" }}>
@@ -389,7 +366,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                             {mix.pillar_purpose && (
                                                 <div style={{ marginBottom: "0.75rem" }}>
                                                     <span style={{ fontSize: "10px", color: "#666", fontWeight: "600" }}>
-                                                        {langCode === "vi" ? "Muc dich chien luoc:" : "Strategic Purpose:"}
+{lang.analysis.contentCalendar.strategicPurpose}
                                                     </span>
                                                     <p style={{ fontSize: "11px", color: "#555", marginTop: "0.25rem", marginBottom: 0 }}>
                                                         {mix.pillar_purpose}
@@ -399,7 +376,7 @@ const ContentStructureSection: React.FC<ContentStructureSectionProps> = ({
                                             {mix.performance_insight && (
                                                 <div style={{ marginBottom: "0.75rem" }}>
                                                     <span style={{ fontSize: "10px", color: "#666", fontWeight: "600" }}>
-                                                        {langCode === "vi" ? "Phan tich hieu suat:" : "Performance Insight:"}
+{lang.analysis.contentCalendar.performanceInsight}
                                                     </span>
                                                     <p style={{ fontSize: "11px", color: "#555", marginTop: "0.25rem", marginBottom: 0 }}>
                                                         {mix.performance_insight}

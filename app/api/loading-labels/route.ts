@@ -92,8 +92,12 @@ export async function GET(request: NextRequest) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-lite",
-            generationConfig: { responseMimeType: "application/json" },
+            model: "gemini-2.5-flash-lite",
+            generationConfig: {
+                temperature: 1.0, // Recommended for both Gemini 2.5 and 3 models
+                maxOutputTokens: 2048, // Sufficient for label sets
+                responseMimeType: "application/json",
+            },
         });
 
         const result = await model.generateContent(prompt);

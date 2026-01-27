@@ -108,7 +108,11 @@ export async function generateMarketingReport(
     const genAI = initGemini(customApiKey);
     const model = genAI.getGenerativeModel({
         model: modelId || DEFAULT_MODEL,
-        generationConfig: { responseMimeType: "application/json" },
+        generationConfig: {
+            temperature: 1.0, // Recommended for both Gemini 2.5 and 3 models
+            maxOutputTokens: 16384, // Large enough for comprehensive reports
+            responseMimeType: "application/json",
+        },
     });
 
     // Prepare data for analysis
