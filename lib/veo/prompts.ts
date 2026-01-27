@@ -2,7 +2,41 @@
  * VEO Pipeline - Prompt templates for scene generation
  */
 
-import { GeminiRequestBody, VoiceLanguage, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult } from "./types";
+import { GeminiRequestBody, VoiceLanguage, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType } from "./types";
+
+// ============================================================================
+// NEGATIVE PROMPT DEFAULTS
+// ============================================================================
+
+/**
+ * Default negative prompt - common AI video generation issues
+ * NOTE: This replaces the text overlay rule previously in BASE_USER_PROMPT (line 489)
+ */
+export const DEFAULT_NEGATIVE_PROMPT =
+  // Text and overlays (moved from system instruction)
+  "text overlays, subtitles, captions, watermarks, logos, UI overlays, " +
+  // Quality issues
+  "blurry, low quality, out of focus, compression artifacts, pixelated, " +
+  // Anatomical/physics errors
+  "duplicate subjects, anatomical errors, extra limbs, deformed faces, " +
+  // Continuity issues
+  "repeated actions, looping movements, objects appearing out of nowhere, " +
+  "objects disappearing suddenly, teleporting items";
+
+/**
+ * Get preset negative prompt by mode
+ */
+export function getDefaultNegativePrompt(
+  mode: "minimal" | "standard" | "aggressive" = "standard"
+): string {
+  if (mode === "minimal") {
+    return "text overlays, watermarks, blurry, low quality";
+  }
+  if (mode === "aggressive") {
+    return DEFAULT_NEGATIVE_PROMPT + ", motion blur, grain, noise, flickering, vignetting, black bars";
+  }
+  return DEFAULT_NEGATIVE_PROMPT; // standard
+}
 
 // ============================================================================
 // PHASE 1: Character Extraction (BEFORE scene generation)
@@ -239,6 +273,458 @@ function normalizeCharacterExtraction(parsed: Record<string, unknown>): Characte
 }
 
 // ============================================================================
+// PHASE 0: Cinematic Color Profile Extraction (BEFORE character extraction)
+// ============================================================================
+
+/**
+ * System instruction for color profile extraction (Phase 0)
+ */
+const COLOR_PROFILE_EXTRACTION_SYSTEM = `ROLE: You are an expert cinematographer and colorist analyzing video footage.
+
+GOAL: Extract a comprehensive cinematic color profile from the video that can be used to maintain exact visual consistency when generating new scenes.
+
+ANALYZE THE ENTIRE VIDEO to identify:
+1. DOMINANT COLORS (5-8 colors): The key colors that define the video's palette
+2. COLOR TEMPERATURE: Warm/cool/neutral/mixed with estimated Kelvin value
+3. CONTRAST: Level and style (lifted blacks, crushed blacks, etc.)
+4. SHADOWS: Color cast, density, and falloff characteristics
+5. HIGHLIGHTS: Color cast, handling, and bloom presence
+6. FILM STOCK: What film stock or digital color profile would match this look
+7. MOOD: Primary mood, atmosphere, and emotional tone
+8. GRAIN: Amount, type, and pattern
+9. POST-PROCESSING: Color grade style, saturation, vignette, split-toning
+
+OUTPUT: Return ONLY valid JSON according to the schema.
+
+COLOR IDENTIFICATION RULES:
+- Extract EXACT hex color values where possible
+- Name colors descriptively (e.g., "muted teal", "warm golden", "desaturated coral")
+- Identify usage context (skin tones, backgrounds, accents, shadows, highlights)
+- Consider both foreground and background color palettes
+
+TECHNICAL ANALYSIS:
+- Estimate color temperature in Kelvin (e.g., 5600K for daylight, 3200K for tungsten)
+- Identify contrast style (film-like lifted blacks, digital crushed blacks, etc.)
+- Note shadow color casts (blue, purple, green tints)
+- Note highlight handling (soft roll-off, hard clip, warm/cool bloom)
+
+FILM STOCK REFERENCE:
+- Suggest which film stock (Kodak Portra, Fuji Superia, etc.) or digital profile matches
+- Describe the characteristics that led to this suggestion
+
+STRICTNESS:
+- Return ONLY valid JSON according to the schema
+- Use specific, measurable values where possible
+- Be consistent with your analysis across the entire video`;
+
+/**
+ * User prompt for color profile extraction
+ */
+const COLOR_PROFILE_EXTRACTION_USER = `Analyze this video and extract a comprehensive cinematic color profile.
+
+REQUIREMENTS:
+1. Identify the 5-8 dominant colors with exact hex values
+2. Determine color temperature category and estimate Kelvin value
+3. Analyze contrast level, shadow characteristics, and highlight handling
+4. Suggest a matching film stock or digital color profile
+5. Describe the overall mood and atmosphere
+6. Note any grain or post-processing characteristics
+
+Return ONLY valid JSON according to the schema.`;
+
+/**
+ * Response schema for color profile extraction
+ */
+const COLOR_PROFILE_EXTRACTION_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    dominantColors: {
+      type: "ARRAY",
+      description: "5-8 dominant colors defining the video palette",
+      items: {
+        type: "OBJECT",
+        properties: {
+          hex: { type: "STRING", description: "Hex color value (e.g., '#FF5733')" },
+          name: { type: "STRING", description: "Descriptive name (e.g., 'warm coral', 'muted teal')" },
+          usage: { type: "STRING", description: "How this color is used (e.g., 'accent', 'background', 'skin tones')" },
+        },
+        required: ["hex", "name", "usage"],
+      },
+    },
+    colorTemperature: {
+      type: "OBJECT",
+      properties: {
+        category: { type: "STRING", description: "warm, cool, neutral, or mixed" },
+        kelvinEstimate: { type: "NUMBER", description: "Estimated color temperature in Kelvin" },
+        description: { type: "STRING", description: "Description of the temperature characteristics" },
+      },
+      required: ["category", "kelvinEstimate", "description"],
+    },
+    contrast: {
+      type: "OBJECT",
+      properties: {
+        level: { type: "STRING", description: "low, medium, high, or extreme" },
+        style: { type: "STRING", description: "Contrast style (e.g., 'film-like lifted blacks', 'digital crushed')" },
+        blackPoint: { type: "STRING", description: "Black point characteristics (e.g., 'lifted', 'crushed', 'neutral')" },
+        whitePoint: { type: "STRING", description: "White point characteristics (e.g., 'soft roll-off', 'hard clip')" },
+      },
+      required: ["level", "style", "blackPoint", "whitePoint"],
+    },
+    shadows: {
+      type: "OBJECT",
+      properties: {
+        color: { type: "STRING", description: "Shadow color cast (e.g., 'blue-tinted', 'purple', 'neutral')" },
+        density: { type: "STRING", description: "Shadow density (e.g., 'deep', 'transparent', 'medium')" },
+        falloff: { type: "STRING", description: "Shadow falloff (e.g., 'gradual', 'hard', 'soft')" },
+      },
+      required: ["color", "density", "falloff"],
+    },
+    highlights: {
+      type: "OBJECT",
+      properties: {
+        color: { type: "STRING", description: "Highlight color cast (e.g., 'warm golden', 'cool white', 'neutral')" },
+        handling: { type: "STRING", description: "How highlights are handled (e.g., 'soft roll-off', 'blown out', 'retained detail')" },
+        bloom: { type: "BOOLEAN", description: "Whether bloom/glow is present in highlights" },
+      },
+      required: ["color", "handling", "bloom"],
+    },
+    filmStock: {
+      type: "OBJECT",
+      properties: {
+        suggested: { type: "STRING", description: "Suggested matching film stock (e.g., 'Kodak Portra 400', 'Fuji Superia')" },
+        characteristics: { type: "STRING", description: "Key characteristics that led to this suggestion" },
+        digitalProfile: { type: "STRING", description: "Alternative digital color profile if applicable" },
+      },
+      required: ["suggested", "characteristics"],
+    },
+    mood: {
+      type: "OBJECT",
+      properties: {
+        primary: { type: "STRING", description: "Primary mood (e.g., 'warm and inviting', 'cold and clinical')" },
+        atmosphere: { type: "STRING", description: "Overall atmosphere (e.g., 'cozy', 'industrial', 'romantic')" },
+        emotionalTone: { type: "STRING", description: "Emotional tone conveyed by colors (e.g., 'nostalgic', 'energetic', 'melancholic')" },
+      },
+      required: ["primary", "atmosphere", "emotionalTone"],
+    },
+    grain: {
+      type: "OBJECT",
+      properties: {
+        amount: { type: "STRING", description: "none, subtle, moderate, or heavy" },
+        type: { type: "STRING", description: "Type of grain (e.g., 'fine', 'coarse', 'organic', 'digital noise')" },
+        pattern: { type: "STRING", description: "Grain pattern (e.g., 'uniform', 'clustered', 'film-like')" },
+      },
+      required: ["amount", "type", "pattern"],
+    },
+    postProcessing: {
+      type: "OBJECT",
+      properties: {
+        colorGrade: { type: "STRING", description: "Overall color grade style (e.g., 'orange and teal', 'desaturated', 'vibrant')" },
+        saturation: { type: "STRING", description: "Saturation level (e.g., 'muted', 'normal', 'punchy', 'oversaturated')" },
+        vignettePresent: { type: "BOOLEAN", description: "Whether vignetting is present" },
+        splitToning: {
+          type: "OBJECT",
+          properties: {
+            shadows: { type: "STRING", description: "Shadow split-tone color" },
+            highlights: { type: "STRING", description: "Highlight split-tone color" },
+          },
+        },
+      },
+      required: ["colorGrade", "saturation", "vignettePresent"],
+    },
+    confidence: {
+      type: "NUMBER",
+      description: "Confidence level of the analysis (0.0 to 1.0)",
+    },
+  },
+  required: ["dominantColors", "colorTemperature", "contrast", "shadows", "highlights", "filmStock", "mood", "grain", "postProcessing"],
+};
+
+/**
+ * Build color profile extraction request for Phase 0
+ * This extracts the cinematic color profile BEFORE character extraction
+ */
+export function buildColorProfileExtractionPrompt(options: {
+  videoUrl: string;
+  startTime?: string;
+  endTime?: string;
+}): GeminiRequestBody {
+  let userPrompt = COLOR_PROFILE_EXTRACTION_USER;
+
+  // Add time range instruction if provided
+  if (options.startTime || options.endTime) {
+    const timeRange = [];
+    if (options.startTime) {
+      timeRange.push(`from ${options.startTime}`);
+    }
+    if (options.endTime) {
+      timeRange.push(`to ${options.endTime}`);
+    }
+    userPrompt += `\n\nTIME RANGE: Only analyze the video segment ${timeRange.join(" ")}.`;
+  }
+
+  return {
+    contents: [
+      {
+        parts: [
+          {
+            fileData: {
+              fileUri: options.videoUrl,
+              mimeType: "video/mp4",
+            },
+          },
+          {
+            text: userPrompt,
+          },
+        ],
+      },
+    ],
+    systemInstruction: {
+      parts: [{ text: COLOR_PROFILE_EXTRACTION_SYSTEM }],
+      role: "user",
+    },
+    generationConfig: {
+      temperature: 1.0,
+      maxOutputTokens: 65536,
+      responseMimeType: "application/json",
+      responseSchema: COLOR_PROFILE_EXTRACTION_SCHEMA,
+    },
+  };
+}
+
+/**
+ * Parse color profile extraction response from Gemini API
+ */
+export function parseColorProfileResponse(response: {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+    finishReason?: string;
+  }>;
+}): ColorProfileExtractionResult {
+  const candidate = response?.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text;
+
+  if (!text) {
+    throw new Error("No text response from Gemini API for color profile extraction");
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    return normalizeColorProfile(parsed);
+  } catch {
+    // Try extracting JSON from formatted text
+  }
+
+  // Try extracting JSON from markdown/formatted response
+  const extracted = extractJsonFromText(text);
+  try {
+    const parsed = JSON.parse(extracted);
+    return normalizeColorProfile(parsed);
+  } catch (parseError) {
+    const preview = text.substring(0, 300);
+    const errorMsg = parseError instanceof Error ? parseError.message : "Unknown parse error";
+    throw new Error(
+      `Failed to parse color profile response as JSON. Error: ${errorMsg}. Response preview: ${preview}${text.length > 300 ? "..." : ""}`
+    );
+  }
+}
+
+/**
+ * Normalize color profile extraction result
+ */
+function normalizeColorProfile(parsed: Record<string, unknown>): ColorProfileExtractionResult {
+  // Normalize dominant colors
+  const dominantColors: CinematicProfile["dominantColors"] = [];
+  if (Array.isArray(parsed.dominantColors)) {
+    for (const color of parsed.dominantColors) {
+      if (typeof color === "object" && color !== null) {
+        const colorObj = color as Record<string, unknown>;
+        dominantColors.push({
+          hex: String(colorObj.hex || "#000000"),
+          name: String(colorObj.name || "unknown"),
+          usage: String(colorObj.usage || "general"),
+        });
+      }
+    }
+  }
+
+  // Normalize color temperature
+  const tempObj = (parsed.colorTemperature || {}) as Record<string, unknown>;
+  const colorTemperature: CinematicProfile["colorTemperature"] = {
+    category: (tempObj.category as "warm" | "cool" | "neutral" | "mixed") || "neutral",
+    kelvinEstimate: Number(tempObj.kelvinEstimate) || 5600,
+    description: String(tempObj.description || ""),
+  };
+
+  // Normalize contrast
+  const contrastObj = (parsed.contrast || {}) as Record<string, unknown>;
+  const contrast: CinematicProfile["contrast"] = {
+    level: (contrastObj.level as "low" | "medium" | "high" | "extreme") || "medium",
+    style: String(contrastObj.style || ""),
+    blackPoint: String(contrastObj.blackPoint || ""),
+    whitePoint: String(contrastObj.whitePoint || ""),
+  };
+
+  // Normalize shadows
+  const shadowsObj = (parsed.shadows || {}) as Record<string, unknown>;
+  const shadows: CinematicProfile["shadows"] = {
+    color: String(shadowsObj.color || "neutral"),
+    density: String(shadowsObj.density || "medium"),
+    falloff: String(shadowsObj.falloff || "gradual"),
+  };
+
+  // Normalize highlights
+  const highlightsObj = (parsed.highlights || {}) as Record<string, unknown>;
+  const highlights: CinematicProfile["highlights"] = {
+    color: String(highlightsObj.color || "neutral"),
+    handling: String(highlightsObj.handling || "soft roll-off"),
+    bloom: Boolean(highlightsObj.bloom),
+  };
+
+  // Normalize film stock
+  const filmObj = (parsed.filmStock || {}) as Record<string, unknown>;
+  const filmStock: CinematicProfile["filmStock"] = {
+    suggested: String(filmObj.suggested || "digital"),
+    characteristics: String(filmObj.characteristics || ""),
+    digitalProfile: filmObj.digitalProfile ? String(filmObj.digitalProfile) : undefined,
+  };
+
+  // Normalize mood
+  const moodObj = (parsed.mood || {}) as Record<string, unknown>;
+  const mood: CinematicProfile["mood"] = {
+    primary: String(moodObj.primary || ""),
+    atmosphere: String(moodObj.atmosphere || ""),
+    emotionalTone: String(moodObj.emotionalTone || ""),
+  };
+
+  // Normalize grain
+  const grainObj = (parsed.grain || {}) as Record<string, unknown>;
+  const grain: CinematicProfile["grain"] = {
+    amount: (grainObj.amount as "none" | "subtle" | "moderate" | "heavy") || "none",
+    type: String(grainObj.type || ""),
+    pattern: String(grainObj.pattern || ""),
+  };
+
+  // Normalize post-processing
+  const postObj = (parsed.postProcessing || {}) as Record<string, unknown>;
+  const splitToningObj = postObj.splitToning as Record<string, unknown> | undefined;
+  const postProcessing: CinematicProfile["postProcessing"] = {
+    colorGrade: String(postObj.colorGrade || ""),
+    saturation: String(postObj.saturation || "normal"),
+    vignettePresent: Boolean(postObj.vignettePresent),
+    splitToning: splitToningObj ? {
+      shadows: String(splitToningObj.shadows || ""),
+      highlights: String(splitToningObj.highlights || ""),
+    } : undefined,
+  };
+
+  const profile: CinematicProfile = {
+    dominantColors,
+    colorTemperature,
+    contrast,
+    shadows,
+    highlights,
+    filmStock,
+    mood,
+    grain,
+    postProcessing,
+  };
+
+  return {
+    profile,
+    confidence: Number(parsed.confidence) || 0.8,
+  };
+}
+
+/**
+ * Build cinematic profile context for scene generation prompt
+ * This context is injected into buildScenePrompt when a color profile is available
+ */
+export function buildCinematicProfileContext(profile: CinematicProfile): string {
+  let context = `\n\n=== CINEMATIC PROFILE (PHASE 0 - USE EXACTLY) ===\n`;
+  context += `CRITICAL: Apply these EXACT color values and characteristics to ALL generated scenes.\n`;
+  context += `Do NOT infer or modify these values - use them verbatim.\n\n`;
+
+  // Dominant colors
+  context += `DOMINANT COLORS (use these exact hex values):\n`;
+  for (const color of profile.dominantColors) {
+    context += `- ${color.hex} "${color.name}" - ${color.usage}\n`;
+  }
+
+  // Color temperature
+  context += `\nCOLOR TEMPERATURE:\n`;
+  context += `- Category: ${profile.colorTemperature.category}\n`;
+  context += `- Kelvin: ${profile.colorTemperature.kelvinEstimate}K\n`;
+  context += `- ${profile.colorTemperature.description}\n`;
+
+  // Contrast
+  context += `\nCONTRAST:\n`;
+  context += `- Level: ${profile.contrast.level}\n`;
+  context += `- Style: ${profile.contrast.style}\n`;
+  context += `- Black point: ${profile.contrast.blackPoint}\n`;
+  context += `- White point: ${profile.contrast.whitePoint}\n`;
+
+  // Shadows & Highlights
+  context += `\nSHADOWS: ${profile.shadows.color}, ${profile.shadows.density} density, ${profile.shadows.falloff} falloff\n`;
+  context += `HIGHLIGHTS: ${profile.highlights.color}, ${profile.highlights.handling}${profile.highlights.bloom ? ", with bloom" : ""}\n`;
+
+  // Film stock
+  context += `\nFILM STOCK REFERENCE:\n`;
+  context += `- Suggested: ${profile.filmStock.suggested}\n`;
+  context += `- Characteristics: ${profile.filmStock.characteristics}\n`;
+  if (profile.filmStock.digitalProfile) {
+    context += `- Digital profile: ${profile.filmStock.digitalProfile}\n`;
+  }
+
+  // Mood
+  context += `\nMOOD:\n`;
+  context += `- Primary: ${profile.mood.primary}\n`;
+  context += `- Atmosphere: ${profile.mood.atmosphere}\n`;
+  context += `- Emotional tone: ${profile.mood.emotionalTone}\n`;
+
+  // Grain
+  context += `\nGRAIN: ${profile.grain.amount}`;
+  if (profile.grain.amount !== "none") {
+    context += ` - ${profile.grain.type}, ${profile.grain.pattern}`;
+  }
+  context += `\n`;
+
+  // Post-processing
+  context += `\nPOST-PROCESSING:\n`;
+  context += `- Color grade: ${profile.postProcessing.colorGrade}\n`;
+  context += `- Saturation: ${profile.postProcessing.saturation}\n`;
+  context += `- Vignette: ${profile.postProcessing.vignettePresent ? "yes" : "no"}\n`;
+  if (profile.postProcessing.splitToning) {
+    context += `- Split-toning: shadows=${profile.postProcessing.splitToning.shadows}, highlights=${profile.postProcessing.splitToning.highlights}\n`;
+  }
+
+  context += `\n=== END CINEMATIC PROFILE ===\n`;
+
+  return context;
+}
+
+/**
+ * Convert cinematic profile to StyleObject fields
+ * This pre-populates style fields from the extracted profile
+ */
+export function cinematicProfileToStyleFields(profile: CinematicProfile): Partial<StyleObject> {
+  // Build palette string from dominant colors
+  const paletteColors = profile.dominantColors.map(c => `${c.name} (${c.hex})`).join(", ");
+
+  return {
+    palette: paletteColors,
+    color_temperature: `${profile.colorTemperature.category}, ${profile.colorTemperature.kelvinEstimate}K - ${profile.colorTemperature.description}`,
+    contrast: `${profile.contrast.level} - ${profile.contrast.style}, black point: ${profile.contrast.blackPoint}, white point: ${profile.contrast.whitePoint}`,
+    film_stock_or_profile: profile.filmStock.suggested + (profile.filmStock.digitalProfile ? ` / ${profile.filmStock.digitalProfile}` : ""),
+    grain: `${profile.grain.amount}${profile.grain.amount !== "none" ? ` - ${profile.grain.type}, ${profile.grain.pattern}` : ""}`,
+    post_processing: `${profile.postProcessing.colorGrade}, ${profile.postProcessing.saturation} saturation${profile.postProcessing.vignettePresent ? ", vignette" : ""}${profile.postProcessing.splitToning ? `, split-toning (${profile.postProcessing.splitToning.shadows}/${profile.postProcessing.splitToning.highlights})` : ""}`,
+    mood: `${profile.mood.primary} - ${profile.mood.atmosphere}, ${profile.mood.emotionalTone}`,
+    lighting_style: `${profile.colorTemperature.category} ${profile.colorTemperature.kelvinEstimate}K, shadows: ${profile.shadows.color} (${profile.shadows.density}), highlights: ${profile.highlights.color} (${profile.highlights.handling})`,
+  };
+}
+
+// ============================================================================
 // PHASE 2: Scene Generation (uses pre-extracted characters)
 // ============================================================================
 
@@ -418,7 +904,36 @@ SCENE TRANSITION DETECTION:
 STRICTNESS:
 - Your answer must be valid JSON according to the schema (no markdown, no comments).
 - Prefer objective, visual facts; avoid speculation.
-- Uphold character consistency across scenes.`;
+- Uphold character consistency across scenes.
+
+NEGATIVE PROMPT FIELD (CRITICAL):
+- The 'negativePrompt' field specifies elements that MUST NOT appear in the generated scene
+- ALWAYS include the global negative prompt provided by the user
+- You SHOULD add scene-specific exclusions based on context
+- Format: comma-separated list
+
+SCENE-SPECIFIC ADDITIONS (Examples):
+Visual Context:
+  • "children" (for adult-only scenes)
+  • "motion blur" (for static establishing shots)
+  • "modern elements, smartphones, cars" (for historical period scenes)
+  • "daytime, sunlight" (for night scenes)
+
+Continuity Context:
+  • "character holding [item]" (if they dropped it in previous scene)
+  • "character wearing [outfit]" (if they changed clothes)
+  • "background crowd" (if scene transitioned to private area)
+  • Pay special attention to object persistence across scenes
+
+Physics/Logic:
+  • If an object is dropped/placed, do NOT have it magically reappear in hand
+  • If a character exits frame, do NOT have them suddenly back without transition
+  • Maintain spatial consistency (if standing, can't be sitting without action)
+
+CRITICAL RULES:
+- NEVER contradict the positive description
+- Final format: [global exclusions], [scene-specific additions]
+- Scene-specific additions should enhance continuity and prevent physics violations`;
 
 /**
  * Character analysis prompt for hybrid mode
@@ -481,12 +996,97 @@ CHARACTER CONSISTENCY RULES:
 - Never abbreviate - always use full detailed description
 - Camera/shot info NEVER goes in character field - use composition field instead`;
 
+// ============================================================================
+// Media Type Specific Instructions
+// ============================================================================
+
+/**
+ * Image-specific system instructions for still image generation
+ * Optimized for: Midjourney, DALL-E, Flux, Stable Diffusion
+ */
+const IMAGE_GENERATION_INSTRUCTIONS = `
+=== IMAGE GENERATION MODE (STILL IMAGES) ===
+Generate scenes optimized for STILL IMAGE generation (Midjourney, DALL-E, Flux).
+
+CRITICAL REQUIREMENTS:
+- Each scene represents a SINGLE DECISIVE MOMENT - one frozen frame
+- Describe static poses and expressions (no implied movement)
+- Focus on rich environmental and compositional detail
+- NO motion blur or implied movement descriptions
+- Consider aspect ratio for framing composition
+- Emphasize texture, material quality, and lighting details
+
+IMAGE-SPECIFIC GUIDANCE:
+- Use decisive, frozen moment language: "stands", "holds", "gazes" (not "walking", "reaching")
+- Describe the exact position of all elements
+- Include depth cues (foreground/midground/background)
+- Specify material textures (velvet, brushed metal, rough wood)
+- Note reflections, highlights, and shadow details
+
+DO NOT:
+- Describe motion or action sequences
+- Use verbs that imply ongoing movement
+- Include camera movement descriptions (pan, dolly, etc.)
+- Reference time progression within a scene
+=== END IMAGE GENERATION MODE ===`;
+
+/**
+ * Video-specific system instructions for video generation
+ * Optimized for: VEO, Sora, Runway Gen-3, Pika
+ */
+const VIDEO_GENERATION_INSTRUCTIONS = `
+=== VIDEO GENERATION MODE (MOTION VIDEO) ===
+Generate scenes optimized for VIDEO generation (VEO, Sora, Runway Gen-3).
+
+CRITICAL REQUIREMENTS:
+- Each scene represents a 4-8 SECOND VIDEO CLIP
+- Describe explicit motion paths and trajectories
+- Include camera movement when appropriate (pan, tilt, dolly, etc.)
+- Note the START and END states of any motion
+- Describe subject motion AND camera motion separately
+- Consider transitions between scenes for continuity
+
+VIDEO-SPECIFIC FIELDS (REQUIRED):
+1. video.duration: Estimated clip length (4-8 seconds typical)
+2. video.cameraMovement: Type (static/pan/tilt/dolly/crane/handheld/orbital/zoom), direction, intensity
+3. video.subjectMotion: Primary action, secondary motion, background motion
+
+MOTION DESCRIPTION GUIDANCE:
+- Use active verbs: "walks from left to right", "leans forward slowly"
+- Specify direction and speed: "camera dollies in gradually", "quick pan left"
+- Note motion intensity: subtle, moderate, dynamic
+- Describe cause-and-effect beats: "as she pours, steam rises"
+
+CAMERA MOVEMENT TYPES:
+- static: Fixed position, no movement
+- pan: Horizontal rotation (left/right)
+- tilt: Vertical rotation (up/down)
+- dolly: Camera moves forward/backward
+- crane: Vertical camera movement
+- handheld: Shaky, documentary style
+- orbital: Camera orbits subject
+- zoom: Lens focal length change
+- tracking: Camera follows subject laterally
+
+CONTINUITY BETWEEN SCENES:
+- Use video.continuity to track scene relationships
+- matchAction: true if motion continues from previous scene
+- matchColor: true to maintain color grade
+- Note any transitions (cut, fade, dissolve)
+=== END VIDEO GENERATION MODE ===`;
+
+/**
+ * Get media-specific instructions based on mediaType
+ */
+export function getMediaTypeInstructions(mediaType: "image" | "video" = "video"): string {
+  return mediaType === "image" ? IMAGE_GENERATION_INSTRUCTIONS : VIDEO_GENERATION_INSTRUCTIONS;
+}
+
 /**
  * Base user prompt for scene analysis
+ * NOTE: Text overlay exclusions moved to negativePrompt field for better separation
  */
-const BASE_USER_PROMPT = `Analyze this video scene-by-scene according to the provided JSON schema and system instructions. Pay special attention to hair details (length, style, texture, color), clothing patterns, textures, and accessories. Provide detailed descriptions for character appearance including specific hair length, hairstyle patterns, clothing details, fabric textures, and decorative elements.
-
-MANDATORY IMAGE PROMPT RULE: All generated image descriptions must EXPLICITLY avoid any on-screen text: no subtitles, no dialogue text, no captions, no watermarks, no logos, no UI overlays, no signage legible text.`;
+const BASE_USER_PROMPT = `Analyze this video scene-by-scene according to the provided JSON schema and system instructions. Pay special attention to hair details (length, style, texture, color), clothing patterns, textures, and accessories. Provide detailed descriptions for character appearance including specific hair length, hairstyle patterns, clothing details, fabric textures, and decorative elements.`;
 
 /**
  * Response schema for Gemini API
@@ -563,9 +1163,47 @@ const RESPONSE_SCHEMA = {
         },
       },
       prompt: { type: "STRING" },
+      negativePrompt: {
+        type: "STRING",
+        description: "Comma-separated unwanted elements. Include global + scene-specific additions.",
+      },
       characterVariations: {
         type: "STRING",
         description: "JSON string of per-scene character variations. Format: {\"CharacterName\": {\"accessories\": \"...\", \"expression\": \"...\", \"pose\": \"...\", \"outfit\": \"...\"}}. Use for temporary changes like accessories, expressions, poses, or outfit changes.",
+      },
+      // Video-specific fields (only populated when mediaType is "video")
+      video: {
+        type: "OBJECT",
+        description: "Video-specific settings (only for video mediaType)",
+        properties: {
+          duration: { type: "NUMBER", description: "Scene duration in seconds (typically 4-8)" },
+          fps: { type: "NUMBER", description: "Frames per second (24, 30, or 60)" },
+          speed: { type: "STRING", description: "normal, slow-motion, or timelapse" },
+          cameraMovement: {
+            type: "OBJECT",
+            properties: {
+              type: { type: "STRING", description: "static, pan, tilt, dolly, crane, handheld, orbital, zoom, tracking" },
+              direction: { type: "STRING", description: "left, right, up, down, in, out, clockwise, counterclockwise" },
+              intensity: { type: "STRING", description: "subtle, moderate, dynamic" },
+              path: { type: "STRING", description: "Natural language description of camera path" },
+            },
+          },
+          subjectMotion: {
+            type: "OBJECT",
+            properties: {
+              primary: { type: "STRING", description: "Main subject motion (e.g., 'Chef walks left to right')" },
+              secondary: { type: "STRING", description: "Secondary motion (e.g., 'Steam rises from pot')" },
+              background: { type: "STRING", description: "Background motion (e.g., 'Trees sway gently')" },
+            },
+          },
+          transitionIn: { type: "STRING", description: "cut, fade, dissolve, wipe, or zoom" },
+          transitionOut: { type: "STRING", description: "cut, fade, dissolve, wipe, or zoom" },
+          audioCues: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description: "Audio cues for the scene (e.g., 'fire crackling', 'knife on wood')",
+          },
+        },
       },
     },
     required: [
@@ -822,9 +1460,14 @@ export function buildScenePrompt(options: {
   voiceLang?: VoiceLanguage;
   includeCharacterAnalysis?: boolean;
   continuityContext?: string;
+  globalNegativePrompt?: string;
   // Phase 2: Pre-extracted characters from Phase 1
   preExtractedCharacters?: CharacterSkeleton[];
   preExtractedBackground?: string;
+  // Phase 0: Cinematic color profile
+  cinematicProfile?: CinematicProfile;
+  // Media type: image vs video generation
+  mediaType?: MediaType;
   // Legacy batch info for script-based batching
   batchInfo?: {
     batchNum: number;
@@ -841,8 +1484,11 @@ export function buildScenePrompt(options: {
     voiceLang = "no-voice",
     includeCharacterAnalysis = false,
     continuityContext = "",
+    globalNegativePrompt,
     preExtractedCharacters,
     preExtractedBackground,
+    cinematicProfile,
+    mediaType = "video",
     batchInfo,
     directBatchInfo,
   } = options;
@@ -864,6 +1510,14 @@ export function buildScenePrompt(options: {
     // Fallback: Use inline character analysis if no pre-extracted characters
     userPrompt += CHARACTER_ANALYSIS_PROMPT;
   }
+
+  // Add cinematic profile context (Phase 0 - takes priority over inferred style)
+  if (cinematicProfile) {
+    userPrompt += buildCinematicProfileContext(cinematicProfile);
+  }
+
+  // Add media type instructions (image vs video generation)
+  userPrompt += getMediaTypeInstructions(mediaType);
 
   userPrompt = addVoiceInstructions(userPrompt, voiceLang);
 
@@ -889,6 +1543,15 @@ export function buildScenePrompt(options: {
     if (batchInfo.batchNum > 0) {
       userPrompt += ` Continues from scene ${batchInfo.batchStart - 1}. Maintain continuity.`;
     }
+  }
+
+  // Global negative prompt instruction
+  if (globalNegativePrompt) {
+    userPrompt += `\n\n=== GLOBAL NEGATIVE PROMPT (APPLY TO ALL SCENES) ===`;
+    userPrompt += `\n${globalNegativePrompt}`;
+    userPrompt += `\nInclude this in EVERY scene's negativePrompt field.`;
+    userPrompt += `\nYou MAY add scene-specific exclusions (comma-separated after global).`;
+    userPrompt += `\n=== END GLOBAL NEGATIVE PROMPT ===`;
   }
 
   return {
@@ -1143,16 +1806,24 @@ export function buildScriptToScenesPrompt(options: {
   scriptText: string;
   sceneCount: number;
   voiceLang?: VoiceLanguage;
+  globalNegativePrompt?: string;
   // Phase 2: Pre-extracted characters from Phase 1
   preExtractedCharacters?: CharacterSkeleton[];
   preExtractedBackground?: string;
+  // Phase 0: Cinematic color profile
+  cinematicProfile?: CinematicProfile;
+  // Media type: image vs video generation
+  mediaType?: MediaType;
 }): GeminiRequestBody {
   const {
     scriptText,
     sceneCount,
     voiceLang = "no-voice",
+    globalNegativePrompt,
     preExtractedCharacters,
     preExtractedBackground,
+    cinematicProfile,
+    mediaType = "video",
   } = options;
 
   const systemText = SCRIPT_TO_SCENES_SYSTEM.replace("{SceneNumber}", String(sceneCount));
@@ -1166,7 +1837,24 @@ export function buildScriptToScenesPrompt(options: {
     userPrompt += buildPreExtractedCharactersContext(preExtractedCharacters, preExtractedBackground);
   }
 
+  // Add cinematic profile context (Phase 0)
+  if (cinematicProfile) {
+    userPrompt += buildCinematicProfileContext(cinematicProfile);
+  }
+
+  // Add media type instructions (image vs video generation)
+  userPrompt += getMediaTypeInstructions(mediaType);
+
   userPrompt = addVoiceInstructions(userPrompt, voiceLang);
+
+  // Global negative prompt instruction
+  if (globalNegativePrompt) {
+    userPrompt += `\n\n=== GLOBAL NEGATIVE PROMPT (APPLY TO ALL SCENES) ===`;
+    userPrompt += `\n${globalNegativePrompt}`;
+    userPrompt += `\nInclude this in EVERY scene's negativePrompt field.`;
+    userPrompt += `\nYou MAY add scene-specific exclusions (comma-separated after global).`;
+    userPrompt += `\n=== END GLOBAL NEGATIVE PROMPT ===`;
+  }
 
   return {
     contents: [

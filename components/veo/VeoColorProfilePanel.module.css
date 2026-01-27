@@ -1,0 +1,333 @@
+/* VeoColorProfilePanel.module.css */
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-main);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.header:hover {
+  background: var(--bg-hover);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.headerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 14px;
+}
+
+.title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.confidence {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.chevron {
+  transition: transform 0.2s;
+  color: var(--text-secondary);
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Color Palette Section */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.colorPalette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.colorSwatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  min-width: 75px;
+  transition: var(--transition);
+}
+
+.colorSwatch:hover {
+  border-color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.colorBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.colorHex {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.colorName {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 70px;
+}
+
+.colorUsage {
+  font-size: 8px;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius-sm);
+  text-transform: lowercase;
+}
+
+/* Info Grid */
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.infoCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.infoLabel {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.infoValue {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.infoDesc {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Temperature Badge */
+.tempBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.tempBadge.warm {
+  background: rgba(255, 193, 7, 0.15);
+  color: #d4a100;
+}
+
+.tempBadge.cool {
+  background: rgba(33, 150, 243, 0.15);
+  color: #1976d2;
+}
+
+.tempBadge.neutral {
+  background: rgba(158, 158, 158, 0.15);
+  color: #616161;
+}
+
+.tempBadge.mixed {
+  background: linear-gradient(90deg, rgba(255, 193, 7, 0.15), rgba(33, 150, 243, 0.15));
+  color: var(--text-main);
+}
+
+/* Contrast Badge */
+.contrastBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.contrastBadge.low {
+  background: rgba(76, 175, 80, 0.15);
+  color: #388e3c;
+}
+
+.contrastBadge.medium {
+  background: rgba(255, 193, 7, 0.15);
+  color: #d4a100;
+}
+
+.contrastBadge.high {
+  background: rgba(244, 67, 54, 0.15);
+  color: #d32f2f;
+}
+
+.contrastBadge.extreme {
+  background: rgba(156, 39, 176, 0.15);
+  color: #7b1fa2;
+}
+
+/* Film Stock Pill */
+.filmStockPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+/* Mood Section */
+.moodGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.moodTag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.moodTag svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+/* Details List */
+.detailsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.detailItem {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.detailItem strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+  .header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .content {
+    padding: 0.75rem;
+    gap: 1rem;
+  }
+
+  .colorSwatch {
+    min-width: 65px;
+    padding: 0.4rem;
+  }
+
+  .colorBox {
+    width: 32px;
+    height: 32px;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .infoCard {
+    padding: 0.6rem;
+  }
+}

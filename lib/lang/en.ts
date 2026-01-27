@@ -517,6 +517,20 @@ export const en = {
                 korean: "Korean",
                 chinese: "Chinese",
             },
+            useVideoChapters: "Include Description Chapters",
+            useVideoChaptersDesc: "Use chapter timestamps from video description",
+            deduplicationThreshold: "Deduplication Threshold",
+            deduplicationThresholdDesc: "Similarity threshold for removing duplicate scenes (0 = no filtering, 1 = only exact matches)",
+            negativePrompt: "Negative Prompt",
+            negativePromptPlaceholder: "Enter unwanted elements (comma-separated)",
+            negativePromptDesc: "Elements to exclude from generation (text overlays, quality issues, continuity problems). Edit to customize (max 500 characters)",
+            extractColorProfile: "Extract Color Profile",
+            extractColorProfileDesc: "Analyze video to extract exact color palette, temperature, contrast, and film stock characteristics (Phase 0)",
+            mediaType: "Output Type",
+            imageMode: "Image",
+            videoMode: "Video",
+            imageModeHint: "Optimized for Midjourney, DALL-E, Flux (still images)",
+            videoModeHint: "Optimized for VEO, Sora, Runway Gen-3 (motion video)",
         },
 
         loading: {
@@ -575,12 +589,31 @@ export const en = {
                 angle: "Angle",
                 framing: "Framing",
                 focus: "Focus",
+                // Video-specific fields
+                duration: "Duration",
+                cameraMovement: "Camera Movement",
+                subjectMotion: "Subject Motion",
+                transitions: "Transitions",
+                audioCues: "Audio Cues",
             },
 
             characterCard: {
                 appearances: "Appearances",
                 description: "Full Description",
                 noCharacters: "No characters detected in this video",
+            },
+
+            colorProfile: {
+                title: "Cinematic Color Profile",
+                confidence: "confidence",
+                dominantColors: "Dominant Colors",
+                temperature: "Color Temperature",
+                contrast: "Contrast",
+                filmStock: "Film Stock",
+                shadowsHighlights: "Shadows & Highlights",
+                mood: "Mood & Atmosphere",
+                grain: "Film Grain",
+                postProcessing: "Post-Processing",
             },
 
             downloadOptions: {

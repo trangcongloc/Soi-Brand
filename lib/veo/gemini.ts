@@ -11,11 +11,14 @@ import {
   CharacterRegistry,
   CharacterSkeleton,
   CharacterExtractionResult,
+  ColorProfileExtractionResult,
 } from "./types";
 
 import {
   buildCharacterExtractionPrompt,
   parseCharacterExtractionResponse,
+  buildColorProfileExtractionPrompt,
+  parseColorProfileResponse,
 } from "./prompts";
 
 const DEFAULT_MODEL = "gemini-2.0-flash-exp"; // Default to 2.0 Flash Experimental (fallback)
@@ -564,4 +567,56 @@ export function extractionResultToRegistry(
   }
 
   return registry;
+}
+
+// ============================================================================
+// Phase 0: Color Profile Extraction (BEFORE character extraction and scenes)
+// ============================================================================
+
+/**
+ * Extract cinematic color profile from video BEFORE character extraction (Phase 0)
+ * Returns a color profile with consistent values for use in Phase 2
+ *
+ * This three-phase approach ensures:
+ * - Color palette is identified upfront with exact hex values
+ * - Consistent color temperature, contrast, and mood across all scenes
+ * - Film stock reference for visual consistency
+ */
+export async function extractColorProfileFromVideo(
+  videoUrl: string,
+  options: {
+    apiKey: string;
+    model?: string;
+    startTime?: string;
+    endTime?: string;
+    onProgress?: (message: string) => void;
+  }
+): Promise<ColorProfileExtractionResult> {
+  const { apiKey, model, startTime, endTime, onProgress } = options;
+
+  onProgress?.("Phase 0: Extracting cinematic color profile from video...");
+
+  const requestBody = buildColorProfileExtractionPrompt({
+    videoUrl,
+    startTime,
+    endTime,
+  });
+
+  const response = await callGeminiAPIWithRetry(requestBody, {
+    apiKey,
+    model,
+    onRetry: (attempt) => {
+      onProgress?.(`Phase 0 retry ${attempt}...`);
+    },
+  });
+
+  onProgress?.("Phase 0: Parsing color profile data...");
+
+  const result = parseColorProfileResponse(response);
+
+  onProgress?.(
+    `Phase 0 complete: Extracted ${result.profile.dominantColors.length} dominant colors (confidence: ${(result.confidence * 100).toFixed(0)}%)`
+  );
+
+  return result;
 }

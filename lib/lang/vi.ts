@@ -522,6 +522,20 @@ export const vi = {
                 korean: "Tiếng Hàn",
                 chinese: "Tiếng Trung",
             },
+            useVideoChapters: "Bao gồm chapters trong mô tả",
+            useVideoChaptersDesc: "Sử dụng thông tin chapters từ mô tả video",
+            deduplicationThreshold: "Ngưỡng loại bỏ trùng lặp",
+            deduplicationThresholdDesc: "Mức độ tương đồng để loại bỏ scenes trùng lặp (0 = không lọc, 1 = chỉ giống hệt)",
+            negativePrompt: "Prompt Phủ Định",
+            negativePromptPlaceholder: "Nhập yếu tố không mong muốn (phân tách bằng dấu phẩy)",
+            negativePromptDesc: "Yếu tố để loại trừ khỏi video (văn bản, vấn đề chất lượng, vấn đề liên tục). Chỉnh sửa để tùy chỉnh (tối đa 500 ký tự)",
+            extractColorProfile: "Trích xuất Hồ sơ Màu",
+            extractColorProfileDesc: "Phân tích video để trích xuất bảng màu, nhiệt độ màu, độ tương phản và đặc điểm phim (Giai đoạn 0)",
+            mediaType: "Loại đầu ra",
+            imageMode: "Hình ảnh",
+            videoMode: "Video",
+            imageModeHint: "Tối ưu cho Midjourney, DALL-E, Flux (ảnh tĩnh)",
+            videoModeHint: "Tối ưu cho VEO, Sora, Runway Gen-3 (video chuyển động)",
         },
 
         loading: {
@@ -580,12 +594,31 @@ export const vi = {
                 angle: "Góc máy",
                 framing: "Khung hình",
                 focus: "Tiêu điểm",
+                // Video-specific fields
+                duration: "Thời lượng",
+                cameraMovement: "Chuyển động camera",
+                subjectMotion: "Chuyển động chủ thể",
+                transitions: "Chuyển cảnh",
+                audioCues: "Hiệu ứng âm thanh",
             },
 
             characterCard: {
                 appearances: "Xuất hiện",
                 description: "Mô tả chi tiết",
                 noCharacters: "Không phát hiện nhân vật trong video này",
+            },
+
+            colorProfile: {
+                title: "Hồ sơ Màu Điện ảnh",
+                confidence: "độ tin cậy",
+                dominantColors: "Màu Chủ Đạo",
+                temperature: "Nhiệt Độ Màu",
+                contrast: "Độ Tương Phản",
+                filmStock: "Loại Phim",
+                shadowsHighlights: "Bóng & Sáng",
+                mood: "Tâm Trạng & Không Khí",
+                grain: "Hạt Phim",
+                postProcessing: "Hậu Kỳ",
             },
 
             downloadOptions: {

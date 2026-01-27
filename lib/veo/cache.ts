@@ -13,6 +13,7 @@ import {
   VeoErrorType,
   VoiceLanguage,
   VeoMode,
+  CinematicProfile,
 } from "./types";
 import { logger } from "@/lib/logger";
 
@@ -138,6 +139,7 @@ export function setCachedJob(
     scenes: Scene[];
     characterRegistry: CharacterRegistry;
     script?: GeneratedScript; // Optional script for regeneration
+    colorProfile?: CinematicProfile; // Optional color profile from Phase 0
     status?: VeoJobStatus;
     error?: {
       message: string;
@@ -193,6 +195,7 @@ export function setCachedJob(
       characterRegistry: data.characterRegistry,
       timestamp,
       script: data.script,
+      colorProfile: data.colorProfile,
       status: data.status || "completed",
       error: data.error,
       resumeData: data.resumeData,

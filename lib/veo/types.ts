@@ -52,6 +52,14 @@ export interface Technical {
 }
 
 export interface Scene {
+  // === Identity (for sequencing) ===
+  id?: string;                    // Unique scene identifier
+  sequence?: number;              // Order in sequence (1, 2, 3...)
+
+  // === Media Type (NEW) ===
+  mediaType?: MediaType;          // "image" | "video" - Default: "image" for backward compat
+
+  // === Content (existing) ===
   description: string;
   object: string;
   character: string;
@@ -61,8 +69,10 @@ export interface Scene {
   composition: Composition;
   technical: Technical;
   prompt: string;
+  negativePrompt?: string; // Elements to avoid in generation
   voice?: string; // Optional voice narration
-  // Character skeleton system - scene-specific variations
+
+  // === Character skeleton system - scene-specific variations ===
   characterVariations?: {
     [characterName: string]: {
       outfit?: string;       // "now wearing casual clothes"
@@ -72,6 +82,15 @@ export interface Scene {
       injuries?: string;     // "bandaged hand"
     };
   };
+
+  // === Image-Specific Settings (NEW) ===
+  image?: ImageSettings;
+
+  // === Video-Specific Settings (NEW) ===
+  video?: VideoSettings;
+
+  // === Platform Hints (NEW) ===
+  platformHints?: PlatformHints;
 }
 
 // ============================================================================
@@ -216,6 +235,11 @@ export interface VeoGenerateRequest {
   resumeFromBatch?: number;
   existingScenes?: Scene[];
   existingCharacters?: CharacterRegistry;
+  // Phase 0: Color profile extraction
+  extractColorProfile?: boolean; // Default: true
+  existingColorProfile?: CinematicProfile; // For resume
+  // Media type: image vs video generation
+  mediaType?: MediaType; // Default: "video"
 }
 
 export interface VeoScriptEvent {
@@ -251,6 +275,7 @@ export interface VeoCompleteEvent {
     characterRegistry: CharacterRegistry;
     summary: VeoJobSummary;
     script?: GeneratedScript; // Script for caching (only in url-to-scenes workflow)
+    colorProfile?: CinematicProfile; // Phase 0: Cinematic color profile
   };
 }
 
@@ -275,7 +300,8 @@ export type VeoSSEEvent =
   | VeoCharacterEvent
   | VeoCompleteEvent
   | VeoErrorEvent
-  | VeoScriptEvent;
+  | VeoScriptEvent
+  | VeoColorProfileEvent;
 
 // ============================================================================
 // Error Types
@@ -362,6 +388,7 @@ export interface CachedVeoJob {
   characterRegistry: CharacterRegistry;
   timestamp: number;
   script?: GeneratedScript; // Cached script for regeneration
+  colorProfile?: CinematicProfile; // Phase 0: Cached color profile
   status: VeoJobStatus; // Job completion status
   error?: {
     message: string;
@@ -380,6 +407,7 @@ export interface CachedVeoJob {
     batchSize: number;
     sceneCount: number;
     voice: VoiceLanguage;
+    colorProfile?: CinematicProfile; // Phase 0: For resume
   };
 }
 
@@ -509,4 +537,191 @@ export interface VeoSettings {
   // Scene count flexibility (Phase 5)
   allowFewerScenes: boolean; // Default: true
   minSceneCountRatio: number; // Default: 0.7 (70% of target)
+
+  // Color profile extraction (Phase 0)
+  extractColorProfile: boolean; // Default: true
+}
+
+// ============================================================================
+// Phase 0: Cinematic Color Profile Extraction
+// ============================================================================
+
+/**
+ * Color entry with hex and description
+ */
+export interface ColorEntry {
+  hex: string;        // "#FF5733"
+  name: string;       // "warm coral"
+  usage: string;      // "accent", "background", "skin tones"
+}
+
+/**
+ * Full cinematic profile extracted from video
+ * Used to ensure consistent color values across all generated scenes
+ */
+export interface CinematicProfile {
+  dominantColors: ColorEntry[];  // 5-8 colors
+  colorTemperature: {
+    category: "warm" | "cool" | "neutral" | "mixed";
+    kelvinEstimate: number;
+    description: string;
+  };
+  contrast: {
+    level: "low" | "medium" | "high" | "extreme";
+    style: string;
+    blackPoint: string;
+    whitePoint: string;
+  };
+  shadows: {
+    color: string;
+    density: string;
+    falloff: string;
+  };
+  highlights: {
+    color: string;
+    handling: string;
+    bloom: boolean;
+  };
+  filmStock: {
+    suggested: string;
+    characteristics: string;
+    digitalProfile?: string;
+  };
+  mood: {
+    primary: string;
+    atmosphere: string;
+    emotionalTone: string;
+  };
+  grain: {
+    amount: "none" | "subtle" | "moderate" | "heavy";
+    type: string;
+    pattern: string;
+  };
+  postProcessing: {
+    colorGrade: string;
+    saturation: string;
+    vignettePresent: boolean;
+    splitToning?: {
+      shadows: string;
+      highlights: string;
+    };
+  };
+}
+
+/**
+ * Result from Phase 0: Color profile extraction from video
+ */
+export interface ColorProfileExtractionResult {
+  profile: CinematicProfile;
+  confidence: number;  // 0.0 to 1.0
+}
+
+/**
+ * SSE event for color profile extraction completion
+ */
+export interface VeoColorProfileEvent {
+  event: "colorProfile";
+  data: {
+    profile: CinematicProfile;
+    confidence: number;
+  };
+}
+
+// ============================================================================
+// Media Type: Image vs Video Generation
+// ============================================================================
+
+/**
+ * Media type for scene generation - determines output optimization
+ */
+export type MediaType = "image" | "video";
+
+/**
+ * Image-specific settings for still image generation (Midjourney, DALL-E, Flux)
+ */
+export interface ImageSettings {
+  aspectRatio: "1:1" | "4:3" | "16:9" | "9:16" | "21:9" | "3:2";
+  resolution?: "sd" | "hd" | "4k" | "8k";
+  styleWeight?: number;         // 0-100, how much style influences
+  detailLevel?: "low" | "medium" | "high" | "ultra";
+}
+
+/**
+ * Camera movement description for video generation
+ */
+export interface CameraMovement {
+  type: "static" | "pan" | "tilt" | "dolly" | "crane" | "handheld" | "orbital" | "zoom" | "tracking";
+  direction?: "left" | "right" | "up" | "down" | "in" | "out" | "clockwise" | "counterclockwise";
+  intensity?: "subtle" | "moderate" | "dynamic";
+  path?: string;              // Natural language path description
+}
+
+/**
+ * Subject motion description for video generation
+ */
+export interface SubjectMotion {
+  primary: string;            // "Chef walks left to right"
+  secondary?: string;         // "Steam rises from pot"
+  background?: string;        // "Trees sway gently"
+}
+
+/**
+ * Video continuity tracking between scenes
+ */
+export interface VideoContinuity {
+  previousSceneId?: string;
+  nextSceneId?: string;
+  matchAction?: boolean;      // Continue motion from previous
+  matchColor?: boolean;       // Match color grade
+  notes?: string;
+}
+
+/**
+ * Video-specific settings for video generation (VEO, Sora, Runway)
+ */
+export interface VideoSettings {
+  duration: number;             // Seconds (e.g., 4, 6, 8)
+  fps?: 24 | 30 | 60;
+  speed?: "normal" | "slow-motion" | "timelapse";
+  cameraMovement: CameraMovement;
+  subjectMotion?: SubjectMotion;
+  transitionIn?: "cut" | "fade" | "dissolve" | "wipe" | "zoom";
+  transitionOut?: "cut" | "fade" | "dissolve" | "wipe" | "zoom";
+  continuity?: VideoContinuity;
+  audioCues?: string[];         // ["fire crackling", "knife on wood"]
+}
+
+/**
+ * Platform-specific hints for generation
+ */
+export interface PlatformHints {
+  // Image generation platforms
+  midjourney?: {
+    version?: "v5" | "v6" | "niji";
+    stylize?: number;             // 0-1000
+    chaos?: number;               // 0-100
+    weird?: number;               // 0-3000
+  };
+  dalle?: {
+    style?: "vivid" | "natural";
+    quality?: "standard" | "hd";
+  };
+  flux?: {
+    guidance?: number;            // CFG scale
+    steps?: number;
+  };
+
+  // Video generation platforms
+  veo?: {
+    model?: "veo-001" | "veo-002";
+    aspectRatio?: string;
+  };
+  sora?: {
+    duration?: number;
+    resolution?: string;
+  };
+  runway?: {
+    model?: "gen2" | "gen3";
+    motion?: number;              // 1-10
+  };
 }

@@ -28,12 +28,19 @@ export {
 // Prompt building
 export {
   CHARACTER_ANALYSIS_PROMPT,
+  DEFAULT_NEGATIVE_PROMPT,
+  getDefaultNegativePrompt,
   addVoiceInstructions,
   buildContinuityContext,
   buildScenePrompt,
   buildScriptPrompt,
   buildScriptToScenesPrompt,
   parseScriptResponse,
+  // Phase 0: Color profile extraction
+  buildColorProfileExtractionPrompt,
+  parseColorProfileResponse,
+  buildCinematicProfileContext,
+  cinematicProfileToStyleFields,
   // Phase 1: Character extraction
   buildCharacterExtractionPrompt,
   parseCharacterExtractionResponse,
@@ -50,6 +57,8 @@ export {
   getCharacterDescription,
   mapErrorToType,
   isRetryableError,
+  // Phase 0: Color profile extraction
+  extractColorProfileFromVideo,
   // Phase 1: Character extraction
   extractCharactersFromVideo,
   extractionResultToRegistry,

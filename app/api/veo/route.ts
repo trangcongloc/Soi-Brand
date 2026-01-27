@@ -31,6 +31,8 @@ import {
   parseDuration,
   cleanScriptText,
   formatTime,
+  // Phase 0: Color profile extraction
+  extractColorProfileFromVideo,
   // Phase 1: Character extraction
   extractCharactersFromVideo,
   extractionResultToRegistry,
@@ -39,11 +41,13 @@ import {
   Scene,
   CharacterRegistry,
   CharacterSkeleton,
+  CinematicProfile,
   DirectBatchInfo,
   VeoSSEEvent,
   VeoJobSummary,
   GeminiApiError,
   GeneratedScript,
+  MediaType,
 } from "@/lib/veo";
 import {
   deduplicateScenes,
@@ -120,6 +124,9 @@ const VeoRequestSchema = z.object({
       "chinese",
     ])
     .default("no-voice"),
+  useVideoChapters: z.boolean().default(true), // Include video description chapters
+  deduplicationThreshold: z.number().min(0).max(1).default(0.75), // Scene similarity threshold
+  negativePrompt: z.string().optional(),
   resumeJobId: z.string().optional(),
   geminiApiKey: z.string().optional(),
   geminiModel: z.string().optional(),
@@ -128,6 +135,11 @@ const VeoRequestSchema = z.object({
   resumeFromBatch: z.number().int().min(0).optional(),
   existingScenes: z.array(z.any()).optional(),
   existingCharacters: z.record(z.string(), z.string()).optional(),
+  // Phase 0: Color profile extraction
+  extractColorProfile: z.boolean().default(true), // Enable by default
+  existingColorProfile: z.any().optional(), // For resume
+  // Media type: image vs video generation
+  mediaType: z.enum(["image", "video"]).default("video"),
 });
 
 type VeoRequest = z.infer<typeof VeoRequestSchema>;
@@ -213,6 +225,8 @@ async function runScriptToScenesDirect(
     scriptText: request.scriptText!,
     sceneCount: request.sceneCount,
     voiceLang: request.voice as VoiceLanguage,
+    globalNegativePrompt: request.negativePrompt,
+    mediaType: request.mediaType as MediaType,
   });
 
   const response = await callGeminiAPIWithRetry(requestBody, {
@@ -255,6 +269,8 @@ async function runScriptToScenesHybrid(
   apiKey: string,
   jobId: string,
   sendEvent: (event: VeoSSEEvent) => void,
+  // Phase 0: Pre-extracted cinematic profile
+  cinematicProfile?: CinematicProfile,
   // Phase 2: Pre-extracted characters from Phase 1
   preExtractedCharacters?: CharacterSkeleton[],
   preExtractedBackground?: string
@@ -334,11 +350,16 @@ async function runScriptToScenesHybrid(
       allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
 
     try {
-      // Build prompt for Phase 2 scene generation with pre-extracted characters
+      // Build prompt for Phase 2 scene generation with pre-extracted characters and color profile
       const requestBody = buildScriptToScenesPrompt({
         scriptText: scriptChunk + (continuityContext ? `\n\n${continuityContext}` : ""),
         sceneCount: batchSceneCount,
         voiceLang: request.voice as VoiceLanguage,
+        globalNegativePrompt: request.negativePrompt,
+        // Phase 0: Use pre-extracted cinematic profile
+        cinematicProfile: cinematicProfile || undefined,
+        // Media type: image vs video generation
+        mediaType: request.mediaType as MediaType,
         // Phase 2: Use pre-extracted characters from Phase 1
         preExtractedCharacters: preExtractedCharacters && preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
         preExtractedBackground: preExtractedBackground || undefined,
@@ -380,7 +401,7 @@ async function runScriptToScenesHybrid(
         const deduplicationResult = deduplicateScenes(
           allScenes,
           batchScenes,
-          0.75 // Similarity threshold (configurable in future)
+          request.deduplicationThreshold
         );
 
         // Log deduplication stats if duplicates were found
@@ -499,12 +520,15 @@ async function runUrlToScenesDirect(
   apiKey: string,
   jobId: string,
   videoDurationSeconds: number,
-  sendEvent: (event: VeoSSEEvent) => void
+  sendEvent: (event: VeoSSEEvent) => void,
+  // Phase 0: Pre-extracted cinematic profile (optional)
+  cinematicProfile?: CinematicProfile
 ): Promise<{
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
   elapsed: number;
   failedBatch?: number;
+  colorProfile?: CinematicProfile;
 }> {
   const startTime = Date.now();
 
@@ -687,7 +711,7 @@ async function runUrlToScenesDirect(
 
     try {
       // Build prompt for direct video analysis
-      // Build prompt for Phase 2 scene generation with pre-extracted characters
+      // Build prompt for Phase 2 scene generation with pre-extracted characters and color profile
       const requestBody = buildScenePrompt({
         videoUrl: request.videoUrl!,
         sceneCount: batchSceneCount,
@@ -695,6 +719,11 @@ async function runUrlToScenesDirect(
         includeCharacterAnalysis: preExtractedCharacters.length === 0, // Fallback only if Phase 1 failed
         continuityContext,
         directBatchInfo,
+        globalNegativePrompt: request.negativePrompt,
+        // Phase 0: Use pre-extracted cinematic profile
+        cinematicProfile: cinematicProfile || undefined,
+        // Media type: image vs video generation
+        mediaType: request.mediaType as MediaType,
         // Phase 2: Use pre-extracted characters from Phase 1
         preExtractedCharacters: preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
         preExtractedBackground: preExtractedBackground || undefined,
@@ -736,7 +765,7 @@ async function runUrlToScenesDirect(
         const deduplicationResult = deduplicateScenes(
           allScenes,
           batchScenes,
-          0.75 // Similarity threshold (configurable in future)
+          request.deduplicationThreshold
         );
 
         // Log deduplication stats if duplicates were found
@@ -844,7 +873,7 @@ async function runUrlToScenesDirect(
   serverProgress.set(jobId, completedProgress);
 
   const elapsed = (Date.now() - startTime) / 1000;
-  return { scenes: allScenes, characterRegistry, elapsed };
+  return { scenes: allScenes, characterRegistry, elapsed, colorProfile: cinematicProfile };
 }
 
 export async function POST(request: NextRequest) {
@@ -1036,8 +1065,8 @@ export async function POST(request: NextRequest) {
                 title: videoInfo.title,
               });
             }
-            // Parse video description for chapters
-            if (videoInfo?.description) {
+            // Parse video description for chapters (if enabled)
+            if (veoRequest.useVideoChapters && videoInfo?.description) {
               videoDescription = parseVideoDescription(videoInfo.description);
               if (videoDescription.chapters && videoDescription.chapters.length > 0) {
                 logger.info("VEO Video Chapters Found", {
@@ -1056,10 +1085,12 @@ export async function POST(request: NextRequest) {
             characterRegistry: CharacterRegistry;
             elapsed: number;
             failedBatch?: number;
+            colorProfile?: CinematicProfile;
           };
 
           let script: GeneratedScript | undefined;
           let effectiveSceneCount = veoRequest.sceneCount;
+          let extractedColorProfile: CinematicProfile | undefined = veoRequest.existingColorProfile as CinematicProfile | undefined;
 
           // DIRECT MODE: Video → Scenes (no script generation)
           if (veoRequest.mode === "direct") {
@@ -1102,6 +1133,76 @@ export async function POST(request: NextRequest) {
               data: { batch: 0, total: 0, scenes: 0, message: "Direct mode: Generating scenes directly from video (skipping script extraction)..." },
             });
 
+            // ============================================================================
+            // PHASE 0: Extract cinematic color profile FIRST (before character extraction)
+            // ============================================================================
+            if (veoRequest.extractColorProfile && !extractedColorProfile) {
+              try {
+                sendEvent({
+                  event: "progress",
+                  data: { batch: 0, total: 0, scenes: 0, message: "Phase 0: Extracting cinematic color profile from video..." },
+                });
+
+                const colorResult = await extractColorProfileFromVideo(veoRequest.videoUrl!, {
+                  apiKey,
+                  model: veoRequest.geminiModel,
+                  onProgress: (msg) => {
+                    sendEvent({
+                      event: "progress",
+                      data: { batch: 0, total: 0, scenes: 0, message: msg },
+                    });
+                  },
+                });
+
+                extractedColorProfile = colorResult.profile;
+
+                // Send color profile SSE event
+                sendEvent({
+                  event: "colorProfile",
+                  data: {
+                    profile: colorResult.profile,
+                    confidence: colorResult.confidence,
+                  },
+                });
+
+                logger.info("VEO Phase 0 Complete (Direct)", {
+                  jobId,
+                  colorsFound: colorResult.profile.dominantColors.length,
+                  confidence: colorResult.confidence,
+                  temperature: colorResult.profile.colorTemperature.category,
+                  filmStock: colorResult.profile.filmStock.suggested,
+                });
+
+                sendEvent({
+                  event: "progress",
+                  data: {
+                    batch: 0,
+                    total: 0,
+                    scenes: 0,
+                    message: `Color profile extracted: ${colorResult.profile.dominantColors.length} colors, ${colorResult.profile.colorTemperature.category} temperature (${(colorResult.confidence * 100).toFixed(0)}% confidence). Proceeding with character analysis...`,
+                  },
+                });
+              } catch (phase0Error) {
+                // Phase 0 failed - log but continue (fallback to inferred style)
+                const error = phase0Error as GeminiApiError;
+                logger.warn("VEO Phase 0 Failed - continuing with inferred style", {
+                  jobId,
+                  error: error.message,
+                  status: error.status,
+                });
+
+                sendEvent({
+                  event: "progress",
+                  data: {
+                    batch: 0,
+                    total: 0,
+                    scenes: 0,
+                    message: "Color profile extraction skipped, continuing with inferred style...",
+                  },
+                });
+              }
+            }
+
             // Use direct video analysis with time-based batching
             const directRequest = {
               ...veoRequest,
@@ -1113,7 +1214,8 @@ export async function POST(request: NextRequest) {
               apiKey,
               jobId,
               youtubeDurationSeconds,
-              sendEvent
+              sendEvent,
+              extractedColorProfile
             );
           }
           // HYBRID MODE: Video → Script → Scenes
@@ -1195,6 +1297,76 @@ export async function POST(request: NextRequest) {
               event: "progress",
               data: { batch: 0, total: 0, scenes: 0, message: "Step 2/2: Script extracted. Identifying characters and generating scenes..." },
             });
+
+            // ============================================================================
+            // PHASE 0: Extract cinematic color profile FIRST (before character extraction)
+            // ============================================================================
+            if (veoRequest.extractColorProfile && !extractedColorProfile) {
+              try {
+                sendEvent({
+                  event: "progress",
+                  data: { batch: 0, total: 0, scenes: 0, message: "Phase 0: Extracting cinematic color profile from video..." },
+                });
+
+                const colorResult = await extractColorProfileFromVideo(veoRequest.videoUrl!, {
+                  apiKey,
+                  model: veoRequest.geminiModel,
+                  onProgress: (msg) => {
+                    sendEvent({
+                      event: "progress",
+                      data: { batch: 0, total: 0, scenes: 0, message: msg },
+                    });
+                  },
+                });
+
+                extractedColorProfile = colorResult.profile;
+
+                // Send color profile SSE event
+                sendEvent({
+                  event: "colorProfile",
+                  data: {
+                    profile: colorResult.profile,
+                    confidence: colorResult.confidence,
+                  },
+                });
+
+                logger.info("VEO Phase 0 Complete (Hybrid)", {
+                  jobId,
+                  colorsFound: colorResult.profile.dominantColors.length,
+                  confidence: colorResult.confidence,
+                  temperature: colorResult.profile.colorTemperature.category,
+                  filmStock: colorResult.profile.filmStock.suggested,
+                });
+
+                sendEvent({
+                  event: "progress",
+                  data: {
+                    batch: 0,
+                    total: 0,
+                    scenes: 0,
+                    message: `Color profile extracted: ${colorResult.profile.dominantColors.length} colors, ${colorResult.profile.colorTemperature.category} temperature (${(colorResult.confidence * 100).toFixed(0)}% confidence). Proceeding with character analysis...`,
+                  },
+                });
+              } catch (phase0Error) {
+                // Phase 0 failed - log but continue (fallback to inferred style)
+                const error = phase0Error as GeminiApiError;
+                logger.warn("VEO Phase 0 Failed (Hybrid) - continuing with inferred style", {
+                  jobId,
+                  error: error.message,
+                  status: error.status,
+                });
+
+                sendEvent({
+                  event: "progress",
+                  data: {
+                    batch: 0,
+                    total: 0,
+                    scenes: 0,
+                    message: "Color profile extraction skipped, continuing with inferred style...",
+                  },
+                });
+              }
+            }
 
             // ============================================================================
             // PHASE 1: Extract characters from video BEFORE scene generation
@@ -1281,10 +1453,17 @@ export async function POST(request: NextRequest) {
               apiKey,
               jobId,
               sendEvent,
+              // Pass Phase 0 results
+              extractedColorProfile,
               // Pass Phase 1 results
               hybridPreExtractedCharacters,
               hybridPreExtractedBackground
             );
+
+            // Include color profile in result for complete event
+            if (extractedColorProfile) {
+              result = { ...result, colorProfile: extractedColorProfile };
+            }
           }
 
           // If there was a failure, don't send complete event
@@ -1326,6 +1505,7 @@ export async function POST(request: NextRequest) {
               characterRegistry: result.characterRegistry,
               summary,
               ...(script && { script }), // Include script for client-side caching (hybrid mode only)
+              ...(result.colorProfile && { colorProfile: result.colorProfile }), // Include color profile (Phase 0)
             },
           });
 
@@ -1344,7 +1524,16 @@ export async function POST(request: NextRequest) {
           if (veoRequest.mode === "direct") {
             result = await runScriptToScenesDirect(veoRequest, apiKey, sendEvent);
           } else {
-            result = await runScriptToScenesHybrid(veoRequest, apiKey, jobId, sendEvent);
+            // For script-to-scenes, we don't have a video to extract color profile from
+            result = await runScriptToScenesHybrid(
+              veoRequest,
+              apiKey,
+              jobId,
+              sendEvent,
+              undefined, // No color profile for script-only mode
+              undefined, // No pre-extracted characters
+              undefined  // No pre-extracted background
+            );
           }
 
           // If there was a failure, don't send complete event

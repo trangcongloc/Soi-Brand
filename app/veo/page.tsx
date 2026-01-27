@@ -16,6 +16,7 @@ import {
   VeoSSEEvent,
   GeneratedScript,
   VeoErrorType,
+  CinematicProfile,
   setCachedJob,
   getCachedJob,
   hasProgress,
@@ -27,6 +28,7 @@ import {
   extractVideoId,
 } from "@/lib/veo";
 import { VeoForm, VeoLoadingState, VeoSceneDisplay, VeoHistoryPanel } from "@/components/veo";
+import VeoColorProfilePanel from "@/components/veo/VeoColorProfilePanel";
 import { getCachedJobList } from "@/lib/veo";
 import styles from "./page.module.css";
 
@@ -86,6 +88,10 @@ export default function VeoPage() {
   const [summary, setSummary] = useState<VeoJobSummary | null>(null);
   const [jobId, setJobId] = useState<string>("");
 
+  // Color profile state (Phase 0)
+  const [colorProfile, setColorProfile] = useState<CinematicProfile | null>(null);
+  const [colorProfileConfidence, setColorProfileConfidence] = useState<number>(0);
+
   // Current form data (for retry/resume)
   const [currentFormData, setCurrentFormData] = useState<{
     workflow: VeoWorkflow;
@@ -96,6 +102,8 @@ export default function VeoPage() {
     batchSize: number;
     voice: VoiceLanguage;
     scriptText?: string;
+    useVideoChapters: boolean;
+    deduplicationThreshold: number;
   } | null>(null);
 
   // Resume dialog state
@@ -263,6 +271,10 @@ export default function VeoPage() {
       sceneCount: number;
       batchSize: number;
       voice: VoiceLanguage;
+      useVideoChapters: boolean;
+      deduplicationThreshold: number;
+      extractColorProfile: boolean;
+      mediaType: "image" | "video";
       // Resume parameters
       resumeFromBatch?: number;
       existingScenes?: Scene[];
@@ -288,6 +300,8 @@ export default function VeoPage() {
       setGeneratedScript(null);
       setScenes(options.existingScenes || []);
       setCharacterRegistry(options.existingCharacters || {});
+      setColorProfile(null);
+      setColorProfileConfidence(0);
 
       // Save current form data for retry/error handling
       const formData = {
@@ -299,6 +313,8 @@ export default function VeoPage() {
         batchSize: options.batchSize,
         voice: options.voice,
         scriptText: options.scriptText,
+        useVideoChapters: options.useVideoChapters,
+        deduplicationThreshold: options.deduplicationThreshold,
       };
       formDataRef.current = formData; // Update ref immediately for callbacks
       setCurrentFormData(formData);
@@ -371,6 +387,11 @@ export default function VeoPage() {
                     setGeneratedScript(event.data.script);
                     break;
 
+                  case "colorProfile":
+                    setColorProfile(event.data.profile);
+                    setColorProfileConfidence(event.data.confidence);
+                    break;
+
                   case "complete":
                     if (options.workflow === "url-to-script") {
                       // Step 1 complete - show script
@@ -381,9 +402,13 @@ export default function VeoPage() {
                       setCharacterRegistry(event.data.characterRegistry);
                       setSummary(event.data.summary);
                       setJobId(event.data.jobId);
+                      // Update color profile from complete event if not already set
+                      if (event.data.colorProfile && !colorProfile) {
+                        setColorProfile(event.data.colorProfile);
+                      }
                       setState("complete");
 
-                      // Cache the result with script for regeneration
+                      // Cache the result with script and color profile for regeneration
                       if (event.data.scenes.length > 0) {
                         setCachedJob(event.data.jobId, {
                           videoId: event.data.summary.videoId,
@@ -392,6 +417,7 @@ export default function VeoPage() {
                           scenes: event.data.scenes,
                           characterRegistry: event.data.characterRegistry,
                           script: event.data.script, // Cache script for regeneration
+                          colorProfile: event.data.colorProfile, // Cache color profile
                           status: "completed",
                         });
                         // Update history state to reflect new job
@@ -517,6 +543,10 @@ export default function VeoPage() {
       batchSize: resumeData.batchSize,
       voice: resumeData.voice,
       videoUrl: resumeData.videoUrl,
+      useVideoChapters: true, // Default for resume
+      deduplicationThreshold: 0.75, // Default for resume
+      extractColorProfile: false, // No video in script-to-scenes
+      mediaType: "video", // Default for resume
       resumeFromBatch: resumeData.completedBatches,
       existingScenes: resumeData.existingScenes,
       existingCharacters: resumeData.existingCharacters,
@@ -583,6 +613,10 @@ export default function VeoPage() {
       sceneCount: resumeData.sceneCount,
       batchSize: resumeData.batchSize,
       voice: resumeData.voice,
+      useVideoChapters: true, // Default for resume
+      deduplicationThreshold: 0.75, // Default for resume
+      extractColorProfile: !!cached.colorProfile, // Use existing profile if available
+      mediaType: "video", // Default for resume
       // Resume parameters
       resumeFromBatch: resumeData.completedBatches,
       existingScenes: resumeData.existingScenes,
@@ -600,6 +634,8 @@ export default function VeoPage() {
     setJobId("");
     setCurrentFormData(null);
     setGeneratedScript(null);
+    setColorProfile(null);
+    setColorProfileConfidence(0);
   }, []);
 
   const handleDownloadScript = useCallback(() => {
@@ -871,6 +907,16 @@ export default function VeoPage() {
                   {lang.common.analyze}
                 </button>
               </div>
+
+              {/* Color Profile Panel (Phase 0) */}
+              {colorProfile && (
+                <VeoColorProfilePanel
+                  profile={colorProfile}
+                  confidence={colorProfileConfidence}
+                  defaultExpanded={false}
+                />
+              )}
+
               <VeoSceneDisplay
                 scenes={scenes}
                 characterRegistry={characterRegistry}
