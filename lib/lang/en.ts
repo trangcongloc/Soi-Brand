@@ -424,6 +424,7 @@ export const en = {
         back: "Back",
         analyze: "Analyze",
         skipToContent: "Skip to content",
+        notAvailable: "N/A",
     },
 
     veo: {
@@ -606,6 +607,23 @@ export const en = {
             cancelAction: "Cancel",
             scriptCached: "Script cached",
             regenerate: "Regenerate",
+            retryFromBatch: "Retry from failed batch",
+            // Sort options
+            sortJobs: "Sort jobs",
+            sortNewest: "Newest first",
+            sortOldest: "Oldest first",
+            sortStatus: "Status",
+            sortMostScenes: "Most scenes",
+            sortLeastScenes: "Least scenes",
+            // Status labels
+            statusCompleted: "Completed",
+            statusPartial: "Partial",
+            statusFailed: "Failed",
+            generationFailed: "Generation failed",
+            failedAtBatch: "Failed at batch {current}/{total}",
+            retryable: "Retryable",
+            cancelled: "Cancelled",
+            jobCancelled: "Job cancelled by user",
         },
 
         resume: {

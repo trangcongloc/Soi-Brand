@@ -108,6 +108,12 @@ export default function VeoPage() {
   // Abort controller ref
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Ref to track current jobId for use in callbacks (avoids stale closure)
+  const jobIdRef = useRef<string>("");
+
+  // Ref to track current form data for use in callbacks (avoids stale closure)
+  const formDataRef = useRef<typeof currentFormData>(null);
+
   // Load settings from Soi-brand settings on mount
   useEffect(() => {
     async function loadSettings() {
@@ -180,40 +186,43 @@ export default function VeoPage() {
       setState("error");
 
       // Save failed job to cache if we have enough context
-      if (jobId && currentFormData) {
+      // Use refs to get the current values (avoids stale closure)
+      const currentJobId = jobIdRef.current;
+      const currentForm = formDataRef.current;
+      if (currentJobId && currentForm) {
         const failedBatch = debug?.batch as number | undefined;
         const totalBatchesCalc = (debug?.totalBatches as number | undefined)
           || (summary && typeof summary.batches === 'number' ? summary.batches : undefined)
-          || Math.ceil(currentFormData.sceneCount / currentFormData.batchSize);
+          || Math.ceil(currentForm.sceneCount / currentForm.batchSize);
 
         // Determine status: partial if some scenes were generated, failed if none
         const status = scenes.length > 0 ? "partial" : "failed";
 
         // Create minimal summary if not available
         const effectiveSummary: VeoJobSummary = summary || {
-          mode: currentFormData.mode,
-          videoId: currentFormData.videoId || "",
-          youtubeUrl: currentFormData.videoUrl || "",
-          targetScenes: currentFormData.sceneCount,
+          mode: currentForm.mode,
+          videoId: currentForm.videoId || "",
+          youtubeUrl: currentForm.videoUrl || "",
+          targetScenes: currentForm.sceneCount,
           actualScenes: scenes.length,
           batches: totalBatchesCalc,
-          batchSize: currentFormData.batchSize,
-          voice: currentFormData.voice === "no-voice" ? "No voice (silent)" : currentFormData.voice,
+          batchSize: currentForm.batchSize,
+          voice: currentForm.voice === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.voice,
           charactersFound: Object.keys(characterRegistry).length,
           characters: Object.keys(characterRegistry),
-          processingTime: "N/A",
+          processingTime: lang.common.notAvailable || "N/A",
           createdAt: new Date().toISOString(),
         };
 
-        setCachedJob(jobId, {
-          videoId: currentFormData.videoId || "",
-          videoUrl: currentFormData.videoUrl || "",
+        setCachedJob(currentJobId, {
+          videoId: currentForm.videoId || "",
+          videoUrl: currentForm.videoUrl || "",
           summary: {
             ...effectiveSummary,
             actualScenes: scenes.length,
           },
-          scenes: scenes,
-          characterRegistry: characterRegistry,
+          scenes,
+          characterRegistry,
           script: generatedScript || undefined,
           status,
           error: {
@@ -227,11 +236,11 @@ export default function VeoPage() {
             completedBatches: failedBatch ? failedBatch - 1 : 0,
             existingScenes: scenes,
             existingCharacters: characterRegistry,
-            workflow: currentFormData.workflow,
-            mode: currentFormData.mode,
-            batchSize: currentFormData.batchSize,
-            sceneCount: currentFormData.sceneCount,
-            voice: currentFormData.voice,
+            workflow: currentForm.workflow,
+            mode: currentForm.mode,
+            batchSize: currentForm.batchSize,
+            sceneCount: currentForm.sceneCount,
+            voice: currentForm.voice,
           } : undefined,
         });
 
@@ -239,7 +248,7 @@ export default function VeoPage() {
         setHasHistory(true);
       }
     },
-    [lang, jobId, currentFormData, summary, scenes, characterRegistry, generatedScript]
+    [lang, summary, scenes, characterRegistry, generatedScript]
   );
 
   const handleSubmit = useCallback(
@@ -259,6 +268,11 @@ export default function VeoPage() {
       existingScenes?: Scene[];
       existingCharacters?: CharacterRegistry;
     }) => {
+      // Generate a job ID upfront so we can save failed jobs to history
+      const newJobId = `veo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      jobIdRef.current = newJobId; // Update ref immediately for callbacks
+      setJobId(newJobId);
+
       // Reset state
       setState("loading");
       setError(null);
@@ -272,9 +286,11 @@ export default function VeoPage() {
       setLoadingMessage(lang.veo.loading.steps.initializing);
       setCharacters([]);
       setGeneratedScript(null);
+      setScenes(options.existingScenes || []);
+      setCharacterRegistry(options.existingCharacters || {});
 
       // Save current form data for retry/error handling
-      setCurrentFormData({
+      const formData = {
         workflow: options.workflow,
         videoUrl: options.videoUrl,
         videoId: options.videoUrl ? extractVideoId(options.videoUrl) : undefined,
@@ -283,7 +299,9 @@ export default function VeoPage() {
         batchSize: options.batchSize,
         voice: options.voice,
         scriptText: options.scriptText,
-      });
+      };
+      formDataRef.current = formData; // Update ref immediately for callbacks
+      setCurrentFormData(formData);
 
       // Create abort controller
       abortControllerRef.current = new AbortController();
@@ -414,33 +432,38 @@ export default function VeoPage() {
   const handleCancel = useCallback(() => {
     abortControllerRef.current?.abort();
 
-    // Save cancelled job to history if we have partial progress
-    if (jobId && currentFormData && scenes.length > 0) {
+    // Save cancelled job to history using refs to avoid stale closure
+    const currentJobId = jobIdRef.current;
+    const currentForm = formDataRef.current;
+    if (currentJobId && currentForm) {
       const cancelledSummary: VeoJobSummary = summary || {
-        mode: currentFormData.mode,
-        youtubeUrl: currentFormData.videoUrl || "",
-        videoId: currentFormData.videoId || "",
-        targetScenes: currentFormData.sceneCount,
+        mode: currentForm.mode,
+        youtubeUrl: currentForm.videoUrl || "",
+        videoId: currentForm.videoId || "",
+        targetScenes: currentForm.sceneCount,
         actualScenes: scenes.length,
-        batches: Math.ceil(currentFormData.sceneCount / currentFormData.batchSize),
-        batchSize: currentFormData.batchSize,
-        voice: currentFormData.voice === "no-voice" ? "No voice (silent)" : currentFormData.voice,
+        batches: Math.ceil(currentForm.sceneCount / currentForm.batchSize),
+        batchSize: currentForm.batchSize,
+        voice: currentForm.voice === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.voice,
         charactersFound: Object.keys(characterRegistry).length,
         characters: Object.keys(characterRegistry),
-        processingTime: "Cancelled",
+        processingTime: lang.veo.history.cancelled,
         createdAt: new Date().toISOString(),
       };
 
-      setCachedJob(jobId, {
-        videoId: currentFormData.videoId || "",
-        videoUrl: currentFormData.videoUrl || "",
+      // Determine status: partial if some scenes were generated, failed if none
+      const status = scenes.length > 0 ? "partial" : "failed";
+
+      setCachedJob(currentJobId, {
+        videoId: currentForm.videoId || "",
+        videoUrl: currentForm.videoUrl || "",
         summary: cancelledSummary,
-        scenes: scenes,
-        characterRegistry: characterRegistry,
+        scenes,
+        characterRegistry,
         script: generatedScript || undefined,
-        status: "partial",
+        status,
         error: {
-          message: "Job cancelled by user",
+          message: lang.veo.history.jobCancelled,
           type: "UNKNOWN_ERROR",
           failedBatch: batch,
           totalBatches: totalBatches,
@@ -450,11 +473,11 @@ export default function VeoPage() {
           completedBatches: batch - 1,
           existingScenes: scenes,
           existingCharacters: characterRegistry,
-          workflow: currentFormData.workflow,
-          mode: currentFormData.mode,
-          batchSize: currentFormData.batchSize,
-          sceneCount: currentFormData.sceneCount,
-          voice: currentFormData.voice,
+          workflow: currentForm.workflow,
+          mode: currentForm.mode,
+          batchSize: currentForm.batchSize,
+          sceneCount: currentForm.sceneCount,
+          voice: currentForm.voice,
         },
       });
 
@@ -462,7 +485,7 @@ export default function VeoPage() {
     }
 
     setState("idle");
-  }, [jobId, currentFormData, scenes, characterRegistry, summary, generatedScript, batch, totalBatches]);
+  }, [lang, scenes, characterRegistry, summary, generatedScript, batch, totalBatches]);
 
   const handleResumeYes = useCallback(async () => {
     if (!resumeProgressData) {
@@ -572,7 +595,10 @@ export default function VeoPage() {
     setScenes([]);
     setCharacterRegistry({});
     setSummary(null);
+    jobIdRef.current = "";
+    formDataRef.current = null;
     setJobId("");
+    setCurrentFormData(null);
     setGeneratedScript(null);
   }, []);
 

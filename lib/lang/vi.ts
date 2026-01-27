@@ -420,6 +420,7 @@ export const vi = {
         back: "Quay lại",
         analyze: "Phân tích",
         skipToContent: "Chuyển đến nội dung",
+        notAvailable: "N/A",
     },
 
     veo: {
@@ -611,6 +612,23 @@ export const vi = {
             cancelAction: "Hủy",
             scriptCached: "Có script",
             regenerate: "Tạo lại",
+            retryFromBatch: "Thử lại từ batch lỗi",
+            // Sort options
+            sortJobs: "Sắp xếp",
+            sortNewest: "Mới nhất",
+            sortOldest: "Cũ nhất",
+            sortStatus: "Trạng thái",
+            sortMostScenes: "Nhiều cảnh nhất",
+            sortLeastScenes: "Ít cảnh nhất",
+            // Status labels
+            statusCompleted: "Hoàn thành",
+            statusPartial: "Một phần",
+            statusFailed: "Thất bại",
+            generationFailed: "Tạo thất bại",
+            failedAtBatch: "Lỗi tại batch {current}/{total}",
+            retryable: "Có thể thử lại",
+            cancelled: "Đã hủy",
+            jobCancelled: "Job đã hủy bởi người dùng",
         },
 
         resume: {

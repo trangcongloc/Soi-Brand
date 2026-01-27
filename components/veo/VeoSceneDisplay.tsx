@@ -91,7 +91,7 @@ function VeoSceneDisplay({
                 {lang.veo.result.summaryStats.mode}
               </span>
               <span className={styles.summaryValue}>
-                {summary.mode === "direct" ? "Direct" : "Hybrid"}
+                {summary.mode === "direct" ? lang.veo.modes.direct : lang.veo.modes.hybrid}
               </span>
             </div>
             <div className={styles.summaryCard}>

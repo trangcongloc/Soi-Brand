@@ -171,7 +171,7 @@ function VeoLoadingState({
                     onClick={handleCopyScript}
                     type="button"
                   >
-                    {copied ? "Copied!" : lang.veo.script.copy}
+                    {copied ? lang.veo.result.sceneCard.copied : lang.veo.script.copy}
                   </button>
                   <button
                     className={styles.scriptActionBtn}

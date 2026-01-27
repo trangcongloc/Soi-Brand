@@ -206,17 +206,17 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
           {jobs.length > 0 && (
             <div className={styles.jobStats}>
               {jobStats.completed > 0 && (
-                <span className={styles.statCompleted} title="Completed">
+                <span className={styles.statCompleted} title={lang.veo.history.statusCompleted}>
                   ✓ {jobStats.completed}
                 </span>
               )}
               {jobStats.partial > 0 && (
-                <span className={styles.statPartial} title="Partial">
+                <span className={styles.statPartial} title={lang.veo.history.statusPartial}>
                   ⚠ {jobStats.partial}
                 </span>
               )}
               {jobStats.failed > 0 && (
-                <span className={styles.statFailed} title="Failed">
+                <span className={styles.statFailed} title={lang.veo.history.statusFailed}>
                   ✗ {jobStats.failed}
                 </span>
               )}
@@ -230,13 +230,13 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                 className={styles.sortSelect}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
-                aria-label="Sort jobs"
+                aria-label={lang.veo.history.sortJobs}
               >
-                <option value="date-desc">Newest first</option>
-                <option value="date-asc">Oldest first</option>
-                <option value="status">Status</option>
-                <option value="scenes-desc">Most scenes</option>
-                <option value="scenes-asc">Least scenes</option>
+                <option value="date-desc">{lang.veo.history.sortNewest}</option>
+                <option value="date-asc">{lang.veo.history.sortOldest}</option>
+                <option value="status">{lang.veo.history.sortStatus}</option>
+                <option value="scenes-desc">{lang.veo.history.sortMostScenes}</option>
+                <option value="scenes-asc">{lang.veo.history.sortLeastScenes}</option>
               </select>
               <button
                 className={styles.clearAllButton}
@@ -296,21 +296,23 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                 </div>
                 <div className={styles.jobMeta}>
                   <span>{job.sceneCount} scenes</span>
-                  <span className={styles.separator}>|</span>
+                  <span className={styles.separator}>•</span>
                   <span>{job.charactersFound} chars</span>
-                  <span className={styles.separator}>|</span>
-                  <span>{formatDate(job.timestamp)}</span>
+                  <span className={styles.separator}>•</span>
+                  <span className={styles.jobDate}>{formatDate(job.timestamp)}</span>
                 </div>
                 {job.error && (
                   <div className={styles.errorIndicator}>
                     <span className={styles.errorMessage}>
                       {job.error.failedBatch
-                        ? `Failed at batch ${job.error.failedBatch}/${job.error.totalBatches}`
-                        : "Generation failed"
+                        ? lang.veo.history.failedAtBatch
+                            .replace("{current}", String(job.error.failedBatch))
+                            .replace("{total}", String(job.error.totalBatches))
+                        : lang.veo.history.generationFailed
                       }
                     </span>
                     {job.error.retryable && (
-                      <span className={styles.retryableHint}>• Retryable</span>
+                      <span className={styles.retryableHint}>• {lang.veo.history.retryable}</span>
                     )}
                   </div>
                 )}
@@ -360,7 +362,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                       <button
                         className={styles.retryButton}
                         onClick={() => onRetryJob(job.jobId)}
-                        title="Retry from failed batch"
+                        title={lang.veo.history.retryFromBatch}
                       >
                         <svg
                           width="14"
@@ -373,7 +375,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                           <path d="M1 4v6h6M23 20v-6h-6"/>
                           <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
                         </svg>
-                        <span>Retry</span>
+                        <span>{lang.veo.history.retryable}</span>
                       </button>
                     )}
                     {/* Regenerate button - show for completed jobs with script */}
