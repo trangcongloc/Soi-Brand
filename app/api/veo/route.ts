@@ -22,10 +22,8 @@ import {
   parseScriptResponse,
   extractCharacterRegistry,
   getCharacterDescription,
-  mapErrorToType,
   serverProgress,
   createProgress,
-  updateProgressAfterBatch,
   markProgressFailed,
   markProgressCompleted,
   parseDuration,
@@ -38,6 +36,7 @@ import {
   extractionResultToRegistry,
   VeoMode,
   VoiceLanguage,
+  VeoErrorType,
   Scene,
   CharacterRegistry,
   CharacterSkeleton,
@@ -49,10 +48,7 @@ import {
   GeneratedScript,
   MediaType,
 } from "@/lib/veo";
-import {
-  deduplicateScenes,
-  getDeduplicationStats,
-} from "@/lib/veo/deduplication";
+import { processSceneBatch } from "@/lib/veo/scene-processor";
 import { getVideoInfo, parseISO8601Duration, parseVideoDescription, type VideoDescription } from "@/lib/youtube";
 import {
   checkRateLimit,
@@ -62,42 +58,67 @@ import {
 } from "@/lib/rateLimit";
 import { VEO_CONFIG } from "@/lib/config";
 import { logger } from "@/lib/logger";
+import { handleAPIError, type UnifiedErrorType } from "@/lib/error-handler";
+import {
+  SSE_KEEPALIVE_INTERVAL_MS,
+  BATCH_DELAY_MS,
+  FALLBACK_VIDEO_DURATION_SECONDS,
+  DEFAULT_SECONDS_PER_SCENE,
+} from "@/lib/veo/constants";
 
 const isDev = process.env.NODE_ENV === "development";
 
 /**
- * Format error for SSE response with detailed info
+ * Map UnifiedErrorType to VeoErrorType
+ * Converts general error types to VEO-specific error types
  */
-function formatErrorMessage(error: GeminiApiError, context?: string): string {
-  const parts: string[] = [];
+function mapToVeoErrorType(unifiedType: UnifiedErrorType): VeoErrorType {
+  // Map unified types to VEO types
+  const mapping: Record<string, VeoErrorType> = {
+    INVALID_URL: "INVALID_URL",
+    GEMINI_API_ERROR: "GEMINI_API_ERROR",
+    GEMINI_QUOTA: "GEMINI_QUOTA",
+    GEMINI_RATE_LIMIT: "GEMINI_RATE_LIMIT",
+    NETWORK_ERROR: "NETWORK_ERROR",
+    PARSE_ERROR: "PARSE_ERROR",
+    AI_PARSE_ERROR: "PARSE_ERROR",
+    TIMEOUT: "TIMEOUT",
+    // Map other types to closest VEO equivalent
+    YOUTUBE_QUOTA: "GEMINI_QUOTA", // Rate limiting
+    YOUTUBE_API_ERROR: "GEMINI_API_ERROR", // General API error
+    RATE_LIMIT: "GEMINI_RATE_LIMIT", // Rate limiting
+    MODEL_OVERLOAD: "GEMINI_API_ERROR", // API overload
+    API_CONFIG: "GEMINI_API_ERROR", // Configuration error
+    CHANNEL_NOT_FOUND: "INVALID_URL", // URL-related error
+    UNKNOWN: "UNKNOWN_ERROR",
+    UNKNOWN_ERROR: "UNKNOWN_ERROR",
+  };
 
-  // Add context if provided
-  if (context) {
-    parts.push(context);
+  return mapping[unifiedType] || "UNKNOWN_ERROR";
+}
+
+/**
+ * Format error for SSE response with detailed info
+ * Uses unified error handler for consistent error messages
+ */
+function formatErrorMessage(error: unknown, context?: string): string {
+  const errorResult = handleAPIError(error, context);
+
+  // Use English message for error logging/display (default)
+  let message = errorResult.message.en;
+
+  // In dev mode, add additional debug info
+  if (isDev && typeof error === "object" && error !== null) {
+    const geminiError = error as GeminiApiError;
+    if (geminiError.status) {
+      message += ` [${geminiError.status}]`;
+    }
+    if (geminiError.response?.error?.message) {
+      message += ` - ${geminiError.response.error.message}`;
+    }
   }
 
-  // Add status code if available
-  if (error.status) {
-    parts.push(`[${error.status}]`);
-  }
-
-  // Add error message
-  if (error.message) {
-    parts.push(error.message);
-  }
-
-  // Add API error details if available
-  if (error.response?.error?.message) {
-    parts.push(`- ${error.response.error.message}`);
-  }
-
-  // In dev mode, add raw response if available
-  if (isDev && error.response?.raw) {
-    const rawPreview = String(error.response.raw).slice(0, 200);
-    parts.push(`[Raw: ${rawPreview}...]`);
-  }
-
-  return parts.join(" ") || "An unexpected error occurred";
+  return message;
 }
 
 // VEO 3 Options schema
@@ -408,86 +429,39 @@ async function runScriptToScenesHybrid(
       const batchScenes = parseGeminiResponse(response);
 
       if (Array.isArray(batchScenes)) {
-        // Extract new characters
-        const newCharacters = extractCharacterRegistry(batchScenes);
-
-        // Send character events for new characters
-        for (const [name, charData] of Object.entries(newCharacters)) {
-          if (!characterRegistry[name]) {
-            sendEvent({
-              event: "character",
-              data: { name, description: getCharacterDescription(charData) },
-            });
-          }
-        }
-
-        // Deduplicate scenes before adding to collection
-        const deduplicationResult = deduplicateScenes(
-          allScenes,
+        // Process batch using unified scene processor
+        const result = processSceneBatch({
           batchScenes,
-          request.deduplicationThreshold
-        );
-
-        // Log deduplication stats if duplicates were found
-        if (deduplicationResult.duplicates.length > 0) {
-          const stats = getDeduplicationStats(deduplicationResult);
-          console.log(
-            `[VEO] Batch ${batchNum + 1} deduplication: ` +
-              `${stats.duplicateCount} duplicates removed ` +
-              `(${(stats.removalRate * 100).toFixed(1)}% removal rate, ` +
-              `avg similarity: ${(stats.averageSimilarity * 100).toFixed(1)}%)`
-          );
-
-          // Log first few duplicate reasons for debugging
-          deduplicationResult.similarities.slice(0, 3).forEach((sim) => {
-            console.log(`  - ${sim.reason}`);
-          });
-        }
-
-        // Update state
-        characterRegistry = { ...characterRegistry, ...newCharacters };
-        allScenes = [...allScenes, ...deduplicationResult.unique];
-
-        // Update progress (convert to string format for legacy compatibility)
-        const stringCharacters: Record<string, string> = {};
-        for (const [n, c] of Object.entries(newCharacters)) {
-          stringCharacters[n] = getCharacterDescription(c);
-        }
-        const updatedProgress = updateProgressAfterBatch(
-          serverProgress.get(jobId)!,
-          deduplicationResult.unique,  // Use unique scenes for progress update
-          stringCharacters
-        );
-        serverProgress.set(jobId, updatedProgress);
-
-        sendEvent({
-          event: "progress",
-          data: {
-            batch: batchNum + 1,
-            total: totalBatches,
-            scenes: allScenes.length,
-            message: `Batch ${batchNum + 1} complete: ${deduplicationResult.unique.length} scenes` +
-              (deduplicationResult.duplicates.length > 0
-                ? ` (${deduplicationResult.duplicates.length} duplicates removed)`
-                : ""),
-          },
+          existingScenes: allScenes,
+          existingCharacters: characterRegistry,
+          deduplicationThreshold: request.deduplicationThreshold,
+          batchNum,
+          totalBatches,
+          jobId,
+          serverProgress,
+          sendEvent,
+          logPrefix: "[VEO]",
         });
+
+        // Update state with processed results
+        allScenes = result.scenes;
+        characterRegistry = result.characterRegistry;
       }
 
       // Delay between batches (except for last batch)
       if (batchNum < totalBatches - 1) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
       }
     } catch (err) {
       const error = err as GeminiApiError;
-      const errorType = mapErrorToType(error);
+      const errorResult = handleAPIError(error, `Batch ${batchNum + 1}/${totalBatches} failed`);
       const errorMessage = formatErrorMessage(error, `Batch ${batchNum + 1}/${totalBatches} failed`);
 
       // Log detailed error for debugging
       logger.error("VEO Batch Error", {
         batch: batchNum + 1,
         totalBatches,
-        type: errorType,
+        type: errorResult.type,
         status: error.status,
         message: error.message,
         apiError: error.response?.error?.message,
@@ -502,9 +476,9 @@ async function runScriptToScenesHybrid(
       sendEvent({
         event: "error",
         data: {
-          type: errorType,
+          type: mapToVeoErrorType(errorResult.type),
           message: errorMessage,
-          retryable: errorType === "GEMINI_RATE_LIMIT" || errorType === "TIMEOUT" || errorType === "NETWORK_ERROR",
+          retryable: errorResult.retryable,
           // Include debug info in dev mode
           ...(isDev && {
             debug: {
@@ -557,8 +531,8 @@ async function runUrlToScenesDirect(
   const startTime = Date.now();
 
   // Calculate time-based batches
-  // Each scene is ~8 seconds, so batch covers batchSize * 8 seconds of video
-  const secondsPerScene = 8;
+  // Each scene is ~DEFAULT_SECONDS_PER_SCENE seconds, so batch covers batchSize * DEFAULT_SECONDS_PER_SCENE seconds of video
+  const secondsPerScene = DEFAULT_SECONDS_PER_SCENE;
   const secondsPerBatch = request.batchSize * secondsPerScene;
   const totalBatches = Math.max(1, Math.ceil(videoDurationSeconds / secondsPerBatch));
 
@@ -772,86 +746,40 @@ async function runUrlToScenesDirect(
       const batchScenes = parseGeminiResponse(response);
 
       if (Array.isArray(batchScenes)) {
-        // Extract new characters
-        const newCharacters = extractCharacterRegistry(batchScenes);
-
-        // Send character events for new characters
-        for (const [name, charData] of Object.entries(newCharacters)) {
-          if (!characterRegistry[name]) {
-            sendEvent({
-              event: "character",
-              data: { name, description: getCharacterDescription(charData) },
-            });
-          }
-        }
-
-        // Deduplicate scenes before adding to collection
-        const deduplicationResult = deduplicateScenes(
-          allScenes,
+        // Process batch using unified scene processor
+        const result = processSceneBatch({
           batchScenes,
-          request.deduplicationThreshold
-        );
-
-        // Log deduplication stats if duplicates were found
-        if (deduplicationResult.duplicates.length > 0) {
-          const stats = getDeduplicationStats(deduplicationResult);
-          console.log(
-            `[VEO Direct] Batch ${batchNum + 1} deduplication: ` +
-              `${stats.duplicateCount} duplicates removed ` +
-              `(${(stats.removalRate * 100).toFixed(1)}% removal rate, ` +
-              `avg similarity: ${(stats.averageSimilarity * 100).toFixed(1)}%)`
-          );
-
-          // Log first few duplicate reasons for debugging
-          deduplicationResult.similarities.slice(0, 3).forEach((sim) => {
-            console.log(`  - ${sim.reason}`);
-          });
-        }
-
-        // Update state
-        characterRegistry = { ...characterRegistry, ...newCharacters };
-        allScenes = [...allScenes, ...deduplicationResult.unique];
-
-        // Update progress (convert to string format for legacy compatibility)
-        const stringCharacters: Record<string, string> = {};
-        for (const [n, c] of Object.entries(newCharacters)) {
-          stringCharacters[n] = getCharacterDescription(c);
-        }
-        const updatedProgress = updateProgressAfterBatch(
-          serverProgress.get(jobId)!,
-          deduplicationResult.unique,  // Use unique scenes for progress update
-          stringCharacters
-        );
-        serverProgress.set(jobId, updatedProgress);
-
-        sendEvent({
-          event: "progress",
-          data: {
-            batch: batchNum + 1,
-            total: totalBatches,
-            scenes: allScenes.length,
-            message: `Batch ${batchNum + 1} complete: ${deduplicationResult.unique.length} scenes from ${directBatchInfo.startTime}-${directBatchInfo.endTime}` +
-              (deduplicationResult.duplicates.length > 0
-                ? ` (${deduplicationResult.duplicates.length} duplicates removed)`
-                : ""),
-          },
+          existingScenes: allScenes,
+          existingCharacters: characterRegistry,
+          deduplicationThreshold: request.deduplicationThreshold,
+          batchNum,
+          totalBatches,
+          jobId,
+          serverProgress,
+          sendEvent,
+          logPrefix: "[VEO Direct]",
+          timeRange: `${directBatchInfo.startTime}-${directBatchInfo.endTime}`,
         });
+
+        // Update state with processed results
+        allScenes = result.scenes;
+        characterRegistry = result.characterRegistry;
       }
 
       // Delay between batches (except for last batch)
       if (batchNum < totalBatches - 1) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
       }
     } catch (err) {
       const error = err as GeminiApiError;
-      const errorType = mapErrorToType(error);
+      const errorResult = handleAPIError(error, `Direct batch ${batchNum + 1}/${totalBatches} failed`);
       const errorMessage = formatErrorMessage(error, `Direct batch ${batchNum + 1}/${totalBatches} failed`);
 
       // Log detailed error for debugging
       logger.error("VEO Direct Batch Error", {
         batch: batchNum + 1,
         totalBatches,
-        type: errorType,
+        type: errorResult.type,
         status: error.status,
         message: error.message,
         apiError: error.response?.error?.message,
@@ -867,9 +795,9 @@ async function runUrlToScenesDirect(
       sendEvent({
         event: "error",
         data: {
-          type: errorType,
+          type: mapToVeoErrorType(errorResult.type),
           message: errorMessage,
-          retryable: errorType === "GEMINI_RATE_LIMIT" || errorType === "TIMEOUT" || errorType === "NETWORK_ERROR",
+          retryable: errorResult.retryable,
           // Include debug info in dev mode
           ...(isDev && {
             debug: {
@@ -1023,7 +951,7 @@ export async function POST(request: NextRequest) {
         } catch {
           clearInterval(keepAliveInterval);
         }
-      }, 15000);
+      }, SSE_KEEPALIVE_INTERVAL_MS);
 
       const sendEvent = (event: VeoSSEEvent) => {
         try {
@@ -1120,7 +1048,7 @@ export async function POST(request: NextRequest) {
           if (veoRequest.mode === "direct") {
             // Calculate scene count from YouTube duration
             if (veoRequest.autoSceneCount && youtubeDurationSeconds > 0) {
-              const calculatedCount = Math.ceil(youtubeDurationSeconds / VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE);
+              const calculatedCount = Math.ceil(youtubeDurationSeconds / DEFAULT_SECONDS_PER_SCENE);
               effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
 
               const durationFormatted = `${Math.floor(youtubeDurationSeconds / 60)}m ${youtubeDurationSeconds % 60}s`;
@@ -1130,7 +1058,7 @@ export async function POST(request: NextRequest) {
                   batch: 0,
                   total: 0,
                   scenes: 0,
-                  message: `Video duration: ${durationFormatted}. Auto-calculated ${effectiveSceneCount} scenes (~${VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE}s/scene)`
+                  message: `Video duration: ${durationFormatted}. Auto-calculated ${effectiveSceneCount} scenes (~${DEFAULT_SECONDS_PER_SCENE}s/scene)`
                 },
               });
             } else if (youtubeDurationSeconds === 0) {
@@ -1148,8 +1076,8 @@ export async function POST(request: NextRequest) {
                   message: `Could not determine video duration. Using ${effectiveSceneCount} scenes.`
                 },
               });
-              // Estimate ~5 minutes for unknown duration
-              youtubeDurationSeconds = 300;
+              // Estimate fallback duration for unknown duration
+              youtubeDurationSeconds = FALLBACK_VIDEO_DURATION_SECONDS;
             }
 
             sendEvent({
@@ -1276,7 +1204,7 @@ export async function POST(request: NextRequest) {
               }
 
               if (durationSeconds > 0) {
-                const calculatedCount = Math.ceil(durationSeconds / VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE);
+                const calculatedCount = Math.ceil(durationSeconds / DEFAULT_SECONDS_PER_SCENE);
                 effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
 
                 const durationFormatted = `${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s`;
@@ -1286,7 +1214,7 @@ export async function POST(request: NextRequest) {
                     batch: 0,
                     total: 0,
                     scenes: 0,
-                    message: `Video duration: ${durationFormatted} (from ${durationSource}). Auto-calculated ${effectiveSceneCount} scenes (~${VEO_CONFIG.DEFAULT_SECONDS_PER_SCENE}s/scene)`
+                    message: `Video duration: ${durationFormatted} (from ${durationSource}). Auto-calculated ${effectiveSceneCount} scenes (~${DEFAULT_SECONDS_PER_SCENE}s/scene)`
                   },
                 });
 
@@ -1501,7 +1429,7 @@ export async function POST(request: NextRequest) {
 
           // Calculate batch count based on mode
           const batchCount = veoRequest.mode === "direct"
-            ? Math.ceil(youtubeDurationSeconds / (veoRequest.batchSize * 8))
+            ? Math.ceil(youtubeDurationSeconds / (veoRequest.batchSize * DEFAULT_SECONDS_PER_SCENE))
             : Math.ceil(effectiveSceneCount / veoRequest.batchSize);
 
           // Build summary
@@ -1602,12 +1530,12 @@ export async function POST(request: NextRequest) {
         }
       } catch (err) {
         const error = err as GeminiApiError;
-        const errorType = mapErrorToType(error);
+        const errorResult = handleAPIError(error, "VEO generation failed");
         const errorMessage = formatErrorMessage(error, "VEO generation failed");
 
         // Log detailed error for debugging
         logger.error("VEO API Error", {
-          type: errorType,
+          type: errorResult.type,
           status: error.status,
           message: error.message,
           response: error.response,
@@ -1619,9 +1547,9 @@ export async function POST(request: NextRequest) {
         sendEvent({
           event: "error",
           data: {
-            type: errorType,
+            type: mapToVeoErrorType(errorResult.type),
             message: errorMessage,
-            retryable: errorType !== "GEMINI_API_ERROR",
+            retryable: errorResult.retryable,
             // Include debug info in dev mode
             ...(isDev && {
               debug: {
