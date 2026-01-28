@@ -91,6 +91,39 @@ export interface Scene {
 
   // === Platform Hints (NEW) ===
   platformHints?: PlatformHints;
+
+  // ============================================================================
+  // VEO 3 PROMPTING GUIDE - Enhanced Scene Fields
+  // ============================================================================
+
+  // === VEO 3: Audio System ===
+  audio?: AudioSpec;
+
+  // === VEO 3: Dialogue System ===
+  dialogue?: DialogueSpec[];
+  textOverlayPrevention?: TextOverlayPrevention;
+
+  // === VEO 3: Enhanced Camera ===
+  enhancedCamera?: EnhancedCameraPosition;
+  movementQuality?: MovementQuality;
+  physicsAwareness?: PhysicsSpec;
+
+  // === VEO 3: Expression Control ===
+  expressionControl?: ExpressionControl;
+  emotionalArc?: EmotionalArc;
+  sceneProgression?: SceneProgression;
+
+  // === VEO 3: Advanced Composition ===
+  lensEffects?: LensEffects;
+  colorGrading?: ColorGrading;
+  advancedLighting?: AdvancedLighting;
+  advancedComposition?: AdvancedComposition;
+
+  // === VEO 3: Platform & Quality ===
+  platformFormat?: PlatformFormat;
+  selfieSpec?: SelfieSpec;
+  shotSize?: ShotSize;
+  qualityScore?: PromptQualityScore;
 }
 
 // ============================================================================
@@ -724,4 +757,629 @@ export interface PlatformHints {
     model?: "gen2" | "gen3";
     motion?: number;              // 1-10
   };
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Audio System
+// ============================================================================
+
+/**
+ * Environmental audio specification for ambient sounds
+ * Prevents audio hallucinations by explicitly specifying expected sounds
+ */
+export interface EnvironmentalAudio {
+  ambiance: string;           // "busy city street", "quiet forest", "kitchen ambiance"
+  intensity: "subtle" | "moderate" | "prominent";
+  spatialPosition?: string;   // "surrounding", "distant left", "close right"
+}
+
+/**
+ * Music specification for background music
+ */
+export interface MusicSpec {
+  mood: string;               // "tense", "uplifting", "melancholic", "energetic"
+  genre?: string;             // "cinematic orchestral", "lo-fi beats", "jazz piano"
+  volume: "background" | "prominent" | "featured";
+  tempo?: "slow" | "moderate" | "fast";
+  instruments?: string;       // "strings and piano", "acoustic guitar"
+}
+
+/**
+ * Sound effect synchronized to action
+ */
+export interface SoundEffect {
+  sound: string;              // "footsteps on gravel", "door slamming"
+  trigger: string;            // "as character walks", "when entering room"
+  intensity?: "subtle" | "moderate" | "prominent";
+}
+
+/**
+ * Audio hallucination prevention specification
+ * Explicitly specify what SHOULD and should NOT be heard
+ */
+export interface AudioHallucinationPrevention {
+  expectedAmbient: string[];      // ["quiet office", "AC hum", "keyboard typing"]
+  expectedEffects: string[];      // ["marker squeak", "paper rustling"]
+  preventedSounds: string[];      // ["audience laughter", "applause", "background music"]
+  roomTone?: "quiet" | "moderate" | "busy";
+  acoustics?: "intimate" | "room" | "hall" | "outdoor";
+}
+
+/**
+ * Complete audio specification for VEO 3
+ */
+export interface AudioSpec {
+  environmental?: EnvironmentalAudio;
+  music?: MusicSpec;
+  soundEffects?: SoundEffect[];
+  hallucinationPrevention?: AudioHallucinationPrevention;
+  negations?: string[];       // ["unwanted laughter", "applause", "crowd noise"]
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Dialogue System
+// ============================================================================
+
+/**
+ * Dialogue specification with VEO 3 colon format
+ * Uses "Character says: 'dialogue'" syntax to prevent subtitles
+ */
+export interface DialogueSpec {
+  character: string;          // Character name
+  line: string;               // The dialogue text (max 12-15 words for 8-sec rule)
+  delivery?: string;          // "whispered", "shouted", "with conviction"
+  phonetic?: string;          // For mispronunciation fixes: "foh-fur" for "Fofur"
+  emotion?: string;           // "warm enthusiasm", "menacing intensity"
+  timing?: "start" | "middle" | "end";  // When in scene dialogue occurs
+}
+
+/**
+ * Text overlay prevention settings
+ */
+export interface TextOverlayPrevention {
+  noSubtitles: boolean;
+  noOnScreenText: boolean;
+  noCaptions: boolean;
+  noWatermarks: boolean;
+  method?: "colon-format" | "explicit-negation" | "multiple-negatives";
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Enhanced Camera System
+// ============================================================================
+
+/**
+ * Camera height options
+ */
+export type CameraHeight = "ground-level" | "eye-level" | "overhead" | "aerial";
+
+/**
+ * Camera distance options
+ */
+export type CameraDistance = "intimate" | "close" | "medium" | "far" | "extreme";
+
+/**
+ * Enhanced camera position with VEO 3 "(thats where the camera is)" syntax
+ */
+export interface EnhancedCameraPosition {
+  type: CameraMovement["type"];
+  direction?: CameraMovement["direction"];
+  intensity?: CameraMovement["intensity"];
+
+  // VEO 3: Precise positioning with "(thats where the camera is)" syntax
+  position?: string;          // "at counter level", "behind interviewer"
+  height?: CameraHeight;
+  distance?: CameraDistance;
+
+  // VEO 3: Timing controls
+  movementTiming?: {
+    startAt?: number;         // Seconds into scene
+    duration?: number;        // Duration of movement
+    easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+  };
+
+  // Generate "(thats where the camera is)" phrase
+  positionPhrase?: string;    // Full phrase for prompt injection
+}
+
+/**
+ * Movement quality keywords for natural motion
+ */
+export type MovementQuality =
+  | "natural"
+  | "fluid"
+  | "graceful"
+  | "energetic"
+  | "dynamic"
+  | "deliberate"
+  | "swift"
+  | "slow-motion"
+  | "mechanical"
+  | "confident";
+
+/**
+ * Physics specifications for realistic movement
+ */
+export interface PhysicsSpec {
+  enabled: boolean;
+  gravity?: "normal" | "low" | "zero" | "heavy";
+  materialBehavior?: {
+    fabric?: "flowing" | "stiff" | "billowing";
+    hair?: "static" | "windswept" | "bouncing";
+    liquid?: "splashing" | "dripping" | "pouring";
+    smoke?: "rising wisps" | "dispersing naturally";
+  };
+  constraints?: {
+    gravity: boolean;           // "realistic physics governing all actions"
+    fluidDynamics: boolean;     // "natural fluid dynamics"
+    momentum: boolean;          // "authentic momentum conservation"
+    weight: boolean;            // "proper weight and balance"
+    materialBehavior: boolean;  // "realistic material behavior"
+  };
+  customPhysics?: string;       // Custom physics description
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Expression Control
+// ============================================================================
+
+/**
+ * Micro-expression types for natural, non-model-face expressions
+ */
+export interface MicroExpression {
+  type: "eye-twitch" | "lip-quiver" | "brow-furrow" | "nostril-flare" | "jaw-tighten" | "custom";
+  customDescription?: string;
+  intensity: "barely-visible" | "subtle" | "noticeable";
+  timing?: "start" | "middle" | "end" | "throughout";
+}
+
+/**
+ * Eye movement and behavior
+ */
+export interface EyeMovement {
+  direction?: "up" | "down" | "left" | "right" | "camera" | "away";
+  behavior?: "narrow" | "squint" | "wide" | "darting" | "focused";
+  description?: string;       // "eyes squint thoughtfully"
+}
+
+/**
+ * Body language specification
+ */
+export interface BodyLanguage {
+  posture?: "upright" | "slouched" | "leaning" | "rigid" | "relaxed";
+  stance?: "open" | "closed" | "defensive" | "confident";
+  gesture?: string;           // "gestures toward charts", "crosses arms"
+}
+
+/**
+ * Complete expression control for anti-model-face technique
+ */
+export interface ExpressionControl {
+  primary: string;            // Main emotion: "confident", "nervous"
+  microExpressions?: MicroExpression[];
+  eyeMovement?: EyeMovement;
+  bodyLanguage?: BodyLanguage;
+  antiModelFace?: boolean;    // Prevent flat "model face" look
+  asymmetry?: boolean;        // Natural, unstaged expression with slight asymmetry
+}
+
+/**
+ * Emotional arc for "This Then That" progression
+ */
+export interface EmotionalArc {
+  startState: string;         // "calm and composed", "confused"
+  middleState?: string;       // "gradually becoming confident"
+  endState: string;           // "overwhelmed with joy", "satisfied accomplishment"
+  transitionType?: "gradual" | "sudden" | "building";
+  beats?: string[];           // Intermediate emotional beats
+}
+
+/**
+ * Scene progression for emotional/action sequences within single scene
+ */
+export interface SceneProgression {
+  emotionalProgression?: EmotionalArc;
+
+  // Action sequence within scene
+  actionProgression?: {
+    start: string;           // "hesitates at door"
+    middle?: string;         // "takes deep breath"
+    end: string;             // "pushes open with resolve"
+  };
+
+  // Camera progression within scene
+  cameraProgression?: {
+    start: string;           // "wide establishing"
+    transition?: string;     // "at 3-second mark"
+    end: string;             // "close-up on expression"
+  };
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Advanced Composition
+// ============================================================================
+
+/**
+ * Lens types for different visual effects
+ */
+export type LensType =
+  | "standard"
+  | "wide-angle"
+  | "telephoto"
+  | "macro"
+  | "fish-eye"
+  | "anamorphic";
+
+/**
+ * Lens effects specification
+ */
+export interface LensEffects {
+  type?: LensType;
+  depthOfField?: "shallow" | "medium" | "deep" | "rack-focus" | "soft-focus";
+  aperture?: string;              // "f/1.4", "f/2.8", "f/8"
+  bokehStyle?: "smooth" | "busy" | "swirly" | "hexagonal" | "creamy";
+  focalLength?: string;           // "24mm", "50mm", "85mm", "200mm"
+  distortion?: "none" | "barrel" | "pincushion";
+  flare?: boolean;                // Enable lens flare
+  flareStyle?: "anamorphic" | "circular" | "natural" | "jj-abrams";
+}
+
+/**
+ * Color palette types
+ */
+export type ColorPaletteType =
+  | "auto"
+  | "monochromatic"
+  | "vibrant"
+  | "pastel"
+  | "desaturated"
+  | "sepia"
+  | "cool-blue"
+  | "warm-orange"
+  | "teal-orange"      // Hollywood blockbuster
+  | "noir";            // Black and white
+
+/**
+ * Color grading specification
+ */
+export interface ColorGrading {
+  palette?: ColorPaletteType;
+
+  // Split toning
+  shadowColor?: string;           // Hex color for shadows: "#1a3a5c"
+  highlightColor?: string;        // Hex color for highlights: "#d4a574"
+
+  // Adjustments
+  saturation?: "muted" | "normal" | "punchy" | "oversaturated";
+  contrast?: "low" | "medium" | "high" | "extreme";
+
+  // Selective color
+  selectiveColorEmphasis?: string; // "red rose", "blue eyes"
+
+  // Film emulation
+  filmEmulation?: string;          // "Kodak Portra 400", "Fuji Superia", "Kodachrome"
+}
+
+/**
+ * Professional lighting setups
+ */
+export type LightingSetup =
+  | "auto"
+  | "three-point"
+  | "rembrandt"
+  | "butterfly"
+  | "split"
+  | "chiaroscuro"
+  | "golden-hour"
+  | "blue-hour"
+  | "neon"
+  | "natural"
+  | "practical";
+
+/**
+ * Advanced lighting specification
+ */
+export interface AdvancedLighting {
+  setup?: LightingSetup;
+
+  // Key light
+  keyLight?: {
+    direction: "left" | "right" | "front" | "back" | "above";
+    temperature?: "warm" | "neutral" | "cool";
+    temperatureKelvin?: number;   // 3200K (tungsten), 5600K (daylight)
+    intensity?: "soft" | "medium" | "hard";
+  };
+
+  // Fill light
+  fillLight?: {
+    ratio?: string;               // "2:1", "4:1", "8:1"
+    direction?: string;
+  };
+
+  // Accent/rim light
+  rimLight?: boolean;
+  rimLightColor?: string;
+
+  // Atmospheric
+  atmosphericEffects?: ("haze" | "fog" | "dust" | "rain" | "snow")[];
+  practicalLights?: string[];     // ["desk lamp", "neon sign", "candles"]
+}
+
+/**
+ * Composition rules/techniques
+ */
+export type CompositionRule =
+  | "rule-of-thirds"
+  | "golden-ratio"
+  | "symmetry"
+  | "leading-lines"
+  | "frame-within-frame"
+  | "negative-space"
+  | "diagonal"
+  | "centered";
+
+/**
+ * Advanced composition specification
+ */
+export interface AdvancedComposition {
+  rule?: CompositionRule;
+  subjectPlacement?: string;      // "left third intersection", "center"
+  foregroundElement?: string;     // Element in foreground for depth
+  backgroundElement?: string;     // Background detail
+  depthLayers?: number;           // 2-5 layers of depth
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Platform & Format
+// ============================================================================
+
+/**
+ * Enhanced platform format specification
+ */
+export interface PlatformFormat {
+  aspectRatio: "16:9" | "9:16" | "1:1" | "4:5" | "21:9";
+  platform?: "youtube" | "tiktok" | "instagram-reels" | "youtube-shorts" | "instagram-feed";
+  safeZones?: {
+    top?: number;             // Pixels to keep clear
+    bottom?: number;
+  };
+  optimization?: string[];    // ["mobile-optimized", "hook-driven"]
+}
+
+/**
+ * Selfie/POV mode specification
+ */
+export interface SelfieSpec {
+  enabled: boolean;
+  armPosition?: "extended" | "close";
+  armVisible?: boolean;           // "arm is clearly visible in frame"
+  cameraShake?: "none" | "subtle" | "natural";
+  eyeContact?: boolean;           // "occasionally looking into camera"
+  filmLike?: boolean;             // "slightly grainy, looks very film-like"
+  closingGesture?: string;        // "thumbs up", "wave", "smile"
+}
+
+/**
+ * Vertical video workaround specification
+ */
+export interface VerticalVideoSpec {
+  nativeAspect: "16:9";           // Veo 3 only supports 16:9
+  targetAspect: "9:16";
+  reframeTool?: "luma-reframe" | "manual";
+  safeZones: {
+    top: number;
+    bottom: number;
+  };
+}
+
+/**
+ * Subtitle prevention methods
+ */
+export interface SubtitlePrevention {
+  method: "colon-format" | "explicit-negation" | "multiple-negatives";
+  // Method implementations:
+  // 1. Colon format: "says: 'dialogue'" (prevents subtitles)
+  // 2. Explicit: Add "(no subtitles)"
+  // 3. Multiple: "No subtitles. No subtitles! No on-screen text."
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Quality Systems
+// ============================================================================
+
+/**
+ * Multi-shot sequence planning with shot size hierarchy
+ */
+export type ShotSize =
+  | "EWS"   // Extreme Wide Shot - environmental context
+  | "WS"    // Wide Shot - full body + environment
+  | "MWS"   // Medium Wide Shot - character + context
+  | "MS"    // Medium Shot - waist up (standard)
+  | "MCU"   // Medium Close-Up - focused attention
+  | "CU"    // Close-Up - emotional intensity
+  | "ECU";  // Extreme Close-Up - critical detail
+
+/**
+ * Multi-shot sequence specification
+ */
+export interface MultiShotSequence {
+  shotSize: ShotSize;
+  purpose: string;           // "establish environment", "show emotion"
+  duration?: number;         // seconds
+  transitionTo?: ShotSize;   // next shot in sequence
+}
+
+/**
+ * Pre-generation quality checklist (10-point system)
+ */
+export interface QualityChecklist {
+  characterDescription: boolean;    // 15+ attributes
+  sceneDetails: boolean;            // 10+ elements
+  cameraSpecs: boolean;             // shot/angle/movement
+  lighting: boolean;                // professional setup
+  audioDesign: boolean;             // hallucination prevention
+  dialogue: boolean;                // tone + 8-sec rule
+  negativePrompts: boolean;         // comprehensive
+  technicalSpecs: boolean;          // broadcast quality
+  brandCompliance?: boolean;        // optional
+  eightSecondOptimization: boolean; // dialogue timing
+}
+
+/**
+ * Quality level based on checklist completion
+ */
+export type QualityLevel = "master" | "professional" | "intermediate" | "basic";
+
+/**
+ * Prompt quality scoring
+ */
+export interface PromptQualityScore {
+  level: QualityLevel;
+
+  // Component scores (1-10)
+  scores: {
+    characterDescription: number;  // 1-10 (need 15+ attributes for 10)
+    sceneDetails: number;          // 1-10 (need 10+ elements for 10)
+    cameraSpecs: number;           // 1-10
+    lightingSetup: number;         // 1-10
+    audioDesign: number;           // 1-10
+    dialogueQuality: number;       // 1-10
+    negativePrompts: number;       // 1-10
+  };
+
+  // Prediction
+  overallScore: number;            // 0-100
+  generationSuccessRate: number;   // 0-100%
+  optimizationSuggestions: string[];
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Enhanced Character Template
+// ============================================================================
+
+/**
+ * Enhanced character template with 15+ attributes for consistency
+ */
+export interface EnhancedCharacterTemplate {
+  // Identity (3 attributes)
+  name: string;
+  ethnicity: string;
+  gender: string;
+
+  // Physical (5 attributes)
+  age: string;
+  build: string;              // "slim", "athletic", "stocky"
+  height: string;             // "tall", "medium", "short"
+  hairDetails: string;        // color, style, length, texture
+  eyeDetails: string;         // color, shape, expression
+
+  // Facial (3 attributes)
+  facialFeatures: string;     // shape, distinctive marks
+  facialHair?: string;
+  skinDetails?: string;
+
+  // Clothing (2 attributes)
+  clothingDescription: string;  // full outfit details
+  accessories?: string;
+
+  // Behavioral (2+ attributes)
+  postureMannerisms: string;
+  emotionalBaseline: string;
+  distinctiveMarks?: string;
+  voiceCharacteristics?: string;
+}
+
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Template System
+// ============================================================================
+
+/**
+ * Template categories for battle-tested prompts
+ */
+export type TemplateCategory =
+  | "pov-vlog"           // Travel, lifestyle vlogs
+  | "asmr"               // Macro, sensory content
+  | "street-interview"   // Viral social media
+  | "corporate"          // Professional presentations
+  | "educational"        // Learning content
+  | "product-demo"       // Commercial showcases
+  | "horror-thriller"    // Genre-specific
+  | "comedy"             // Entertainment
+  | "documentary"        // Authentic storytelling
+  | "fashion-beauty"     // Glamour content
+  | "sports-action"      // Dynamic movement
+  | "cinematic-drama";   // Narrative film
+
+/**
+ * Prompt template with placeholders
+ */
+export interface PromptTemplate {
+  id: string;
+  category: TemplateCategory;
+  name: string;
+  description: string;
+
+  // Template structure with placeholders
+  template: {
+    subject: string;       // With [PLACEHOLDERS]
+    action: string;
+    scene: string;
+    style: string;
+    dialogue?: string;
+    sounds: string;
+    technical: string;
+  };
+
+  // Required variables
+  variables: {
+    name: string;
+    description: string;
+    examples: string[];
+  }[];
+
+  // Best practices for this template
+  tips: string[];
+}
+
+// ============================================================================
+// VEO 3 Settings (Veo3Options)
+// ============================================================================
+
+/**
+ * VEO 3 generation options to pass to prompt builders
+ */
+export interface Veo3Options {
+  // Audio System
+  enableAudio?: boolean;
+  audioPreset?: "minimal" | "standard" | "cinematic";
+
+  // Dialogue System
+  enableDialogue?: boolean;
+  colonFormat?: boolean;        // Use "says: 'dialogue'" format
+  eightSecondRule?: boolean;    // Enforce 12-15 word limit
+
+  // Camera System
+  enableCameraPositioning?: boolean;
+  cameraPositionSyntax?: boolean; // Use "(thats where the camera is)" syntax
+
+  // Expression System
+  enableExpressionControl?: boolean;
+  antiModelFace?: boolean;
+  emotionalArc?: boolean;
+
+  // Advanced Composition
+  enableAdvancedComposition?: boolean;
+  colorPalette?: ColorPaletteType;
+  lightingSetup?: LightingSetup;
+
+  // Quality Systems
+  enableQualityChecklist?: boolean;
+  targetQualityLevel?: QualityLevel;
+
+  // Platform Optimization
+  platform?: PlatformFormat["platform"];
+  selfieMode?: boolean;
+
+  // Template
+  templateId?: string;
 }

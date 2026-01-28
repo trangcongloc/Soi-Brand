@@ -183,6 +183,259 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
               </details>
             )}
 
+            {/* VEO 3: Audio System */}
+            {scene.audio && (
+              <details className={styles.styleDetails}>
+                <summary>{lang.veo.result.sceneCard.audio || "Audio"}</summary>
+                <div className={styles.specGrid}>
+                  {scene.audio.environmental && (
+                    <div>
+                      <span className={styles.specLabel}>
+                        {lang.veo.result.sceneCard.audioAmbient || "Ambient"}
+                      </span>
+                      <span>{scene.audio.environmental.ambiance}</span>
+                    </div>
+                  )}
+                  {scene.audio.music && (
+                    <div>
+                      <span className={styles.specLabel}>
+                        {lang.veo.result.sceneCard.audioMusic || "Music"}
+                      </span>
+                      <span>{scene.audio.music.mood} {scene.audio.music.genre || ""}</span>
+                    </div>
+                  )}
+                  {scene.audio.soundEffects && scene.audio.soundEffects.length > 0 && (
+                    <div>
+                      <span className={styles.specLabel}>
+                        {lang.veo.result.sceneCard.audioSFX || "Sound FX"}
+                      </span>
+                      <span>{scene.audio.soundEffects.map(s => s.sound).join(", ")}</span>
+                    </div>
+                  )}
+                  {scene.audio.negations && scene.audio.negations.length > 0 && (
+                    <div>
+                      <span className={styles.specLabel}>
+                        {lang.veo.result.sceneCard.audioNegations || "Prevent"}
+                      </span>
+                      <span>{scene.audio.negations.join(", ")}</span>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {/* VEO 3: Dialogue System */}
+            {scene.dialogue && scene.dialogue.length > 0 && (
+              <details className={styles.styleDetails}>
+                <summary>{lang.veo.result.sceneCard.dialogue || "Dialogue"}</summary>
+                <div className={styles.specGrid}>
+                  {scene.dialogue.map((d, idx) => (
+                    <div key={idx}>
+                      <span className={styles.specLabel}>{d.character}</span>
+                      <span>&quot;{d.line}&quot; {d.delivery ? `(${d.delivery})` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {/* VEO 3: Enhanced Camera */}
+            {scene.enhancedCamera && (
+              <details className={styles.styleDetails}>
+                <summary>{lang.veo.result.sceneCard.cameraPosition || "Camera Position"}</summary>
+                <div className={styles.specGrid}>
+                  {scene.enhancedCamera.position && (
+                    <div>
+                      <span className={styles.specLabel}>Position</span>
+                      <span>{scene.enhancedCamera.position}</span>
+                    </div>
+                  )}
+                  {scene.enhancedCamera.height && (
+                    <div>
+                      <span className={styles.specLabel}>Height</span>
+                      <span>{scene.enhancedCamera.height}</span>
+                    </div>
+                  )}
+                  {scene.enhancedCamera.distance && (
+                    <div>
+                      <span className={styles.specLabel}>Distance</span>
+                      <span>{scene.enhancedCamera.distance}</span>
+                    </div>
+                  )}
+                  {scene.enhancedCamera.positionPhrase && (
+                    <div>
+                      <span className={styles.specLabel}>VEO 3 Phrase</span>
+                      <span style={{ fontStyle: "italic", fontSize: "var(--fs-xs)" }}>
+                        {scene.enhancedCamera.positionPhrase}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {/* VEO 3: Expression Control */}
+            {scene.expressionControl && (
+              <details className={styles.styleDetails}>
+                <summary>{lang.veo.result.sceneCard.expression || "Expression"}</summary>
+                <div className={styles.specGrid}>
+                  <div>
+                    <span className={styles.specLabel}>Primary</span>
+                    <span>{scene.expressionControl.primary}</span>
+                  </div>
+                  {scene.expressionControl.eyeMovement && (
+                    <div>
+                      <span className={styles.specLabel}>Eyes</span>
+                      <span>
+                        {scene.expressionControl.eyeMovement.direction || ""}{" "}
+                        {scene.expressionControl.eyeMovement.behavior || ""}
+                      </span>
+                    </div>
+                  )}
+                  {scene.expressionControl.bodyLanguage && (
+                    <div>
+                      <span className={styles.specLabel}>Body</span>
+                      <span>
+                        {scene.expressionControl.bodyLanguage.posture || ""}{" "}
+                        {scene.expressionControl.bodyLanguage.gesture || ""}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {/* VEO 3: Emotional Arc */}
+            {scene.emotionalArc && (
+              <details className={styles.styleDetails}>
+                <summary>{lang.veo.result.sceneCard.emotionalArc || "Emotional Arc"}</summary>
+                <div className={styles.specGrid}>
+                  <div>
+                    <span className={styles.specLabel}>Start</span>
+                    <span>{scene.emotionalArc.startState}</span>
+                  </div>
+                  {scene.emotionalArc.middleState && (
+                    <div>
+                      <span className={styles.specLabel}>Middle</span>
+                      <span>{scene.emotionalArc.middleState}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className={styles.specLabel}>End</span>
+                    <span>{scene.emotionalArc.endState}</span>
+                  </div>
+                  {scene.emotionalArc.transitionType && (
+                    <div>
+                      <span className={styles.specLabel}>Transition</span>
+                      <span>{scene.emotionalArc.transitionType}</span>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {/* VEO 3: Advanced Composition */}
+            {(scene.lensEffects || scene.colorGrading || scene.advancedLighting) && (
+              <details className={styles.styleDetails}>
+                <summary>{lang.veo.result.sceneCard.advancedComposition || "Advanced Composition"}</summary>
+                <div className={styles.specGrid}>
+                  {scene.lensEffects && (
+                    <>
+                      {scene.lensEffects.type && (
+                        <div>
+                          <span className={styles.specLabel}>Lens</span>
+                          <span>{scene.lensEffects.type}</span>
+                        </div>
+                      )}
+                      {scene.lensEffects.depthOfField && (
+                        <div>
+                          <span className={styles.specLabel}>DOF</span>
+                          <span>{scene.lensEffects.depthOfField}</span>
+                        </div>
+                      )}
+                      {scene.lensEffects.aperture && (
+                        <div>
+                          <span className={styles.specLabel}>Aperture</span>
+                          <span>{scene.lensEffects.aperture}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {scene.colorGrading && (
+                    <>
+                      {scene.colorGrading.palette && (
+                        <div>
+                          <span className={styles.specLabel}>Palette</span>
+                          <span>{scene.colorGrading.palette}</span>
+                        </div>
+                      )}
+                      {scene.colorGrading.filmEmulation && (
+                        <div>
+                          <span className={styles.specLabel}>Film</span>
+                          <span>{scene.colorGrading.filmEmulation}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {scene.advancedLighting && (
+                    <>
+                      {scene.advancedLighting.setup && (
+                        <div>
+                          <span className={styles.specLabel}>Lighting</span>
+                          <span>{scene.advancedLighting.setup}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {/* VEO 3: Shot Size */}
+            {scene.shotSize && (
+              <div className={styles.detailSection}>
+                <h4>{lang.veo.result.sceneCard.shotSize || "Shot Size"}</h4>
+                <p>{scene.shotSize}</p>
+              </div>
+            )}
+
+            {/* VEO 3: Movement Quality */}
+            {scene.movementQuality && (
+              <div className={styles.detailSection}>
+                <h4>{lang.veo.result.sceneCard.movementQuality || "Movement"}</h4>
+                <p>{scene.movementQuality}</p>
+              </div>
+            )}
+
+            {/* VEO 3: Quality Score */}
+            {scene.qualityScore && (
+              <details className={styles.styleDetails}>
+                <summary>
+                  {lang.veo.result.sceneCard.qualityScore || "Quality Score"}: {scene.qualityScore.overallScore}/100
+                </summary>
+                <div className={styles.specGrid}>
+                  <div>
+                    <span className={styles.specLabel}>Level</span>
+                    <span style={{ textTransform: "capitalize" }}>{scene.qualityScore.level}</span>
+                  </div>
+                  <div>
+                    <span className={styles.specLabel}>Success Rate</span>
+                    <span>{scene.qualityScore.generationSuccessRate}%</span>
+                  </div>
+                  {scene.qualityScore.optimizationSuggestions && scene.qualityScore.optimizationSuggestions.length > 0 && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <span className={styles.specLabel}>Suggestions</span>
+                      <ul style={{ margin: "4px 0", paddingLeft: "16px", fontSize: "var(--fs-xs)" }}>
+                        {scene.qualityScore.optimizationSuggestions.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
             {/* Prompt */}
             <div className={styles.promptSection}>
               <div className={styles.promptHeader}>

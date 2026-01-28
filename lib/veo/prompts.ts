@@ -1082,6 +1082,357 @@ export function getMediaTypeInstructions(mediaType: "image" | "video" = "video")
   return mediaType === "image" ? IMAGE_GENERATION_INSTRUCTIONS : VIDEO_GENERATION_INSTRUCTIONS;
 }
 
+// ============================================================================
+// VEO 3 PROMPTING GUIDE - Advanced Instructions
+// ============================================================================
+
+/**
+ * VEO 3 Audio System Instructions
+ * Prevents audio hallucinations and enables precise sound design
+ */
+export const VEO3_AUDIO_INSTRUCTIONS = `
+=== VEO 3 AUDIO SYSTEM ===
+AUDIO DESIGN (CRITICAL for preventing hallucinations):
+
+1. ENVIRONMENTAL AUDIO - Specify location-appropriate ambient sounds:
+   - Kitchen: "sizzling pan, knife chopping, boiling water, kitchen ambiance"
+   - Forest: "birds chirping, leaves rustling, gentle wind, natural ambiance"
+   - Office: "keyboard typing, air conditioning hum, paper rustling, professional atmosphere"
+   - City Street: "traffic noise, distant horns, footsteps on pavement, urban ambiance"
+
+2. MUSIC SPECIFICATION - Use structured music descriptions:
+   - Format: "[mood] [genre] [instruments], [tempo/energy]"
+   - Example: "Uplifting orchestral music with strings, building to inspiring crescendo"
+   - Volume levels: "background" (subtle), "prominent" (clear), "featured" (primary)
+
+3. SOUND EFFECTS - Always name exact sounds with triggers:
+   - Format: "[sound] as/when [trigger]"
+   - Example: "Footsteps on gravel as character walks"
+   - Example: "Door slamming shut, echoing in hallway"
+
+4. AUDIO HALLUCINATION PREVENTION (CRITICAL):
+   - ALWAYS specify what SHOULD be heard
+   - EXPLICITLY name what should NOT be heard
+   - Add negations: "No unwanted laughter, no applause, no crowd noise"
+   - Include room tone: "professional atmosphere", "natural room tone"
+
+OUTPUT: Populate the 'audio' field with:
+- environmental: {ambiance, intensity, spatialPosition}
+- music: {mood, genre, volume}
+- soundEffects: [{sound, trigger}]
+- negations: ["unwanted sounds to prevent"]
+=== END VEO 3 AUDIO SYSTEM ===`;
+
+/**
+ * VEO 3 Dialogue System Instructions
+ * Uses colon format to prevent subtitles
+ */
+export const VEO3_DIALOGUE_INSTRUCTIONS = `
+=== VEO 3 DIALOGUE SYSTEM ===
+DIALOGUE FORMATTING (CRITICAL for subtitle prevention):
+
+1. THE COLON RULE (Prevents subtitles):
+   ✅ CORRECT: "[Character] [action] and says: '[dialogue]' [tone]"
+   ❌ WRONG: "[Character] says '[dialogue]'" (triggers subtitles)
+
+   Example: "Chef Marco turns to camera and says: 'The secret is in the freshness.' with warm, passionate enthusiasm"
+
+2. THE 8-SECOND RULE (MANDATORY):
+   - Maximum: 12-15 words per line
+   - Maximum: 20-25 syllables per line
+   - This ensures dialogue fits within scene duration
+
+3. PHONETIC SPELLING (For mispronunciation fixes):
+   - Use phonetic versions for unusual names
+   - Example: "foh-fur's" instead of "Fofur's"
+
+4. SPECIFY TONE/DELIVERY:
+   - Add emotional delivery: "with conviction", "whispered softly", "shouted angrily"
+   - Include body language cues: "leaning forward", "eyes narrowing"
+
+5. MULTIPLE SPEAKERS:
+   - Name each character explicitly before their line
+   - Separate speakers with clear transitions
+
+OUTPUT: Populate the 'dialogue' array with:
+- character: Character name
+- line: The dialogue text (max 12-15 words)
+- delivery: Tone/manner of speaking
+- phonetic: Phonetic spelling if needed
+- emotion: Emotional state
+=== END VEO 3 DIALOGUE SYSTEM ===`;
+
+/**
+ * VEO 3 Camera Positioning Instructions
+ * Uses "(thats where the camera is)" syntax for precise positioning
+ */
+export const VEO3_CAMERA_INSTRUCTIONS = `
+=== VEO 3 CAMERA POSITIONING ===
+CAMERA POSITION SYNTAX (CRITICAL breakthrough for precise positioning):
+
+1. THE KEY PHRASE: "(thats where the camera is)"
+   This phrase triggers camera-aware processing in Veo 3.
+
+   Format: "[Shot type] with camera positioned at [location] (thats where the camera is)"
+
+2. EXAMPLES:
+   - "Close-up shot with camera positioned at counter level (thats where the camera is)"
+   - "POV shot from camera at eye level (thats where the camera is) as character explains"
+   - "Over-shoulder view, camera behind interviewer (thats where the camera is)"
+   - "Low angle shot, camera on ground looking up (thats where the camera is)"
+   - "Aerial view, camera positioned directly overhead (thats where the camera is)"
+
+3. CAMERA HEIGHT OPTIONS:
+   - ground-level: Dramatic low perspective
+   - eye-level: Natural, neutral view
+   - overhead: Looking down on subject
+   - aerial: High drone-style shot
+
+4. CAMERA DISTANCE OPTIONS:
+   - intimate: Extreme close-up, personal
+   - close: Head and shoulders
+   - medium: Waist up
+   - far: Full body with environment
+   - extreme: Wide establishing shot
+
+5. MOVEMENT QUALITY KEYWORDS:
+   - "natural movement" - Default, realistic motion
+   - "fluid movement" - Smooth, continuous
+   - "energetic movement" - Dynamic, high-energy
+   - "deliberate movement" - Thoughtful, careful
+   - "graceful movement" - Smooth, flowing
+
+OUTPUT: Populate 'enhancedCamera' with position details and include
+positionPhrase containing "(thats where the camera is)" syntax.
+=== END VEO 3 CAMERA POSITIONING ===`;
+
+/**
+ * VEO 3 Expression Control Instructions
+ * Anti-model-face technique for natural expressions
+ */
+export const VEO3_EXPRESSION_INSTRUCTIONS = `
+=== VEO 3 EXPRESSION CONTROL ===
+EXPRESSION DESIGN (Anti-model-face technique):
+
+1. MICRO-EXPRESSIONS (Eliminate flat "model face"):
+   - "Eyes squint thoughtfully, head tilts as if processing"
+   - "Furrow between brows deepens, momentary pause before speaking"
+   - "Small step forward, chin raised slightly, eyes focused and direct"
+
+2. EYE MOVEMENT:
+   Direction meanings:
+   - up: Thinking, remembering
+   - down: Sad, submissive, ashamed
+   - left/right: Considering, processing
+   - camera: Direct address, connection
+   - away: Avoiding, uncomfortable
+
+   Behavior keywords:
+   - narrow: Suspicious, focused
+   - squint: Thinking, sun in eyes
+   - wide: Surprise, fear, excitement
+   - darting: Nervous, searching
+   - focused: Determined, intent
+
+3. BODY LANGUAGE:
+   Posture meanings:
+   - upright: Confident, alert
+   - slouched: Defeated, tired, casual
+   - leaning: Interested, engaged
+   - rigid: Tense, uncomfortable
+   - relaxed: At ease, comfortable
+
+4. EMOTIONAL ARC ("This Then That" progression):
+   Structure emotion progression within scene:
+   - Start state: "confused and uncertain"
+   - Transition: "gradually becoming confident"
+   - End state: "satisfied smile of accomplishment"
+
+5. ANTI-MODEL-FACE TECHNIQUE:
+   Add natural imperfection:
+   "Natural, unstaged expression with slight asymmetry, avoiding perfect model pose, authentic human moment"
+
+OUTPUT: Populate 'expressionControl' and 'emotionalArc' fields.
+=== END VEO 3 EXPRESSION CONTROL ===`;
+
+/**
+ * VEO 3 Advanced Composition Instructions
+ * Lens effects, color grading, professional lighting
+ */
+export const VEO3_COMPOSITION_INSTRUCTIONS = `
+=== VEO 3 ADVANCED COMPOSITION ===
+PROFESSIONAL COMPOSITION ELEMENTS:
+
+1. LENS EFFECTS:
+   - Depth of Field: "shallow" (isolates subject), "deep" (everything sharp)
+   - Aperture feel: "f/1.4 creamy bokeh", "f/2.8 smooth background"
+   - Lens types: standard, wide-angle, telephoto, macro, anamorphic
+   - Lens flare: "anamorphic horizontal streaks", "natural sun flare"
+
+2. COLOR GRADING:
+   Palette types:
+   - teal-orange: Hollywood blockbuster look
+   - desaturated: Serious, dramatic tone
+   - warm-orange: Comfort, intimacy
+   - cool-blue: Modern, tech, mysterious
+   - noir: Black and white classic
+
+   Split-toning syntax:
+   "Split-toning with shadows pushed toward blue (#1a3a5c) and highlights toward warm amber (#d4a574)"
+
+3. PROFESSIONAL LIGHTING SETUPS:
+   - three-point: "Warm key light from left, fill softening shadows, rim lighting separating subject"
+   - rembrandt: "Triangle of light on cheek, dramatic portrait lighting"
+   - golden-hour: "Warm, nostalgic atmospheric light through windows, long shadows"
+   - chiaroscuro: "Stark contrasts, film noir dramatic shadows, single light source"
+   - neon: "Vibrant magenta/cyan reflecting off wet surfaces, cyberpunk aesthetic"
+
+4. COMPOSITION RULES:
+   - rule-of-thirds: "Subject at left third intersection point"
+   - leading-lines: "Drawing eye from foreground to subject"
+   - frame-within-frame: "Using doorway to focus attention"
+   - symmetry: "Formal, balanced aesthetic"
+   - negative-space: "Isolating subject with empty space"
+
+OUTPUT: Populate 'lensEffects', 'colorGrading', 'advancedLighting', 'advancedComposition' fields.
+=== END VEO 3 ADVANCED COMPOSITION ===`;
+
+/**
+ * VEO 3 Physics-Aware Prompting Instructions
+ */
+export const VEO3_PHYSICS_INSTRUCTIONS = `
+=== VEO 3 PHYSICS-AWARE PROMPTING ===
+REALISTIC PHYSICS KEYWORDS:
+
+1. GENERAL PHYSICS:
+   - "realistic physics governing all actions"
+   - "natural fluid dynamics"
+   - "authentic momentum conservation"
+   - "proper weight and balance"
+   - "realistic material behavior"
+
+2. MATERIAL BEHAVIOR:
+   Fabric: "flowing", "stiff", "billowing"
+   Hair: "static", "windswept", "bouncing"
+   Liquid: "splashing", "dripping", "pouring"
+   Smoke: "rising wisps", "dispersing naturally"
+
+3. GRAVITY OPTIONS:
+   - normal: Standard Earth gravity
+   - low: Slow-motion floating effect
+   - zero: Weightless environment
+   - heavy: Exaggerated weight
+
+OUTPUT: Populate 'physicsAwareness' field with enabled constraints.
+=== END VEO 3 PHYSICS-AWARE PROMPTING ===`;
+
+/**
+ * VEO 3 Selfie/POV Mode Instructions
+ */
+export const VEO3_SELFIE_INSTRUCTIONS = `
+=== VEO 3 SELFIE/POV MODE ===
+PROVEN SELFIE FORMULA:
+
+"A selfie video of [CHARACTER] [ACTIVITY].
+[He/She] holds camera at arm's length.
+[His/Her] arm is clearly visible in frame.
+Occasionally looking into camera before [SPECIFIC_ACTION].
+The image is slightly grainy, looks very film-like.
+[He/She] says: '[DIALOGUE]' [TONE].
+Ends with [GESTURE]."
+
+CRITICAL ELEMENTS:
+1. Start phrase: "A selfie video of..."
+2. Arm visibility: "arm is clearly visible in the frame"
+3. Natural eye contact: "occasionally looking into the camera before..."
+4. Film-like quality: "slightly grainy, looks very film-like"
+5. Closing gesture: thumbs up, wave, smile, etc.
+
+CAMERA SHAKE OPTIONS:
+- none: Perfectly stable (less authentic)
+- subtle: Slight natural movement
+- natural: Authentic handheld feel
+
+OUTPUT: Populate 'selfieSpec' field when selfie mode is enabled.
+=== END VEO 3 SELFIE/POV MODE ===`;
+
+/**
+ * VEO 3 Quality Checklist Instructions
+ */
+export const VEO3_QUALITY_CHECKLIST = `
+=== VEO 3 PRE-GENERATION QUALITY CHECKLIST ===
+10-POINT VALIDATION SYSTEM:
+
+□ 1. CHARACTER DESCRIPTION: 15+ specific physical attributes
+□ 2. SCENE DETAILS: 10+ environmental elements
+□ 3. CAMERA SPECS: Shot type, angle, movement defined
+□ 4. LIGHTING: Professional setup specified
+□ 5. AUDIO DESIGN: Hallucination prevention (explicit sounds)
+□ 6. DIALOGUE: Colon format + tone + 8-second rule
+□ 7. NEGATIVE PROMPTS: Comprehensive exclusions
+□ 8. TECHNICAL SPECS: Broadcast quality settings
+□ 9. BRAND COMPLIANCE: (if applicable)
+□ 10. DURATION: Optimized for 8-second format
+
+QUALITY LEVELS:
+- Master (8-10 items): 95%+ generation success
+- Professional (6-8 items): 85%+ generation success
+- Intermediate (4-6 items): 70%+ generation success
+- Basic (1-3 items): Poor results
+
+TARGET: Master level for all commercial content.
+=== END VEO 3 QUALITY CHECKLIST ===`;
+
+/**
+ * Build VEO 3 enhanced instructions based on options
+ */
+export function buildVeo3Instructions(options: {
+  enableAudio?: boolean;
+  enableDialogue?: boolean;
+  enableCameraPositioning?: boolean;
+  enableExpressionControl?: boolean;
+  enableAdvancedComposition?: boolean;
+  enablePhysics?: boolean;
+  selfieMode?: boolean;
+  enableQualityChecklist?: boolean;
+}): string {
+  let instructions = "";
+
+  if (options.enableAudio) {
+    instructions += VEO3_AUDIO_INSTRUCTIONS + "\n";
+  }
+
+  if (options.enableDialogue) {
+    instructions += VEO3_DIALOGUE_INSTRUCTIONS + "\n";
+  }
+
+  if (options.enableCameraPositioning) {
+    instructions += VEO3_CAMERA_INSTRUCTIONS + "\n";
+  }
+
+  if (options.enableExpressionControl) {
+    instructions += VEO3_EXPRESSION_INSTRUCTIONS + "\n";
+  }
+
+  if (options.enableAdvancedComposition) {
+    instructions += VEO3_COMPOSITION_INSTRUCTIONS + "\n";
+  }
+
+  if (options.enablePhysics) {
+    instructions += VEO3_PHYSICS_INSTRUCTIONS + "\n";
+  }
+
+  if (options.selfieMode) {
+    instructions += VEO3_SELFIE_INSTRUCTIONS + "\n";
+  }
+
+  if (options.enableQualityChecklist) {
+    instructions += VEO3_QUALITY_CHECKLIST + "\n";
+  }
+
+  return instructions;
+}
+
 /**
  * Base user prompt for scene analysis
  * NOTE: Text overlay exclusions moved to negativePrompt field for better separation
@@ -1205,6 +1556,131 @@ const RESPONSE_SCHEMA = {
           },
         },
       },
+      // VEO 3 Audio System
+      audio: {
+        type: "OBJECT",
+        description: "VEO 3 Audio System - environmental audio, music, SFX, hallucination prevention",
+        properties: {
+          environmental: {
+            type: "OBJECT",
+            properties: {
+              ambiance: { type: "STRING", description: "Location-appropriate ambient sounds" },
+              intensity: { type: "STRING", description: "subtle, moderate, or prominent" },
+              spatialPosition: { type: "STRING", description: "surrounding, distant left, close right" },
+            },
+          },
+          music: {
+            type: "OBJECT",
+            properties: {
+              mood: { type: "STRING", description: "Mood of music (tense, uplifting, melancholic)" },
+              genre: { type: "STRING", description: "Music genre (orchestral, jazz, lo-fi)" },
+              volume: { type: "STRING", description: "background, prominent, or featured" },
+            },
+          },
+          soundEffects: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                sound: { type: "STRING", description: "Sound description" },
+                trigger: { type: "STRING", description: "What triggers this sound" },
+              },
+            },
+            description: "Specific sound effects synchronized to actions",
+          },
+          negations: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description: "Sounds to prevent (audio hallucination prevention)",
+          },
+        },
+      },
+      // VEO 3 Dialogue System
+      dialogue: {
+        type: "ARRAY",
+        description: "VEO 3 Dialogue System - colon format for subtitle prevention",
+        items: {
+          type: "OBJECT",
+          properties: {
+            character: { type: "STRING", description: "Character name" },
+            line: { type: "STRING", description: "Dialogue text (max 12-15 words for 8-sec rule)" },
+            delivery: { type: "STRING", description: "Manner of delivery (whispered, shouted, with conviction)" },
+            emotion: { type: "STRING", description: "Emotional state during dialogue" },
+          },
+        },
+      },
+      // VEO 3 Enhanced Camera
+      enhancedCamera: {
+        type: "OBJECT",
+        description: "VEO 3 Camera positioning with '(thats where the camera is)' syntax",
+        properties: {
+          position: { type: "STRING", description: "Camera position description (at counter level, behind interviewer)" },
+          height: { type: "STRING", description: "ground-level, eye-level, overhead, aerial" },
+          distance: { type: "STRING", description: "intimate, close, medium, far, extreme" },
+          positionPhrase: { type: "STRING", description: "Full phrase with '(thats where the camera is)' syntax" },
+        },
+      },
+      // VEO 3 Expression Control
+      expressionControl: {
+        type: "OBJECT",
+        description: "VEO 3 Expression Control - anti-model-face technique",
+        properties: {
+          primary: { type: "STRING", description: "Primary emotion" },
+          microExpressions: { type: "STRING", description: "Subtle facial movements" },
+          eyeMovement: { type: "STRING", description: "Eye direction and behavior" },
+          bodyLanguage: { type: "STRING", description: "Posture and gestures" },
+          antiModelFace: { type: "BOOLEAN", description: "Enable natural, non-model expression" },
+        },
+      },
+      // VEO 3 Emotional Arc
+      emotionalArc: {
+        type: "OBJECT",
+        description: "VEO 3 'This Then That' emotional progression",
+        properties: {
+          startState: { type: "STRING", description: "Initial emotional state" },
+          middleState: { type: "STRING", description: "Transition state (optional)" },
+          endState: { type: "STRING", description: "Final emotional state" },
+          transitionType: { type: "STRING", description: "gradual, sudden, or building" },
+        },
+      },
+      // VEO 3 Advanced Composition
+      lensEffects: {
+        type: "OBJECT",
+        description: "VEO 3 Lens Effects - DOF, bokeh, flare",
+        properties: {
+          type: { type: "STRING", description: "Lens type: standard, wide-angle, telephoto, macro, anamorphic" },
+          depthOfField: { type: "STRING", description: "shallow, medium, deep, rack-focus" },
+          aperture: { type: "STRING", description: "Aperture value (f/1.4, f/2.8)" },
+          bokehStyle: { type: "STRING", description: "smooth, creamy, hexagonal" },
+          flare: { type: "BOOLEAN", description: "Enable lens flare" },
+        },
+      },
+      colorGrading: {
+        type: "OBJECT",
+        description: "VEO 3 Color Grading - palette, split-toning",
+        properties: {
+          palette: { type: "STRING", description: "Color palette: teal-orange, desaturated, warm-orange, cool-blue, noir" },
+          shadowColor: { type: "STRING", description: "Hex color for shadows" },
+          highlightColor: { type: "STRING", description: "Hex color for highlights" },
+          saturation: { type: "STRING", description: "muted, normal, punchy" },
+          filmEmulation: { type: "STRING", description: "Film stock emulation (Kodak Portra, Fuji Superia)" },
+        },
+      },
+      advancedLighting: {
+        type: "OBJECT",
+        description: "VEO 3 Professional Lighting Setups",
+        properties: {
+          setup: { type: "STRING", description: "Lighting setup: three-point, rembrandt, golden-hour, chiaroscuro, neon" },
+          keyLight: { type: "STRING", description: "Key light description" },
+          fillLight: { type: "STRING", description: "Fill light description" },
+          rimLight: { type: "BOOLEAN", description: "Enable rim lighting" },
+          atmosphericEffects: { type: "STRING", description: "haze, fog, dust, rain" },
+        },
+      },
+      // VEO 3 Shot Size
+      shotSize: { type: "STRING", description: "Shot size hierarchy: EWS, WS, MWS, MS, MCU, CU, ECU" },
+      // VEO 3 Movement Quality
+      movementQuality: { type: "STRING", description: "Movement quality: natural, fluid, graceful, energetic, deliberate" },
     },
     required: [
       "description",

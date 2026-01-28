@@ -3,7 +3,17 @@
 import { useState, useCallback, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { isValidYouTubeUrl, VeoMode, VoiceLanguage, VeoWorkflow, getDefaultNegativePrompt, MediaType } from "@/lib/veo";
+import {
+  isValidYouTubeUrl,
+  VeoMode,
+  VoiceLanguage,
+  VeoWorkflow,
+  getDefaultNegativePrompt,
+  MediaType,
+  ColorPaletteType,
+  LightingSetup,
+  Veo3Options,
+} from "@/lib/veo";
 import styles from "./VeoForm.module.css";
 
 interface VeoFormProps {
@@ -23,6 +33,8 @@ interface VeoFormProps {
     negativePrompt?: string;
     extractColorProfile: boolean;
     mediaType: MediaType;
+    // VEO 3 Options
+    veo3Options?: Veo3Options;
   }) => void;
   onError: (msg: string) => void;
   isLoading: boolean;
@@ -59,6 +71,16 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   const [extractColorProfile, setExtractColorProfile] = useState(true);
   const [mediaType, setMediaType] = useState<MediaType>("video");
   const [showSettings, setShowSettings] = useState(false);
+
+  // VEO 3 Prompting Guide Options
+  const [enableAudio, setEnableAudio] = useState(true);
+  const [enableDialogue, setEnableDialogue] = useState(true);
+  const [enableCameraPositioning, setEnableCameraPositioning] = useState(true);
+  const [enableExpressionControl, setEnableExpressionControl] = useState(true);
+  const [enableAdvancedComposition, setEnableAdvancedComposition] = useState(true);
+  const [colorPalette, setColorPalette] = useState<ColorPaletteType>("auto");
+  const [lightingSetup, setLightingSetup] = useState<LightingSetup>("auto");
+  const [selfieMode, setSelfieMode] = useState(false);
 
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,11 +124,29 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     [onError, lang]
   );
 
+  // Build VEO 3 options object
+  const buildVeo3Options = useCallback((): Veo3Options => ({
+    enableAudio,
+    enableDialogue,
+    colonFormat: enableDialogue, // Use colon format when dialogue is enabled
+    eightSecondRule: enableDialogue,
+    enableCameraPositioning,
+    cameraPositionSyntax: enableCameraPositioning,
+    enableExpressionControl,
+    antiModelFace: enableExpressionControl,
+    emotionalArc: enableExpressionControl,
+    enableAdvancedComposition,
+    colorPalette,
+    lightingSetup,
+    selfieMode,
+  }), [enableAudio, enableDialogue, enableCameraPositioning, enableExpressionControl, enableAdvancedComposition, colorPalette, lightingSetup, selfieMode]);
+
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
 
       const trimmedNegativePrompt = negativePrompt.trim();
+      const veo3Options = buildVeo3Options();
 
       if (workflow === "url-to-script" || workflow === "url-to-scenes") {
         if (!url.trim()) {
@@ -133,6 +173,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: workflow === "url-to-scenes" ? extractColorProfile : false,
           mediaType,
+          veo3Options,
         });
       } else {
         if (!scriptText.trim()) {
@@ -152,10 +193,11 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: false, // No video to extract from
           mediaType,
+          veo3Options,
         });
       }
     },
-    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, useVideoChapters, deduplicationThreshold, negativePrompt, extractColorProfile, mediaType, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, useVideoChapters, deduplicationThreshold, negativePrompt, extractColorProfile, mediaType, buildVeo3Options, onError, onSubmit, lang]
   );
 
   const voiceOptions: VoiceLanguage[] = [
@@ -707,6 +749,194 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
                           {lang.veo.settings.negativePromptDesc}
                         </span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: VEO 3 Advanced Features */}
+                  <div className={styles.settingsSection}>
+                    <h4 className={styles.sectionTitle}>
+                      {lang.veo.settings.veo3Title || "VEO 3 Advanced Features"}
+                    </h4>
+                    <div className={styles.sectionContent}>
+                      {/* Audio System Toggle */}
+                      <div className={styles.settingItem}>
+                        <div className={styles.settingHeader}>
+                          <label htmlFor="enable-audio">
+                            {lang.veo.settings.veo3Audio || "Audio System"}
+                          </label>
+                          <label className={styles.toggleSwitch}>
+                            <input
+                              id="enable-audio"
+                              type="checkbox"
+                              checked={enableAudio}
+                              onChange={(e) => setEnableAudio(e.target.checked)}
+                              disabled={isLoading}
+                            />
+                            <span className={styles.toggleSlider}></span>
+                          </label>
+                        </div>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.veo3AudioDesc || "Generate environmental audio, music, and sound effects"}
+                        </span>
+                      </div>
+
+                      {/* Dialogue System Toggle */}
+                      <div className={styles.settingItem}>
+                        <div className={styles.settingHeader}>
+                          <label htmlFor="enable-dialogue">
+                            {lang.veo.settings.veo3Dialogue || "Dialogue System"}
+                          </label>
+                          <label className={styles.toggleSwitch}>
+                            <input
+                              id="enable-dialogue"
+                              type="checkbox"
+                              checked={enableDialogue}
+                              onChange={(e) => setEnableDialogue(e.target.checked)}
+                              disabled={isLoading}
+                            />
+                            <span className={styles.toggleSlider}></span>
+                          </label>
+                        </div>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.veo3DialogueDesc || "Use colon format for dialogue (prevents subtitles)"}
+                        </span>
+                      </div>
+
+                      {/* Camera Positioning Toggle */}
+                      <div className={styles.settingItem}>
+                        <div className={styles.settingHeader}>
+                          <label htmlFor="enable-camera">
+                            {lang.veo.settings.veo3Camera || "Camera Positioning"}
+                          </label>
+                          <label className={styles.toggleSwitch}>
+                            <input
+                              id="enable-camera"
+                              type="checkbox"
+                              checked={enableCameraPositioning}
+                              onChange={(e) => setEnableCameraPositioning(e.target.checked)}
+                              disabled={isLoading}
+                            />
+                            <span className={styles.toggleSlider}></span>
+                          </label>
+                        </div>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.veo3CameraDesc || "Use '(thats where the camera is)' syntax for precise positioning"}
+                        </span>
+                      </div>
+
+                      {/* Expression Control Toggle */}
+                      <div className={styles.settingItem}>
+                        <div className={styles.settingHeader}>
+                          <label htmlFor="enable-expression">
+                            {lang.veo.settings.veo3Expression || "Expression Control"}
+                          </label>
+                          <label className={styles.toggleSwitch}>
+                            <input
+                              id="enable-expression"
+                              type="checkbox"
+                              checked={enableExpressionControl}
+                              onChange={(e) => setEnableExpressionControl(e.target.checked)}
+                              disabled={isLoading}
+                            />
+                            <span className={styles.toggleSlider}></span>
+                          </label>
+                        </div>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.veo3ExpressionDesc || "Anti-model-face technique with micro-expressions and emotional arcs"}
+                        </span>
+                      </div>
+
+                      {/* Selfie Mode Toggle */}
+                      <div className={styles.settingItem}>
+                        <div className={styles.settingHeader}>
+                          <label htmlFor="enable-selfie">
+                            {lang.veo.settings.veo3Selfie || "Selfie/POV Mode"}
+                          </label>
+                          <label className={styles.toggleSwitch}>
+                            <input
+                              id="enable-selfie"
+                              type="checkbox"
+                              checked={selfieMode}
+                              onChange={(e) => setSelfieMode(e.target.checked)}
+                              disabled={isLoading}
+                            />
+                            <span className={styles.toggleSlider}></span>
+                          </label>
+                        </div>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.veo3SelfieDesc || "Generate authentic selfie-style footage with visible arm"}
+                        </span>
+                      </div>
+
+                      {/* Advanced Composition Toggle */}
+                      <div className={styles.settingItem}>
+                        <div className={styles.settingHeader}>
+                          <label htmlFor="enable-composition">
+                            {lang.veo.settings.veo3Composition || "Advanced Composition"}
+                          </label>
+                          <label className={styles.toggleSwitch}>
+                            <input
+                              id="enable-composition"
+                              type="checkbox"
+                              checked={enableAdvancedComposition}
+                              onChange={(e) => setEnableAdvancedComposition(e.target.checked)}
+                              disabled={isLoading}
+                            />
+                            <span className={styles.toggleSlider}></span>
+                          </label>
+                        </div>
+                        <span className={styles.settingDesc}>
+                          {lang.veo.settings.veo3CompositionDesc || "Lens effects, color grading, and professional lighting"}
+                        </span>
+                      </div>
+
+                      {/* Color Palette Selector (only when advanced composition is enabled) */}
+                      {enableAdvancedComposition && (
+                        <div className={styles.settingItem}>
+                          <label htmlFor="color-palette">
+                            {lang.veo.settings.veo3ColorPalette || "Color Palette"}
+                          </label>
+                          <select
+                            id="color-palette"
+                            value={colorPalette}
+                            onChange={(e) => setColorPalette(e.target.value as ColorPaletteType)}
+                            disabled={isLoading}
+                          >
+                            <option value="auto">{lang.veo.settings.veo3ColorAuto || "Auto (from video)"}</option>
+                            <option value="teal-orange">{lang.veo.settings.veo3ColorTealOrange || "Teal-Orange (Hollywood)"}</option>
+                            <option value="warm-orange">{lang.veo.settings.veo3ColorWarm || "Warm Orange"}</option>
+                            <option value="cool-blue">{lang.veo.settings.veo3ColorCool || "Cool Blue"}</option>
+                            <option value="desaturated">{lang.veo.settings.veo3ColorDesaturated || "Desaturated"}</option>
+                            <option value="vibrant">{lang.veo.settings.veo3ColorVibrant || "Vibrant"}</option>
+                            <option value="pastel">{lang.veo.settings.veo3ColorPastel || "Pastel"}</option>
+                            <option value="noir">{lang.veo.settings.veo3ColorNoir || "Noir (B&W)"}</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Lighting Setup Selector (only when advanced composition is enabled) */}
+                      {enableAdvancedComposition && (
+                        <div className={styles.settingItem}>
+                          <label htmlFor="lighting-setup">
+                            {lang.veo.settings.veo3Lighting || "Lighting Setup"}
+                          </label>
+                          <select
+                            id="lighting-setup"
+                            value={lightingSetup}
+                            onChange={(e) => setLightingSetup(e.target.value as LightingSetup)}
+                            disabled={isLoading}
+                          >
+                            <option value="auto">{lang.veo.settings.veo3LightingAuto || "Auto (from video)"}</option>
+                            <option value="three-point">{lang.veo.settings.veo3LightingThreePoint || "Three-Point"}</option>
+                            <option value="rembrandt">{lang.veo.settings.veo3LightingRembrandt || "Rembrandt"}</option>
+                            <option value="golden-hour">{lang.veo.settings.veo3LightingGoldenHour || "Golden Hour"}</option>
+                            <option value="blue-hour">{lang.veo.settings.veo3LightingBlueHour || "Blue Hour"}</option>
+                            <option value="chiaroscuro">{lang.veo.settings.veo3LightingChiaroscuro || "Chiaroscuro"}</option>
+                            <option value="neon">{lang.veo.settings.veo3LightingNeon || "Neon"}</option>
+                            <option value="natural">{lang.veo.settings.veo3LightingNatural || "Natural"}</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>

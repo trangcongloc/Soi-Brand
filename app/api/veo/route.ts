@@ -100,6 +100,28 @@ function formatErrorMessage(error: GeminiApiError, context?: string): string {
   return parts.join(" ") || "An unexpected error occurred";
 }
 
+// VEO 3 Options schema
+const Veo3OptionsSchema = z.object({
+  enableAudio: z.boolean().optional(),
+  audioPreset: z.enum(["minimal", "standard", "cinematic"]).optional(),
+  enableDialogue: z.boolean().optional(),
+  colonFormat: z.boolean().optional(),
+  eightSecondRule: z.boolean().optional(),
+  enableCameraPositioning: z.boolean().optional(),
+  cameraPositionSyntax: z.boolean().optional(),
+  enableExpressionControl: z.boolean().optional(),
+  antiModelFace: z.boolean().optional(),
+  emotionalArc: z.boolean().optional(),
+  enableAdvancedComposition: z.boolean().optional(),
+  colorPalette: z.enum(["auto", "monochromatic", "vibrant", "pastel", "desaturated", "sepia", "cool-blue", "warm-orange", "teal-orange", "noir"]).optional(),
+  lightingSetup: z.enum(["auto", "three-point", "rembrandt", "butterfly", "split", "chiaroscuro", "golden-hour", "blue-hour", "neon", "natural", "practical"]).optional(),
+  enableQualityChecklist: z.boolean().optional(),
+  targetQualityLevel: z.enum(["master", "professional", "intermediate", "basic"]).optional(),
+  platform: z.enum(["youtube", "tiktok", "instagram-reels", "youtube-shorts", "instagram-feed"]).optional(),
+  selfieMode: z.boolean().optional(),
+  templateId: z.string().optional(),
+}).optional();
+
 // Request schema validation
 const VeoRequestSchema = z.object({
   workflow: z.enum(["url-to-script", "script-to-scenes", "url-to-scenes"]),
@@ -140,6 +162,8 @@ const VeoRequestSchema = z.object({
   existingColorProfile: z.any().optional(), // For resume
   // Media type: image vs video generation
   mediaType: z.enum(["image", "video"]).default("video"),
+  // VEO 3 Prompting Guide options
+  veo3Options: Veo3OptionsSchema,
 });
 
 type VeoRequest = z.infer<typeof VeoRequestSchema>;

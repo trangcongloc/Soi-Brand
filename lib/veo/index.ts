@@ -44,7 +44,45 @@ export {
   // Phase 1: Character extraction
   buildCharacterExtractionPrompt,
   parseCharacterExtractionResponse,
+  // VEO 3 Prompting Guide instructions
+  VEO3_AUDIO_INSTRUCTIONS,
+  VEO3_DIALOGUE_INSTRUCTIONS,
+  VEO3_CAMERA_INSTRUCTIONS,
+  VEO3_EXPRESSION_INSTRUCTIONS,
+  VEO3_COMPOSITION_INSTRUCTIONS,
+  VEO3_PHYSICS_INSTRUCTIONS,
+  VEO3_SELFIE_INSTRUCTIONS,
+  VEO3_QUALITY_CHECKLIST,
+  buildVeo3Instructions,
 } from "./prompts";
+
+// VEO 3 Templates
+export {
+  TEMPLATE_REGISTRY,
+  POV_VLOG_TEMPLATE,
+  ASMR_MACRO_TEMPLATE,
+  STREET_INTERVIEW_TEMPLATE,
+  CORPORATE_TEMPLATE,
+  EDUCATIONAL_TEMPLATE,
+  HORROR_THRILLER_TEMPLATE,
+  FASHION_BEAUTY_TEMPLATE,
+  DOCUMENTARY_TEMPLATE,
+  getTemplatesByCategory,
+  getTemplateById,
+  getAvailableTemplateIds,
+  getTemplateCategories,
+  applyTemplate,
+  validateTemplateVariables,
+} from "./templates";
+
+// VEO 3 Validation & Quality Scoring
+export {
+  validateQualityChecklist,
+  getChecklistCompletionCount,
+  getQualityLevel,
+  calculatePromptQualityScore,
+  validateBatchQuality,
+} from "./validation";
 
 // Gemini API
 export {
