@@ -7,6 +7,22 @@
 
 import type { Scene } from "./types";
 
+import {
+  MIN_WORD_LENGTH_TOKENIZE,
+  SIMILARITY_MAX,
+  SIMILARITY_MIN,
+  DEFAULT_DEDUP_THRESHOLD,
+  WEIGHT_DESCRIPTION,
+  WEIGHT_CHARACTER,
+  WEIGHT_OBJECT,
+  WEIGHT_ENVIRONMENT,
+  WEIGHT_LIGHTING,
+  WEIGHT_COMPOSITION,
+  WEIGHT_PROMPT,
+  LIGHTING_FIELD_COUNT,
+  COMPOSITION_FIELD_COUNT,
+} from "./constants";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -42,7 +58,7 @@ function tokenize(text: string): string[] {
     .toLowerCase()
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
-    .filter((word) => word.length > 2); // Filter out short words
+    .filter((word) => word.length > MIN_WORD_LENGTH_TOKENIZE);
 }
 
 /**
@@ -53,8 +69,8 @@ function jaccardSimilarity(text1: string, text2: string): number {
   const tokens1 = new Set(tokenize(text1));
   const tokens2 = new Set(tokenize(text2));
 
-  if (tokens1.size === 0 && tokens2.size === 0) return 1.0;
-  if (tokens1.size === 0 || tokens2.size === 0) return 0.0;
+  if (tokens1.size === 0 && tokens2.size === 0) return SIMILARITY_MAX;
+  if (tokens1.size === 0 || tokens2.size === 0) return SIMILARITY_MIN;
 
   const intersection = new Set(Array.from(tokens1).filter((x) => tokens2.has(x)));
   const union = new Set([...Array.from(tokens1), ...Array.from(tokens2)]);
@@ -70,8 +86,8 @@ function cosineSimilarity(text1: string, text2: string): number {
   const tokens1 = tokenize(text1);
   const tokens2 = tokenize(text2);
 
-  if (tokens1.length === 0 && tokens2.length === 0) return 1.0;
-  if (tokens1.length === 0 || tokens2.length === 0) return 0.0;
+  if (tokens1.length === 0 && tokens2.length === 0) return SIMILARITY_MAX;
+  if (tokens1.length === 0 || tokens2.length === 0) return SIMILARITY_MIN;
 
   // Build word frequency maps
   const freq1 = new Map<string, number>();
@@ -97,7 +113,7 @@ function cosineSimilarity(text1: string, text2: string): number {
     magnitude2 += f2 * f2;
   }
 
-  if (magnitude1 === 0 || magnitude2 === 0) return 0.0;
+  if (magnitude1 === 0 || magnitude2 === 0) return SIMILARITY_MIN;
 
   return dotProduct / (Math.sqrt(magnitude1) * Math.sqrt(magnitude2));
 }
@@ -120,20 +136,20 @@ export function compareDescriptions(desc1: string, desc2: string): number {
  */
 export function compareCharacters(char1: string, char2: string): number {
   // Both empty = identical
-  if ((!char1 || char1.trim() === "") && (!char2 || char2.trim() === "")) return 1.0;
+  if ((!char1 || char1.trim() === "") && (!char2 || char2.trim() === "")) return SIMILARITY_MAX;
 
   // One empty, one not = completely different
-  if (!char1 || !char2) return 0.0;
+  if (!char1 || !char2) return SIMILARITY_MIN;
 
   // Exact match (e.g., "No characters" or character names)
-  if (char1.trim() === char2.trim()) return 1.0;
+  if (char1.trim() === char2.trim()) return SIMILARITY_MAX;
 
   // Check for character name overlap
   const names1 = extractCharacterNames(char1);
   const names2 = extractCharacterNames(char2);
 
-  if (names1.length === 0 && names2.length === 0) return 1.0;
-  if (names1.length === 0 || names2.length === 0) return 0.0;
+  if (names1.length === 0 && names2.length === 0) return SIMILARITY_MAX;
+  if (names1.length === 0 || names2.length === 0) return SIMILARITY_MIN;
 
   const overlap = names1.filter((name) => names2.includes(name)).length;
   const total = new Set([...names1, ...names2]).size;
@@ -157,8 +173,8 @@ function extractCharacterNames(charField: string): string[] {
  * Compare object/prop fields
  */
 export function compareObjects(obj1: string, obj2: string): number {
-  if (!obj1 || !obj2) return 0.0;
-  if (obj1.trim() === obj2.trim()) return 1.0;
+  if (!obj1 || !obj2) return SIMILARITY_MIN;
+  if (obj1.trim() === obj2.trim()) return SIMILARITY_MAX;
 
   // Use Jaccard similarity for objects (simpler check)
   return jaccardSimilarity(obj1, obj2);
@@ -168,8 +184,8 @@ export function compareObjects(obj1: string, obj2: string): number {
  * Compare environment descriptions
  */
 export function compareEnvironments(env1: string, env2: string): number {
-  if (!env1 || !env2) return 0.0;
-  if (env1.trim() === env2.trim()) return 1.0;
+  if (!env1 || !env2) return SIMILARITY_MIN;
+  if (env1.trim() === env2.trim()) return SIMILARITY_MAX;
 
   // Use cosine similarity
   return cosineSimilarity(env1, env2);
@@ -182,11 +198,11 @@ function compareLighting(
   lighting1: { mood: string; source: string; shadows: string },
   lighting2: { mood: string; source: string; shadows: string }
 ): number {
-  const moodMatch = lighting1.mood === lighting2.mood ? 1.0 : 0.0;
-  const sourceMatch = lighting1.source === lighting2.source ? 1.0 : 0.0;
-  const shadowMatch = lighting1.shadows === lighting2.shadows ? 1.0 : 0.0;
+  const moodMatch = lighting1.mood === lighting2.mood ? SIMILARITY_MAX : SIMILARITY_MIN;
+  const sourceMatch = lighting1.source === lighting2.source ? SIMILARITY_MAX : SIMILARITY_MIN;
+  const shadowMatch = lighting1.shadows === lighting2.shadows ? SIMILARITY_MAX : SIMILARITY_MIN;
 
-  return (moodMatch + sourceMatch + shadowMatch) / 3;
+  return (moodMatch + sourceMatch + shadowMatch) / LIGHTING_FIELD_COUNT;
 }
 
 /**
@@ -196,11 +212,11 @@ function compareComposition(
   comp1: { angle: string; framing: string; focus: string },
   comp2: { angle: string; framing: string; focus: string }
 ): number {
-  const angleMatch = comp1.angle === comp2.angle ? 1.0 : 0.0;
-  const framingMatch = comp1.framing === comp2.framing ? 1.0 : 0.0;
-  const focusMatch = comp1.focus === comp2.focus ? 1.0 : 0.0;
+  const angleMatch = comp1.angle === comp2.angle ? SIMILARITY_MAX : SIMILARITY_MIN;
+  const framingMatch = comp1.framing === comp2.framing ? SIMILARITY_MAX : SIMILARITY_MIN;
+  const focusMatch = comp1.focus === comp2.focus ? SIMILARITY_MAX : SIMILARITY_MIN;
 
-  return (angleMatch + framingMatch + focusMatch) / 3;
+  return (angleMatch + framingMatch + focusMatch) / COMPOSITION_FIELD_COUNT;
 }
 
 // ============================================================================
@@ -256,13 +272,13 @@ export function calculateSceneSimilarity(
 
   // Weighted average
   const similarity =
-    descSimilarity * 0.5 +
-    charSimilarity * 0.15 +
-    objSimilarity * 0.1 +
-    envSimilarity * 0.1 +
-    lightingSimilarity * 0.05 +
-    compositionSimilarity * 0.05 +
-    promptSimilarity * 0.05;
+    descSimilarity * WEIGHT_DESCRIPTION +
+    charSimilarity * WEIGHT_CHARACTER +
+    objSimilarity * WEIGHT_OBJECT +
+    envSimilarity * WEIGHT_ENVIRONMENT +
+    lightingSimilarity * WEIGHT_LIGHTING +
+    compositionSimilarity * WEIGHT_COMPOSITION +
+    promptSimilarity * WEIGHT_PROMPT;
 
   return similarity;
 }
@@ -282,7 +298,7 @@ export function calculateSceneSimilarity(
 export function deduplicateScenes(
   existingScenes: Scene[],
   newScenes: Scene[],
-  threshold: number = 0.75
+  threshold: number = DEFAULT_DEDUP_THRESHOLD
 ): DeduplicationResult {
   const unique: Scene[] = [];
   const duplicates: Scene[] = [];
@@ -348,7 +364,7 @@ export function deduplicateScenes(
  */
 export function findSimilarScenes(
   scenes: Scene[],
-  threshold: number = 0.75
+  threshold: number = DEFAULT_DEDUP_THRESHOLD
 ): SceneSimilarity[] {
   const similarities: SceneSimilarity[] = [];
 

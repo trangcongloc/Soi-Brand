@@ -298,8 +298,12 @@ OUTPUT: Return ONLY valid JSON according to the schema.
 
 COLOR IDENTIFICATION RULES:
 - Extract EXACT hex color values where possible
-- Name colors descriptively (e.g., "muted teal", "warm golden", "desaturated coral")
-- Identify usage context (skin tones, backgrounds, accents, shadows, highlights)
+- Name colors cinematically with rich mood context:
+  * Examples: "deep ocean mystery blue", "golden hour amber", "vintage warm coral", "clinical steel teal"
+  * Avoid generic names like just "blue" or "warm orange"
+  * Include emotional/atmospheric qualities in the name itself
+- Identify emotional associations (mysterious, warm, nostalgic, clinical, energetic, melancholic, hopeful, tense, intimate, epic, vintage, modern, organic, synthetic, cold)
+- Specify usage context (skin tones, backgrounds, accents, shadows, highlights)
 - Consider both foreground and background color palettes
 
 TECHNICAL ANALYSIS:
@@ -345,10 +349,15 @@ const COLOR_PROFILE_EXTRACTION_SCHEMA = {
         type: "OBJECT",
         properties: {
           hex: { type: "STRING", description: "Hex color value (e.g., '#FF5733')" },
-          name: { type: "STRING", description: "Descriptive name (e.g., 'warm coral', 'muted teal')" },
-          usage: { type: "STRING", description: "How this color is used (e.g., 'accent', 'background', 'skin tones')" },
+          name: { type: "STRING", description: "Cinematic color name with mood context (e.g., 'deep ocean mystery blue', 'golden hour amber', 'vintage warm coral', 'clinical steel teal')" },
+          moods: {
+            type: "ARRAY",
+            description: "Mood/emotion tags: mysterious, warm, clinical, nostalgic, energetic, melancholic, hopeful, tense, intimate, epic, vintage, modern, organic, synthetic, cold, professional, dramatic, playful, romantic, harsh, soft, bold, serene, ominous, luxurious",
+            items: { type: "STRING" }
+          },
+          usage: { type: "STRING", description: "How this color is used (e.g., 'accent', 'background', 'skin tones', 'shadows', 'highlights')" },
         },
-        required: ["hex", "name", "usage"],
+        required: ["hex", "name", "moods", "usage"],
       },
     },
     colorTemperature: {
@@ -544,6 +553,11 @@ function normalizeColorProfile(parsed: Record<string, unknown>): ColorProfileExt
           hex: String(colorObj.hex || "#000000"),
           name: String(colorObj.name || "unknown"),
           usage: String(colorObj.usage || "general"),
+          semanticName: String(colorObj.name || "unknown"), // Will be enriched later
+          moods: Array.isArray(colorObj.moods) ? (colorObj.moods as string[]) : [],
+          temperature: "neutral", // Will be determined by enrichment
+          psychologyNotes: undefined,
+          confidence: undefined,
         });
       }
     }
@@ -638,6 +652,33 @@ function normalizeColorProfile(parsed: Record<string, unknown>): ColorProfileExt
 }
 
 /**
+ * Enrich extracted color profile with semantic names and mood data
+ * Uses hybrid approach: Gemini names + fallback to local vocabulary
+ */
+export async function enrichExtractedProfile(
+  rawProfile: CinematicProfile
+): Promise<CinematicProfile> {
+  // Import color mapper utilities
+  const { enrichColorEntry, hasGoodSemanticName, hasGoodMoods } = await import('./colorMapper');
+
+  const enrichedColors = rawProfile.dominantColors.map(color => {
+    // Check if Gemini provided good semantic data
+    const hasGoodName = hasGoodSemanticName(color.semanticName);
+    const hasMoods = hasGoodMoods(color.moods);
+
+    // If Gemini did well, return as-is (already EnrichedColorEntry)
+    if (hasGoodName && hasMoods) {
+      return color;
+    }
+
+    // Otherwise, enrich using local vocabulary
+    return enrichColorEntry(color);
+  });
+
+  return { ...rawProfile, dominantColors: enrichedColors };
+}
+
+/**
  * Build cinematic profile context for scene generation prompt
  * This context is injected into buildScenePrompt when a color profile is available
  */
@@ -646,10 +687,20 @@ export function buildCinematicProfileContext(profile: CinematicProfile): string 
   context += `CRITICAL: Apply these EXACT color values and characteristics to ALL generated scenes.\n`;
   context += `Do NOT infer or modify these values - use them verbatim.\n\n`;
 
-  // Dominant colors
-  context += `DOMINANT COLORS (use these exact hex values):\n`;
+  // Dominant colors with semantic descriptions
+  context += `DOMINANT COLORS (apply these exact color characteristics):\n`;
+
+  // Import color mapper utility for semantic description building
+  const { buildSemanticColorDescription } = require('./colorMapper');
+
   for (const color of profile.dominantColors) {
-    context += `- ${color.hex} "${color.name}" - ${color.usage}\n`;
+    const semanticDesc = buildSemanticColorDescription(color, true);
+    context += `- ${semanticDesc} - ${color.usage}\n`;
+
+    // DEV ONLY: Add hex reference in development
+    if (process.env.NODE_ENV === 'development') {
+      context += `  [Technical reference: ${color.hex}]\n`;
+    }
   }
 
   // Color temperature
@@ -1269,16 +1320,17 @@ PROFESSIONAL COMPOSITION ELEMENTS:
    - Lens types: standard, wide-angle, telephoto, macro, anamorphic
    - Lens flare: "anamorphic horizontal streaks", "natural sun flare"
 
-2. COLOR GRADING:
+2. COLOR GRADING (use semantic color descriptions):
    Palette types:
-   - teal-orange: Hollywood blockbuster look
-   - desaturated: Serious, dramatic tone
-   - warm-orange: Comfort, intimacy
-   - cool-blue: Modern, tech, mysterious
-   - noir: Black and white classic
+   - teal-orange: "Cinematic blockbuster teal midtones with golden hour amber highlights (epic, dynamic)"
+   - warm-orange: "Intimate golden amber tones throughout (comforting, nostalgic)"
+   - cool-blue: "Deep ocean mystery blue with steel teal accents (mysterious, professional, modern)"
+   - desaturated: "Muted organic tones with lifted blacks (serious, dramatic, cinematic)"
+   - noir: "Film noir charcoal shadows with stark highlights (dramatic, classic)"
 
-   Split-toning syntax:
-   "Split-toning with shadows pushed toward blue (#1a3a5c) and highlights toward warm amber (#d4a574)"
+   Split-toning examples (use semantic names with mood context, not hex codes):
+   "Split-toning with deep ocean mystery blue shadows (mysterious, professional) and golden hour amber highlights (warm, nostalgic)"
+   "Split-toning with cyberpunk teal shadows (modern, synthetic) and neon magenta highlights (energetic, vibrant)"
 
 3. PROFESSIONAL LIGHTING SETUPS:
    - three-point: "Warm key light from left, fill softening shadows, rim lighting separating subject"

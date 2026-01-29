@@ -128,11 +128,12 @@
 }
 
 .colorName {
-  font-size: 9px;
-  color: var(--text-muted);
+  font-size: 10px;
+  color: var(--text-main);
   text-align: center;
-  line-height: 1.2;
-  max-width: 70px;
+  line-height: 1.3;
+  max-width: 90px;
+  font-weight: 500;
 }
 
 .colorUsage {
@@ -299,6 +300,95 @@
 .detailItem strong {
   color: var(--text-secondary);
   font-weight: 500;
+}
+
+/* Color Moods (for semantic color system) */
+.colorMoods {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90px;
+}
+
+.moodTag {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.8);
+  border: none;
+}
+
+/* Technical Details (expandable hex code section) */
+.technicalDetails {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.technicalDetails summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.technicalDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.technicalDetails .colorHex {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+}
+
+.technicalDetails .confidence {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+/* Color Psychology Section */
+.psychologyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.psychologyCard {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.colorDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.psychologyCard strong {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.psychologyNote {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* Mobile Responsive */

@@ -5,7 +5,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
 import { logger } from "@/lib/logger";
 import { Scene } from "@/lib/veo";
+import { findNearestCinematicColor } from "@/lib/veo/colorMapper";
 import styles from "./VeoSceneCard.module.css";
+
+// Helper functions for semantic color descriptions
+function getColorSemantic(hex: string): string {
+  const match = findNearestCinematicColor(hex);
+  return match.semanticName;
+}
+
+function getSemanticPaletteName(palette: string): string {
+  const paletteDescriptions: Record<string, string> = {
+    "teal-orange": "Hollywood blockbuster (epic, dynamic)",
+    "warm-orange": "Warm intimacy (nostalgic, comforting)",
+    "cool-blue": "Cool mystery (professional, modern)",
+    "desaturated": "Muted drama (serious, cinematic)",
+    "vibrant": "Bold energy (colorful, vibrant)",
+    "pastel": "Soft dream (delicate, gentle)",
+    "noir": "Classic noir (dramatic, stark)"
+  };
+  return paletteDescriptions[palette] || palette;
+}
 
 interface VeoSceneCardProps {
   scene: Scene;
@@ -366,13 +386,25 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
                       {scene.colorGrading.palette && (
                         <div>
                           <span className={styles.specLabel}>Palette</span>
-                          <span>{scene.colorGrading.palette}</span>
+                          <span>{getSemanticPaletteName(scene.colorGrading.palette)}</span>
                         </div>
                       )}
                       {scene.colorGrading.filmEmulation && (
                         <div>
                           <span className={styles.specLabel}>Film</span>
                           <span>{scene.colorGrading.filmEmulation}</span>
+                        </div>
+                      )}
+                      {(scene.colorGrading.shadowColor || scene.colorGrading.highlightColor) && (
+                        <div>
+                          <span className={styles.specLabel}>Split-tone</span>
+                          <span>
+                            {scene.colorGrading.shadowColor &&
+                              `${getColorSemantic(scene.colorGrading.shadowColor)} shadows`}
+                            {scene.colorGrading.shadowColor && scene.colorGrading.highlightColor && " / "}
+                            {scene.colorGrading.highlightColor &&
+                              `${getColorSemantic(scene.colorGrading.highlightColor)} highlights`}
+                          </span>
                         </div>
                       )}
                     </>

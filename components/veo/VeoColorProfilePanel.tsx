@@ -123,10 +123,27 @@ export default function VeoColorProfilePanel({
                   <div
                     className={styles.colorBox}
                     style={{ backgroundColor: color.hex }}
-                    title={`${color.name} - ${color.usage}`}
+                    title={`${color.semanticName || color.name} - ${color.usage}`}
                   />
-                  <span className={styles.colorHex}>{color.hex}</span>
-                  <span className={styles.colorName}>{color.name}</span>
+                  <span className={styles.colorName}>
+                    {color.semanticName || color.name}
+                  </span>
+                  {color.moods && color.moods.length > 0 && (
+                    <div className={styles.colorMoods}>
+                      {color.moods.map((mood, i) => (
+                        <span key={i} className={styles.moodTag}>{mood}</span>
+                      ))}
+                    </div>
+                  )}
+                  <details className={styles.technicalDetails}>
+                    <summary>Technical</summary>
+                    <span className={styles.colorHex}>{color.hex}</span>
+                    {color.confidence && (
+                      <span className={styles.confidence}>
+                        Match: {Math.round(color.confidence * 100)}%
+                      </span>
+                    )}
+                  </details>
                   <span className={styles.colorUsage}>{color.usage}</span>
                 </div>
               ))}
@@ -278,6 +295,29 @@ export default function VeoColorProfilePanel({
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Color Psychology */}
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>
+              {lang.veo.result.colorProfile.colorPsychology || "Color Psychology"}
+            </div>
+            <div className={styles.psychologyGrid}>
+              {profile.dominantColors
+                .filter(c => c.psychologyNotes)
+                .map((color, i) => (
+                  <div key={i} className={styles.psychologyCard}>
+                    <div
+                      className={styles.colorDot}
+                      style={{ background: color.hex }}
+                    />
+                    <strong>{color.semanticName || color.name}</strong>
+                    <p className={styles.psychologyNote}>
+                      {color.psychologyNotes}
+                    </p>
+                  </div>
+                ))}
             </div>
           </div>
         </div>

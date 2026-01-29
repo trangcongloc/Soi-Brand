@@ -671,6 +671,10 @@ export const vi = {
                 mood: "Tâm Trạng & Không Khí",
                 grain: "Hạt Phim",
                 postProcessing: "Hậu Kỳ",
+                colorPsychology: "Tâm lý học Màu sắc",
+                technicalReference: "Tham chiếu Kỹ thuật",
+                moodTags: "Thẻ Tâm trạng",
+                matchConfidence: "Độ Chính xác",
             },
 
             downloadOptions: {

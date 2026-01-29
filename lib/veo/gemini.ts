@@ -21,16 +21,19 @@ import {
   parseColorProfileResponse,
 } from "./prompts";
 
-const DEFAULT_MODEL = "gemini-2.0-flash-exp"; // Default to 2.0 Flash Experimental (fallback)
-const DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
-const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_BASE_DELAY_MS = 1000;
+import {
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_API_TIMEOUT_MS,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_RETRY_BASE_DELAY_MS,
+  GEMINI_API_BASE_URL,
+} from "./constants";
 
 /**
  * Get Gemini API URL for a model
  */
 function getGeminiApiUrl(model: string): string {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  return `${GEMINI_API_BASE_URL}${model}:generateContent`;
 }
 
 /**
@@ -74,7 +77,7 @@ export async function callGeminiAPI(
     timeoutMs?: number;
   }
 ): Promise<GeminiResponse> {
-  const { apiKey, model = DEFAULT_MODEL, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const { apiKey, model = DEFAULT_GEMINI_MODEL, timeoutMs = DEFAULT_API_TIMEOUT_MS } = options;
 
   if (!apiKey) {
     const error = new Error("Gemini API key is required") as GeminiApiError;
@@ -224,7 +227,7 @@ export async function callGeminiAPIWithRetry(
 ): Promise<GeminiResponse> {
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
-    baseDelayMs = DEFAULT_BASE_DELAY_MS,
+    baseDelayMs = DEFAULT_RETRY_BASE_DELAY_MS,
     onRetry,
     ...callOptions
   } = options;
@@ -310,7 +313,7 @@ export async function generateScenesHybrid(
     model,
     totalBatches,
     startBatch = 0,
-    delayBetweenBatches = 2000,
+    delayBetweenBatches = DEFAULT_RETRY_BASE_DELAY_MS * 2,
     onBatchStart,
     onBatchComplete,
     onError,

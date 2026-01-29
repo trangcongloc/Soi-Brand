@@ -14,6 +14,10 @@ import {
   LightingSetup,
   Veo3Options,
 } from "@/lib/veo";
+import { VeoWorkflowSelector } from "./VeoWorkflowSelector";
+import { VeoUrlInput } from "./VeoUrlInput";
+import { VeoScriptInput } from "./VeoScriptInput";
+import { VeoSettingsPanel } from "./VeoSettingsPanel";
 import styles from "./VeoForm.module.css";
 
 interface VeoFormProps {
@@ -200,61 +204,62 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, useVideoChapters, deduplicationThreshold, negativePrompt, extractColorProfile, mediaType, buildVeo3Options, onError, onSubmit, lang]
   );
 
-  const voiceOptions: VoiceLanguage[] = [
-    "no-voice",
-    "english",
-    "vietnamese",
-    "spanish",
-    "french",
-    "german",
-    "japanese",
-    "korean",
-    "chinese",
-  ];
-
   const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
   const showUrlInput = workflow === "url-to-script" || workflow === "url-to-scenes";
   const showSceneSettings = workflow === "script-to-scenes" || workflow === "url-to-scenes";
 
+  // Settings state object
+  const settingsState = {
+    mode,
+    autoSceneCount,
+    sceneCount,
+    batchSize,
+    voice,
+    useVideoChapters,
+    deduplicationThreshold,
+    negativePrompt,
+    extractColorProfile,
+    mediaType,
+    enableAudio,
+    enableDialogue,
+    enableCameraPositioning,
+    enableExpressionControl,
+    enableAdvancedComposition,
+    colorPalette,
+    lightingSetup,
+    selfieMode,
+  };
+
+  // Settings change handler
+  const handleSettingsChange = useCallback((updates: Partial<typeof settingsState>) => {
+    if (updates.mode !== undefined) setMode(updates.mode);
+    if (updates.autoSceneCount !== undefined) setAutoSceneCount(updates.autoSceneCount);
+    if (updates.sceneCount !== undefined) setSceneCount(updates.sceneCount);
+    if (updates.batchSize !== undefined) setBatchSize(updates.batchSize);
+    if (updates.voice !== undefined) setVoice(updates.voice);
+    if (updates.useVideoChapters !== undefined) setUseVideoChapters(updates.useVideoChapters);
+    if (updates.deduplicationThreshold !== undefined) setDeduplicationThreshold(updates.deduplicationThreshold);
+    if (updates.negativePrompt !== undefined) setNegativePrompt(updates.negativePrompt);
+    if (updates.extractColorProfile !== undefined) setExtractColorProfile(updates.extractColorProfile);
+    if (updates.mediaType !== undefined) setMediaType(updates.mediaType);
+    if (updates.enableAudio !== undefined) setEnableAudio(updates.enableAudio);
+    if (updates.enableDialogue !== undefined) setEnableDialogue(updates.enableDialogue);
+    if (updates.enableCameraPositioning !== undefined) setEnableCameraPositioning(updates.enableCameraPositioning);
+    if (updates.enableExpressionControl !== undefined) setEnableExpressionControl(updates.enableExpressionControl);
+    if (updates.enableAdvancedComposition !== undefined) setEnableAdvancedComposition(updates.enableAdvancedComposition);
+    if (updates.colorPalette !== undefined) setColorPalette(updates.colorPalette);
+    if (updates.lightingSetup !== undefined) setLightingSetup(updates.lightingSetup);
+    if (updates.selfieMode !== undefined) setSelfieMode(updates.selfieMode);
+  }, []);
+
   return (
     <div className={styles.container}>
       {/* Workflow Selector */}
-      <div className={styles.workflowSelector}>
-        <button
-          type="button"
-          className={`${styles.workflowTab} ${workflow === "url-to-scenes" ? styles.active : ""}`}
-          onClick={() => setWorkflow("url-to-scenes")}
-          disabled={isLoading}
-          title={lang.veo.workflow.urlToScenesDesc}
-        >
-          <span className={styles.workflowNumber}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-          </span>
-          <span className={styles.workflowName}>{lang.veo.workflow.urlToScenes}</span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.workflowTab} ${workflow === "url-to-script" ? styles.active : ""}`}
-          onClick={() => setWorkflow("url-to-script")}
-          disabled={isLoading}
-          title={lang.veo.workflow.urlToScriptDesc}
-        >
-          <span className={styles.workflowNumber}>1</span>
-          <span className={styles.workflowName}>{lang.veo.workflow.urlToScript}</span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.workflowTab} ${workflow === "script-to-scenes" ? styles.active : ""}`}
-          onClick={() => setWorkflow("script-to-scenes")}
-          disabled={isLoading}
-          title={lang.veo.workflow.scriptToScenesDesc}
-        >
-          <span className={styles.workflowNumber}>2</span>
-          <span className={styles.workflowName}>{lang.veo.workflow.scriptToScenes}</span>
-        </button>
-      </div>
+      <VeoWorkflowSelector
+        workflow={workflow}
+        onChange={setWorkflow}
+        isLoading={isLoading}
+      />
 
       {/* API Key Status Notice */}
       {!hasApiKey && (
@@ -282,687 +287,63 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
         <AnimatePresence mode="wait">
           {/* URL Input (for url-to-script and url-to-scenes) */}
           {showUrlInput && (
-            <motion.div
-              key="url-input"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className={styles.inputGroup}
-            >
-              <label htmlFor="video-url" className="sr-only">
-                YouTube Video URL
-              </label>
-              <div className={styles.inputWrapper}>
-                <input
-                  id="video-url"
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder={lang.veo.form.placeholder}
-                  className="input"
-                  disabled={isLoading}
-                />
-              </div>
-
-              {/* Duration Mode Toggle */}
-              <div className={styles.durationSection}>
-                <div className={styles.durationHeader}>
-                  <span className={styles.durationLabel}>{lang.veo.form.duration}</span>
-                  <div className={styles.durationToggle}>
-                    <button
-                      type="button"
-                      className={`${styles.durationToggleBtn} ${durationMode === "auto" ? styles.active : ""}`}
-                      onClick={() => setDurationMode("auto")}
-                      disabled={isLoading}
-                    >
-                      {lang.veo.form.durationAuto}
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.durationToggleBtn} ${durationMode === "custom" ? styles.active : ""}`}
-                      onClick={() => setDurationMode("custom")}
-                      disabled={isLoading}
-                    >
-                      {lang.veo.form.durationCustom}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Time Range Input - only show in custom mode */}
-                <AnimatePresence>
-                  {durationMode === "custom" && (
-                    <motion.div
-                      className={styles.timeRangeRow}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className={styles.timeInputs}>
-                        <span className={styles.timeLabel}>{lang.veo.form.from}</span>
-                        <input
-                          id="start-time"
-                          type="text"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          placeholder="00:00"
-                          className={styles.timeInput}
-                          disabled={isLoading}
-                        />
-                        <span className={styles.timeLabel}>{lang.veo.form.to}</span>
-                        <input
-                          id="end-time"
-                          type="text"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                          placeholder="05:30"
-                          className={styles.timeInput}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <p className={styles.durationHint}>
-                  {durationMode === "auto"
-                    ? lang.veo.form.durationAutoHint
-                    : lang.veo.form.durationCustomHint}
-                </p>
-              </div>
-
-              <p className={styles.inputHint}>
-                {workflow === "url-to-scenes" ? lang.veo.workflow.urlToScenesHint : lang.veo.workflow.urlHint}
-              </p>
-
-              {/* Submit Button for url-to-script only */}
-              {workflow === "url-to-script" && (
-                <AnimatePresence>
-                  {url.trim().length > 0 && (
-                    <motion.button
-                      type="submit"
-                      className={styles.submitButtonLarge}
-                      disabled={isLoading}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                    >
-                      {isLoading ? lang.veo.form.processing : lang.veo.form.extractScript}
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              )}
-            </motion.div>
+            <VeoUrlInput
+              url={url}
+              onChange={setUrl}
+              durationMode={durationMode}
+              onDurationModeChange={setDurationMode}
+              startTime={startTime}
+              onStartTimeChange={setStartTime}
+              endTime={endTime}
+              onEndTimeChange={setEndTime}
+              isLoading={isLoading}
+              workflow={workflow}
+            />
           )}
 
           {/* Step 2: Script Input */}
           {workflow === "script-to-scenes" && (
-            <motion.div
-              key="script-input"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className={styles.inputGroup}
-            >
-              <div className={styles.scriptInputArea}>
-                <textarea
-                  id="script-text"
-                  value={scriptText}
-                  onChange={(e) => setScriptText(e.target.value)}
-                  placeholder={lang.veo.form.scriptPlaceholder}
-                  className={styles.scriptTextarea}
-                  disabled={isLoading}
-                  rows={6}
-                />
-                <div className={styles.scriptActions}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".txt,.json"
-                    onChange={handleFileUpload}
-                    className={styles.fileInput}
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    className={styles.uploadButton}
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-                    </svg>
-                    {lang.veo.form.uploadScript}
-                  </button>
-                  {scriptFileName && (
-                    <span className={styles.fileName}>{scriptFileName}</span>
-                  )}
-                </div>
-              </div>
-              <p className={styles.inputHint}>{lang.veo.workflow.scriptHint}</p>
-            </motion.div>
+            <VeoScriptInput
+              scriptText={scriptText}
+              onChange={setScriptText}
+              onFileUpload={handleFileUpload}
+              scriptFileName={scriptFileName}
+              isLoading={isLoading}
+              fileInputRef={fileInputRef}
+            />
           )}
         </AnimatePresence>
 
         {/* Settings for scene generation (script-to-scenes and url-to-scenes) */}
+        <VeoSettingsPanel
+          settings={settingsState}
+          onSettingsChange={handleSettingsChange}
+          isLoading={isLoading}
+          workflow={workflow}
+          showSettings={showSettings}
+          onToggleSettings={() => setShowSettings(!showSettings)}
+        />
+
+        {/* Submit button */}
         {showSceneSettings && (
-          <>
-            {/* Mode Selector */}
-            <div className={styles.modeSelector}>
-              <span className={styles.modeLabel}>{lang.veo.modes.title}:</span>
-              <div className={styles.modeButtons}>
-                <button
-                  type="button"
-                  className={`${styles.modeButton} ${mode === "direct" ? styles.active : ""}`}
-                  onClick={() => setMode("direct")}
-                  disabled={isLoading}
-                >
-                  <span className={styles.modeName}>{lang.veo.modes.direct}</span>
-                  <span className={styles.modeDesc}>{lang.veo.modes.directDesc}</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.modeButton} ${mode === "hybrid" ? styles.active : ""}`}
-                  onClick={() => setMode("hybrid")}
-                  disabled={isLoading}
-                >
-                  <span className={styles.modeName}>{lang.veo.modes.hybrid}</span>
-                  <span className={styles.modeDesc}>{lang.veo.modes.hybridDesc}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Settings Toggle */}
-            <button
-              type="button"
-              className={styles.settingsToggle}
-              onClick={() => setShowSettings(!showSettings)}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+          <AnimatePresence>
+            {hasInput && (
+              <motion.button
+                type="submit"
+                className={styles.submitButtonLarge}
+                disabled={isLoading}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
               >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-              {lang.veo.settings.title}
-              <svg
-                className={`${styles.chevron} ${showSettings ? styles.open : ""}`}
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </button>
-
-            {/* Settings Panel */}
-            <AnimatePresence>
-              {showSettings && (
-                <motion.div
-                  className={styles.settings}
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {/* Section 1: Generation Settings */}
-                  <div className={styles.settingsSection}>
-                    <h4 className={styles.sectionTitle}>{lang.veo.settings.generationTitle}</h4>
-                    <div className={styles.sectionContent}>
-                      {/* Scene Count - with auto toggle for url-to-scenes */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="scene-count">{lang.veo.settings.sceneCount}</label>
-                          {workflow === "url-to-scenes" && (
-                            <div className={styles.autoToggle}>
-                              <button
-                                type="button"
-                                className={`${styles.autoToggleBtn} ${autoSceneCount ? styles.active : ""}`}
-                                onClick={() => setAutoSceneCount(true)}
-                                disabled={isLoading}
-                              >
-                                {lang.veo.settings.auto}
-                              </button>
-                              <button
-                                type="button"
-                                className={`${styles.autoToggleBtn} ${!autoSceneCount ? styles.active : ""}`}
-                                onClick={() => setAutoSceneCount(false)}
-                                disabled={isLoading}
-                              >
-                                {lang.veo.settings.manual}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {(workflow !== "url-to-scenes" || !autoSceneCount) && (
-                          <input
-                            id="scene-count"
-                            type="number"
-                            min={1}
-                            max={200}
-                            value={sceneCount}
-                            onChange={(e) => setSceneCount(parseInt(e.target.value) || 40)}
-                            disabled={isLoading}
-                          />
-                        )}
-                        <span className={styles.settingDesc}>
-                          {workflow === "url-to-scenes" && autoSceneCount
-                            ? lang.veo.settings.sceneCountAutoDesc
-                            : lang.veo.settings.sceneCountDesc}
-                        </span>
-                      </div>
-
-                      {/* Batch Size (only for hybrid mode) */}
-                      {mode === "hybrid" && (
-                        <div className={styles.settingItem}>
-                          <label htmlFor="batch-size">{lang.veo.settings.batchSize}</label>
-                          <input
-                            id="batch-size"
-                            type="number"
-                            min={1}
-                            max={50}
-                            value={batchSize}
-                            onChange={(e) => setBatchSize(parseInt(e.target.value) || 30)}
-                            disabled={isLoading}
-                          />
-                          <span className={styles.settingDesc}>
-                            {lang.veo.settings.batchSizeDesc}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Media Type Toggle (Image vs Video) */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label>{lang.veo.settings.mediaType}</label>
-                        </div>
-                        <div className={styles.mediaTypeToggle}>
-                          <button
-                            type="button"
-                            className={`${styles.mediaTypeBtn} ${mediaType === "image" ? styles.active : ""}`}
-                            onClick={() => setMediaType("image")}
-                            disabled={isLoading}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                              <circle cx="8.5" cy="8.5" r="1.5" />
-                              <polyline points="21 15 16 10 5 21" />
-                            </svg>
-                            {lang.veo.settings.imageMode}
-                          </button>
-                          <button
-                            type="button"
-                            className={`${styles.mediaTypeBtn} ${mediaType === "video" ? styles.active : ""}`}
-                            onClick={() => setMediaType("video")}
-                            disabled={isLoading}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polygon points="23 7 16 12 23 17 23 7" />
-                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                            </svg>
-                            {lang.veo.settings.videoMode}
-                          </button>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {mediaType === "image"
-                            ? lang.veo.settings.imageModeHint
-                            : lang.veo.settings.videoModeHint}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 2: Content Analysis */}
-                  <div className={styles.settingsSection}>
-                    <h4 className={styles.sectionTitle}>{lang.veo.settings.contentTitle}</h4>
-                    <div className={styles.sectionContent}>
-                      {/* Extract Color Profile Toggle (only for url-to-scenes workflow) */}
-                      {workflow === "url-to-scenes" && (
-                        <div className={styles.settingItem}>
-                          <div className={styles.settingHeader}>
-                            <label htmlFor="extract-color-profile">{lang.veo.settings.extractColorProfile}</label>
-                            <label className={styles.toggleSwitch}>
-                              <input
-                                id="extract-color-profile"
-                                type="checkbox"
-                                checked={extractColorProfile}
-                                onChange={(e) => setExtractColorProfile(e.target.checked)}
-                                disabled={isLoading}
-                              />
-                              <span className={styles.toggleSlider}></span>
-                            </label>
-                          </div>
-                          <span className={styles.settingDesc}>
-                            {lang.veo.settings.extractColorProfileDesc}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Include Video Chapters Toggle (only for url-to-scenes workflow) */}
-                      {workflow === "url-to-scenes" && (
-                        <div className={styles.settingItem}>
-                          <div className={styles.settingHeader}>
-                            <label htmlFor="use-chapters">{lang.veo.settings.useVideoChapters}</label>
-                            <label className={styles.toggleSwitch}>
-                              <input
-                                id="use-chapters"
-                                type="checkbox"
-                                checked={useVideoChapters}
-                                onChange={(e) => setUseVideoChapters(e.target.checked)}
-                                disabled={isLoading}
-                              />
-                              <span className={styles.toggleSlider}></span>
-                            </label>
-                          </div>
-                          <span className={styles.settingDesc}>
-                            {lang.veo.settings.useVideoChaptersDesc}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Voice Selection */}
-                      <div className={styles.settingItem}>
-                        <label htmlFor="voice">{lang.veo.settings.voice}</label>
-                        <select
-                          id="voice"
-                          value={voice}
-                          onChange={(e) => setVoice(e.target.value as VoiceLanguage)}
-                          disabled={isLoading}
-                        >
-                          {voiceOptions.map((v) => (
-                            <option key={v} value={v}>
-                              {lang.veo.settings.voiceOptions[v]}
-                            </option>
-                          ))}
-                        </select>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.voiceDesc}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 3: Quality & Filtering */}
-                  <div className={styles.settingsSection}>
-                    <h4 className={styles.sectionTitle}>{lang.veo.settings.qualityTitle}</h4>
-                    <div className={styles.sectionContent}>
-                      {/* Deduplication Threshold Slider */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="dedup-threshold">
-                            {lang.veo.settings.deduplicationThreshold}
-                          </label>
-                          <span className={styles.thresholdValue}>
-                            {deduplicationThreshold.toFixed(2)}
-                          </span>
-                        </div>
-                        <input
-                          id="dedup-threshold"
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={deduplicationThreshold}
-                          onChange={(e) => setDeduplicationThreshold(parseFloat(e.target.value))}
-                          disabled={isLoading}
-                          className={styles.rangeSlider}
-                        />
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.deduplicationThresholdDesc}
-                        </span>
-                      </div>
-
-                      {/* Negative Prompt */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="negative-prompt">{lang.veo.settings.negativePrompt}</label>
-                        </div>
-                        <textarea
-                          id="negative-prompt"
-                          value={negativePrompt}
-                          onChange={(e) => setNegativePrompt(e.target.value)}
-                          placeholder={lang.veo.settings.negativePromptPlaceholder}
-                          disabled={isLoading}
-                          rows={4}
-                          maxLength={500}
-                          className={styles.scriptTextarea}
-                          style={{ minHeight: '100px', fontSize: 'var(--fs-xs)' }}
-                        />
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.negativePromptDesc}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 4: VEO 3 Advanced Features */}
-                  <div className={styles.settingsSection}>
-                    <h4 className={styles.sectionTitle}>
-                      {lang.veo.settings.veo3Title || "VEO 3 Advanced Features"}
-                    </h4>
-                    <div className={styles.sectionContent}>
-                      {/* Audio System Toggle */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="enable-audio">
-                            {lang.veo.settings.veo3Audio || "Audio System"}
-                          </label>
-                          <label className={styles.toggleSwitch}>
-                            <input
-                              id="enable-audio"
-                              type="checkbox"
-                              checked={enableAudio}
-                              onChange={(e) => setEnableAudio(e.target.checked)}
-                              disabled={isLoading}
-                            />
-                            <span className={styles.toggleSlider}></span>
-                          </label>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.veo3AudioDesc || "Generate environmental audio, music, and sound effects"}
-                        </span>
-                      </div>
-
-                      {/* Dialogue System Toggle */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="enable-dialogue">
-                            {lang.veo.settings.veo3Dialogue || "Dialogue System"}
-                          </label>
-                          <label className={styles.toggleSwitch}>
-                            <input
-                              id="enable-dialogue"
-                              type="checkbox"
-                              checked={enableDialogue}
-                              onChange={(e) => setEnableDialogue(e.target.checked)}
-                              disabled={isLoading}
-                            />
-                            <span className={styles.toggleSlider}></span>
-                          </label>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.veo3DialogueDesc || "Use colon format for dialogue (prevents subtitles)"}
-                        </span>
-                      </div>
-
-                      {/* Camera Positioning Toggle */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="enable-camera">
-                            {lang.veo.settings.veo3Camera || "Camera Positioning"}
-                          </label>
-                          <label className={styles.toggleSwitch}>
-                            <input
-                              id="enable-camera"
-                              type="checkbox"
-                              checked={enableCameraPositioning}
-                              onChange={(e) => setEnableCameraPositioning(e.target.checked)}
-                              disabled={isLoading}
-                            />
-                            <span className={styles.toggleSlider}></span>
-                          </label>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.veo3CameraDesc || "Use '(thats where the camera is)' syntax for precise positioning"}
-                        </span>
-                      </div>
-
-                      {/* Expression Control Toggle */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="enable-expression">
-                            {lang.veo.settings.veo3Expression || "Expression Control"}
-                          </label>
-                          <label className={styles.toggleSwitch}>
-                            <input
-                              id="enable-expression"
-                              type="checkbox"
-                              checked={enableExpressionControl}
-                              onChange={(e) => setEnableExpressionControl(e.target.checked)}
-                              disabled={isLoading}
-                            />
-                            <span className={styles.toggleSlider}></span>
-                          </label>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.veo3ExpressionDesc || "Anti-model-face technique with micro-expressions and emotional arcs"}
-                        </span>
-                      </div>
-
-                      {/* Selfie Mode Toggle */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="enable-selfie">
-                            {lang.veo.settings.veo3Selfie || "Selfie/POV Mode"}
-                          </label>
-                          <label className={styles.toggleSwitch}>
-                            <input
-                              id="enable-selfie"
-                              type="checkbox"
-                              checked={selfieMode}
-                              onChange={(e) => setSelfieMode(e.target.checked)}
-                              disabled={isLoading}
-                            />
-                            <span className={styles.toggleSlider}></span>
-                          </label>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.veo3SelfieDesc || "Generate authentic selfie-style footage with visible arm"}
-                        </span>
-                      </div>
-
-                      {/* Advanced Composition Toggle */}
-                      <div className={styles.settingItem}>
-                        <div className={styles.settingHeader}>
-                          <label htmlFor="enable-composition">
-                            {lang.veo.settings.veo3Composition || "Advanced Composition"}
-                          </label>
-                          <label className={styles.toggleSwitch}>
-                            <input
-                              id="enable-composition"
-                              type="checkbox"
-                              checked={enableAdvancedComposition}
-                              onChange={(e) => setEnableAdvancedComposition(e.target.checked)}
-                              disabled={isLoading}
-                            />
-                            <span className={styles.toggleSlider}></span>
-                          </label>
-                        </div>
-                        <span className={styles.settingDesc}>
-                          {lang.veo.settings.veo3CompositionDesc || "Lens effects, color grading, and professional lighting"}
-                        </span>
-                      </div>
-
-                      {/* Color Palette Selector (only when advanced composition is enabled) */}
-                      {enableAdvancedComposition && (
-                        <div className={styles.settingItem}>
-                          <label htmlFor="color-palette">
-                            {lang.veo.settings.veo3ColorPalette || "Color Palette"}
-                          </label>
-                          <select
-                            id="color-palette"
-                            value={colorPalette}
-                            onChange={(e) => setColorPalette(e.target.value as ColorPaletteType)}
-                            disabled={isLoading}
-                          >
-                            <option value="auto">{lang.veo.settings.veo3ColorAuto || "Auto (from video)"}</option>
-                            <option value="teal-orange">{lang.veo.settings.veo3ColorTealOrange || "Teal-Orange (Hollywood)"}</option>
-                            <option value="warm-orange">{lang.veo.settings.veo3ColorWarm || "Warm Orange"}</option>
-                            <option value="cool-blue">{lang.veo.settings.veo3ColorCool || "Cool Blue"}</option>
-                            <option value="desaturated">{lang.veo.settings.veo3ColorDesaturated || "Desaturated"}</option>
-                            <option value="vibrant">{lang.veo.settings.veo3ColorVibrant || "Vibrant"}</option>
-                            <option value="pastel">{lang.veo.settings.veo3ColorPastel || "Pastel"}</option>
-                            <option value="noir">{lang.veo.settings.veo3ColorNoir || "Noir (B&W)"}</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Lighting Setup Selector (only when advanced composition is enabled) */}
-                      {enableAdvancedComposition && (
-                        <div className={styles.settingItem}>
-                          <label htmlFor="lighting-setup">
-                            {lang.veo.settings.veo3Lighting || "Lighting Setup"}
-                          </label>
-                          <select
-                            id="lighting-setup"
-                            value={lightingSetup}
-                            onChange={(e) => setLightingSetup(e.target.value as LightingSetup)}
-                            disabled={isLoading}
-                          >
-                            <option value="auto">{lang.veo.settings.veo3LightingAuto || "Auto (from video)"}</option>
-                            <option value="three-point">{lang.veo.settings.veo3LightingThreePoint || "Three-Point"}</option>
-                            <option value="rembrandt">{lang.veo.settings.veo3LightingRembrandt || "Rembrandt"}</option>
-                            <option value="golden-hour">{lang.veo.settings.veo3LightingGoldenHour || "Golden Hour"}</option>
-                            <option value="blue-hour">{lang.veo.settings.veo3LightingBlueHour || "Blue Hour"}</option>
-                            <option value="chiaroscuro">{lang.veo.settings.veo3LightingChiaroscuro || "Chiaroscuro"}</option>
-                            <option value="neon">{lang.veo.settings.veo3LightingNeon || "Neon"}</option>
-                            <option value="natural">{lang.veo.settings.veo3LightingNatural || "Natural"}</option>
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Submit button */}
-            <AnimatePresence>
-              {hasInput && (
-                <motion.button
-                  type="submit"
-                  className={styles.submitButtonLarge}
-                  disabled={isLoading}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                >
-                  {isLoading
-                    ? lang.veo.form.processing
-                    : workflow === "url-to-scenes"
-                    ? lang.veo.form.generateFromUrl
-                    : lang.veo.form.generateScenes}
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </>
+                {isLoading
+                  ? lang.veo.form.processing
+                  : workflow === "url-to-scenes"
+                  ? lang.veo.form.generateFromUrl
+                  : lang.veo.form.generateScenes}
+              </motion.button>
+            )}
+          </AnimatePresence>
         )}
       </form>
     </div>

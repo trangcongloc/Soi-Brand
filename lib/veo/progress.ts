@@ -11,15 +11,14 @@ import {
   VoiceLanguage,
 } from "./types";
 import { logger } from "@/lib/logger";
+import { isBrowser } from "./browser-utils";
+import {
+  getStorageItem,
+  setStorageItem,
+  removeStorageItem,
+} from "./storage-utils";
 
 const PROGRESS_KEY = "veo_progress_current";
-
-/**
- * Check if running in browser environment
- */
-function isBrowser(): boolean {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
-}
 
 /**
  * Load progress from storage
@@ -28,9 +27,7 @@ export function loadProgress(): VeoProgress | null {
   if (!isBrowser()) return null;
 
   try {
-    const data = localStorage.getItem(PROGRESS_KEY);
-    if (!data) return null;
-    return JSON.parse(data) as VeoProgress;
+    return getStorageItem<VeoProgress | null>(PROGRESS_KEY, null);
   } catch {
     return null;
   }
@@ -43,7 +40,7 @@ export function saveProgress(progress: VeoProgress): void {
   if (!isBrowser()) return;
 
   try {
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    setStorageItem(PROGRESS_KEY, progress);
   } catch (error) {
     logger.error("Error saving VEO progress", error);
   }
@@ -54,7 +51,7 @@ export function saveProgress(progress: VeoProgress): void {
  */
 export function clearProgress(): void {
   if (!isBrowser()) return;
-  localStorage.removeItem(PROGRESS_KEY);
+  removeStorageItem(PROGRESS_KEY);
 }
 
 /**
@@ -62,7 +59,7 @@ export function clearProgress(): void {
  */
 export function hasProgress(): boolean {
   if (!isBrowser()) return false;
-  return localStorage.getItem(PROGRESS_KEY) !== null;
+  return getStorageItem<VeoProgress | null>(PROGRESS_KEY, null) !== null;
 }
 
 /**

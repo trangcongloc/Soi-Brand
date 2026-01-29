@@ -41,6 +41,7 @@ export {
   parseColorProfileResponse,
   buildCinematicProfileContext,
   cinematicProfileToStyleFields,
+  enrichExtractedProfile,
   // Phase 1: Character extraction
   buildCharacterExtractionPrompt,
   parseCharacterExtractionResponse,

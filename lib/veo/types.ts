@@ -589,11 +589,22 @@ export interface ColorEntry {
 }
 
 /**
+ * Enhanced color entry with semantic name and mood/psychology metadata
+ */
+export interface EnrichedColorEntry extends ColorEntry {
+  semanticName: string;        // "deep ocean mystery blue"
+  moods: string[];             // ["mysterious", "professional", "cold"]
+  temperature: "warm" | "cool" | "neutral";
+  psychologyNotes?: string;    // "Evokes trust, depth, mystery"
+  confidence?: number;         // 0-1: mapping confidence score
+}
+
+/**
  * Full cinematic profile extracted from video
  * Used to ensure consistent color values across all generated scenes
  */
 export interface CinematicProfile {
-  dominantColors: ColorEntry[];  // 5-8 colors
+  dominantColors: EnrichedColorEntry[];  // 5-8 colors with semantic names and moods
   colorTemperature: {
     category: "warm" | "cool" | "neutral" | "mixed";
     kelvinEstimate: number;

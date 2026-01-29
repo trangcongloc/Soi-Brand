@@ -10,6 +10,33 @@ import type {
   PromptQualityScore,
 } from "./types";
 
+import {
+  MAX_CHARACTER_ATTRIBUTES,
+  MIN_CHAR_ATTRS_FULL_SCORE,
+  WORDS_PER_DETAIL_UNIT,
+  MAX_DETAIL_SCORE_FROM_WORDS,
+  MIN_SCENE_DETAILS_FULL_SCORE,
+  QUALITY_MASTER_THRESHOLD,
+  QUALITY_PROFESSIONAL_THRESHOLD,
+  QUALITY_INTERMEDIATE_THRESHOLD,
+  MAX_DIALOGUE_WORDS_8SEC_RULE,
+  BASE_DIALOGUE_SCORE,
+  DIALOGUE_DELIVERY_BONUS,
+  DIALOGUE_8SEC_BONUS,
+  MIN_NEGATIVE_PROMPT_LENGTH,
+  NEGATIVE_PROMPT_QUANTITY_MAX_POINTS,
+  KEY_NEGATIVE_BONUS,
+  LIGHTING_SETUP_SCORE,
+  AUDIO_ENVIRONMENTAL_SCORE,
+  AUDIO_NEGATIONS_SCORE,
+  QUALITY_WEIGHT_CHAR_DESC,
+  QUALITY_WEIGHT_SCENE_DETAILS,
+  QUALITY_WEIGHT_DIALOGUE,
+  QUALITY_WEIGHT_NEGATIVE,
+  BASE_SUCCESS_RATE,
+  SUCCESS_RATE_PER_POINT,
+} from "./constants";
+
 // ============================================================================
 // Quality Checklist Validation
 // ============================================================================
@@ -42,7 +69,7 @@ function countCharacterAttributes(character: string): number {
     if (pattern.test(character)) count++;
   });
 
-  return Math.min(count, 20); // Cap at 20
+  return Math.min(count, MAX_CHARACTER_ATTRIBUTES);
 }
 
 /**
@@ -75,7 +102,7 @@ function countSceneDetails(scene: Scene): number {
   // Check description length (more words = more detail)
   if (scene.description) {
     const wordCount = scene.description.split(/\s+/).length;
-    count += Math.min(Math.floor(wordCount / 10), 5);
+    count += Math.min(Math.floor(wordCount / WORDS_PER_DETAIL_UNIT), MAX_DETAIL_SCORE_FROM_WORDS);
   }
 
   return count;
@@ -89,11 +116,11 @@ export function validateQualityChecklist(scene: Scene): QualityChecklist {
   const sceneDetailCount = countSceneDetails(scene);
 
   return {
-    // 15+ attributes needed for full score
-    characterDescription: characterCount >= 15,
+    // MIN_CHAR_ATTRS_FULL_SCORE+ attributes needed for full score
+    characterDescription: characterCount >= MIN_CHAR_ATTRS_FULL_SCORE,
 
-    // 10+ elements needed for full score
-    sceneDetails: sceneDetailCount >= 10,
+    // MIN_SCENE_DETAILS_FULL_SCORE+ elements needed for full score
+    sceneDetails: sceneDetailCount >= MIN_SCENE_DETAILS_FULL_SCORE,
 
     // Camera specs - check composition and video fields
     cameraSpecs: Boolean(
@@ -125,7 +152,7 @@ export function validateQualityChecklist(scene: Scene): QualityChecklist {
     // Negative prompts - check negativePrompt field
     negativePrompts: Boolean(
       scene.negativePrompt &&
-      scene.negativePrompt.length > 20
+      scene.negativePrompt.length > MIN_NEGATIVE_PROMPT_LENGTH
     ),
 
     // Technical specs - check technical field and quality indicators
@@ -140,7 +167,7 @@ export function validateQualityChecklist(scene: Scene): QualityChecklist {
     // 8-second optimization - check dialogue length
     eightSecondOptimization: Boolean(
       !scene.dialogue?.length ||
-      scene.dialogue.every(d => d.line.split(/\s+/).length <= 15)
+      scene.dialogue.every(d => d.line.split(/\s+/).length <= MAX_DIALOGUE_WORDS_8SEC_RULE)
     ),
   };
 }
@@ -158,9 +185,9 @@ export function getChecklistCompletionCount(checklist: QualityChecklist): number
 export function getQualityLevel(checklist: QualityChecklist): QualityLevel {
   const count = getChecklistCompletionCount(checklist);
 
-  if (count >= 8) return "master";
-  if (count >= 6) return "professional";
-  if (count >= 4) return "intermediate";
+  if (count >= QUALITY_MASTER_THRESHOLD) return "master";
+  if (count >= QUALITY_PROFESSIONAL_THRESHOLD) return "professional";
+  if (count >= QUALITY_INTERMEDIATE_THRESHOLD) return "intermediate";
   return "basic";
 }
 
@@ -173,8 +200,8 @@ export function getQualityLevel(checklist: QualityChecklist): QualityLevel {
  */
 function scoreCharacterDescription(scene: Scene): number {
   const count = countCharacterAttributes(scene.character);
-  // 15+ = 10, linear scale below
-  return Math.min(10, Math.round((count / 15) * 10));
+  // MIN_CHAR_ATTRS_FULL_SCORE+ = 10, linear scale below
+  return Math.min(10, Math.round((count / MIN_CHAR_ATTRS_FULL_SCORE) * 10));
 }
 
 /**
@@ -182,7 +209,7 @@ function scoreCharacterDescription(scene: Scene): number {
  */
 function scoreSceneDetails(scene: Scene): number {
   const count = countSceneDetails(scene);
-  // 10+ = 10, linear scale below
+  // MIN_SCENE_DETAILS_FULL_SCORE+ = 10, linear scale below
   return Math.min(10, count);
 }
 
@@ -211,7 +238,7 @@ function scoreLightingSetup(scene: Scene): number {
   if (scene.lighting?.source) score += 2;
   if (scene.lighting?.mood) score += 2;
   if (scene.lighting?.shadows) score += 1;
-  if (scene.advancedLighting?.setup) score += 3;
+  if (scene.advancedLighting?.setup) score += LIGHTING_SETUP_SCORE;
   if (scene.advancedLighting?.keyLight) score += 1;
   if (scene.advancedLighting?.rimLight) score += 1;
 
@@ -224,10 +251,10 @@ function scoreLightingSetup(scene: Scene): number {
 function scoreAudioDesign(scene: Scene): number {
   let score = 0;
 
-  if (scene.audio?.environmental) score += 3;
+  if (scene.audio?.environmental) score += AUDIO_ENVIRONMENTAL_SCORE;
   if (scene.audio?.music) score += 2;
   if (scene.audio?.soundEffects?.length) score += 2;
-  if (scene.audio?.negations?.length) score += 3; // Hallucination prevention
+  if (scene.audio?.negations?.length) score += AUDIO_NEGATIONS_SCORE; // Hallucination prevention
   if (scene.video?.audioCues?.length) score += 1;
 
   return Math.min(10, score);
@@ -238,19 +265,19 @@ function scoreAudioDesign(scene: Scene): number {
  */
 function scoreDialogueQuality(scene: Scene): number {
   if (!scene.dialogue?.length && !scene.voice) {
-    return 5; // Neutral if no dialogue
+    return BASE_DIALOGUE_SCORE; // Neutral if no dialogue
   }
 
-  let score = 5; // Base score for having dialogue
+  let score = BASE_DIALOGUE_SCORE; // Base score for having dialogue
 
   if (scene.dialogue?.length) {
     const dialogue = scene.dialogue[0];
-    if (dialogue.delivery) score += 1;
-    if (dialogue.emotion) score += 1;
+    if (dialogue.delivery) score += DIALOGUE_DELIVERY_BONUS;
+    if (dialogue.emotion) score += DIALOGUE_DELIVERY_BONUS;
 
-    // Check 8-second rule (12-15 words)
+    // Check 8-second rule
     const wordCount = dialogue.line.split(/\s+/).length;
-    if (wordCount <= 15) score += 2;
+    if (wordCount <= MAX_DIALOGUE_WORDS_8SEC_RULE) score += DIALOGUE_8SEC_BONUS;
     if (wordCount <= 12) score += 1;
   }
 
@@ -267,12 +294,12 @@ function scoreNegativePrompts(scene: Scene): number {
   const count = negatives.length;
 
   // Score based on comprehensiveness
-  let score = Math.min(5, count); // Up to 5 points for quantity
+  let score = Math.min(NEGATIVE_PROMPT_QUANTITY_MAX_POINTS, count); // Up to NEGATIVE_PROMPT_QUANTITY_MAX_POINTS for quantity
 
   // Bonus for key quality negatives
   const keyNegatives = ["subtitles", "watermark", "text", "blur", "distort", "artifact"];
   keyNegatives.forEach(key => {
-    if (scene.negativePrompt!.toLowerCase().includes(key)) score += 0.5;
+    if (scene.negativePrompt!.toLowerCase().includes(key)) score += KEY_NEGATIVE_BONUS;
   });
 
   return Math.min(10, Math.round(score));
@@ -294,13 +321,13 @@ export function calculatePromptQualityScore(scene: Scene): PromptQualityScore {
 
   // Calculate overall score (weighted average)
   const weights = {
-    characterDescription: 1.5, // More important for consistency
-    sceneDetails: 1.2,
+    characterDescription: QUALITY_WEIGHT_CHAR_DESC, // More important for consistency
+    sceneDetails: QUALITY_WEIGHT_SCENE_DETAILS,
     cameraSpecs: 1.0,
     lightingSetup: 1.0,
     audioDesign: 1.0,
-    dialogueQuality: 0.8,
-    negativePrompts: 1.0,
+    dialogueQuality: QUALITY_WEIGHT_DIALOGUE,
+    negativePrompts: QUALITY_WEIGHT_NEGATIVE,
   };
 
   const weightedSum = Object.entries(scores).reduce(
@@ -317,11 +344,11 @@ export function calculatePromptQualityScore(scene: Scene): PromptQualityScore {
   // Generate suggestions
   const suggestions: string[] = [];
 
-  if (scores.characterDescription < 8) {
-    suggestions.push("Add more character attributes (aim for 15+): hair details, eye color, clothing textures");
+  if (scores.characterDescription < QUALITY_MASTER_THRESHOLD) {
+    suggestions.push(`Add more character attributes (aim for ${MIN_CHAR_ATTRS_FULL_SCORE}+): hair details, eye color, clothing textures`);
   }
-  if (scores.sceneDetails < 8) {
-    suggestions.push("Add more environmental details (aim for 10+): background elements, props, atmosphere");
+  if (scores.sceneDetails < QUALITY_MASTER_THRESHOLD) {
+    suggestions.push(`Add more environmental details (aim for ${MIN_SCENE_DETAILS_FULL_SCORE}+): background elements, props, atmosphere`);
   }
   if (scores.cameraSpecs < 7) {
     suggestions.push("Include camera positioning with '(thats where the camera is)' syntax");
@@ -337,7 +364,7 @@ export function calculatePromptQualityScore(scene: Scene): PromptQualityScore {
   }
 
   // Calculate generation success rate prediction
-  const successRate = Math.min(99, Math.round(60 + overallScore * 4));
+  const successRate = Math.min(99, Math.round(BASE_SUCCESS_RATE + overallScore * SUCCESS_RATE_PER_POINT));
 
   return {
     level,
@@ -373,9 +400,9 @@ export function validateBatchQuality(scenes: Scene[]): {
 
   // Determine overall level based on average score
   let overallLevel: QualityLevel;
-  if (averageScore >= 8) overallLevel = "master";
-  else if (averageScore >= 6) overallLevel = "professional";
-  else if (averageScore >= 4) overallLevel = "intermediate";
+  if (averageScore >= QUALITY_MASTER_THRESHOLD) overallLevel = "master";
+  else if (averageScore >= QUALITY_PROFESSIONAL_THRESHOLD) overallLevel = "professional";
+  else if (averageScore >= QUALITY_INTERMEDIATE_THRESHOLD) overallLevel = "intermediate";
   else overallLevel = "basic";
 
   return {

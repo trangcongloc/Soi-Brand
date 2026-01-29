@@ -666,6 +666,10 @@ export const en = {
                 mood: "Mood & Atmosphere",
                 grain: "Film Grain",
                 postProcessing: "Post-Processing",
+                colorPsychology: "Color Psychology",
+                technicalReference: "Technical Reference",
+                moodTags: "Mood Tags",
+                matchConfidence: "Match Confidence",
             },
 
             downloadOptions: {

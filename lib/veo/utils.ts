@@ -4,6 +4,20 @@
 
 import { TimeRange } from "./types";
 import { logger } from "@/lib/logger";
+import {
+  MAX_FOLDER_NAME_LENGTH,
+  SECONDS_PER_HOUR,
+  SECONDS_PER_MINUTE,
+  DURATION_THRESHOLD_FOR_MINUTES,
+  DEFAULT_SECONDS_PER_SCENE,
+  RANDOM_STRING_RADIX,
+  RANDOM_STRING_MIN_LENGTH,
+  MIN_PROCESSING_TIME_SECONDS,
+  MAX_PROCESSING_TIME_SECONDS,
+  YOUTUBE_THUMBNAIL_BASE_URL,
+  SCRIPT_CONTAMINATION_THRESHOLD,
+  MIN_SCRIPT_LENGTH,
+} from "./constants";
 
 /**
  * Extract video ID from YouTube URL
@@ -29,7 +43,10 @@ export function isValidYouTubeUrl(url: string): boolean {
 /**
  * Sanitize string for use in folder/file names
  */
-export function sanitizeForFolder(str: string, maxLength = 50): string {
+export function sanitizeForFolder(
+  str: string,
+  maxLength = MAX_FOLDER_NAME_LENGTH
+): string {
   return str
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -50,8 +67,8 @@ export function parseDuration(durationStr: string | undefined): number {
   const matchHMS = str.match(/(\d+):(\d+):(\d+)/);
   if (matchHMS) {
     return (
-      parseInt(matchHMS[1], 10) * 3600 +
-      parseInt(matchHMS[2], 10) * 60 +
+      parseInt(matchHMS[1], 10) * SECONDS_PER_HOUR +
+      parseInt(matchHMS[2], 10) * SECONDS_PER_MINUTE +
       parseInt(matchHMS[3], 10)
     );
   }
@@ -59,7 +76,7 @@ export function parseDuration(durationStr: string | undefined): number {
   // Handle MM:SS format
   const matchMS = str.match(/(\d+):(\d+)/);
   if (matchMS) {
-    return parseInt(matchMS[1], 10) * 60 + parseInt(matchMS[2], 10);
+    return parseInt(matchMS[1], 10) * SECONDS_PER_MINUTE + parseInt(matchMS[2], 10);
   }
 
   // Handle text formats: "X hours Y minutes Z seconds" or variations
@@ -68,13 +85,13 @@ export function parseDuration(durationStr: string | undefined): number {
   // Extract hours
   const hourMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/);
   if (hourMatch) {
-    totalSeconds += parseFloat(hourMatch[1]) * 3600;
+    totalSeconds += parseFloat(hourMatch[1]) * SECONDS_PER_HOUR;
   }
 
   // Extract minutes
   const minMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/);
   if (minMatch) {
-    totalSeconds += parseFloat(minMatch[1]) * 60;
+    totalSeconds += parseFloat(minMatch[1]) * SECONDS_PER_MINUTE;
   }
 
   // Extract seconds
@@ -90,8 +107,10 @@ export function parseDuration(durationStr: string | undefined): number {
   // Handle plain number (assume seconds if small, minutes if larger)
   const plainNum = parseFloat(str);
   if (!isNaN(plainNum) && plainNum > 0) {
-    // If number is > 300, assume it's seconds; otherwise assume minutes
-    return plainNum > 300 ? Math.round(plainNum) : Math.round(plainNum * 60);
+    // If number is > DURATION_THRESHOLD_FOR_MINUTES, assume it's seconds; otherwise assume minutes
+    return plainNum > DURATION_THRESHOLD_FOR_MINUTES
+      ? Math.round(plainNum)
+      : Math.round(plainNum * SECONDS_PER_MINUTE);
   }
 
   return 0;
@@ -101,8 +120,8 @@ export function parseDuration(durationStr: string | undefined): number {
  * Format seconds to MM:SS string
  */
 export function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const mins = Math.floor(seconds / SECONDS_PER_MINUTE);
+  const secs = seconds % SECONDS_PER_MINUTE;
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
@@ -110,9 +129,9 @@ export function formatTime(seconds: number): string {
  * Format seconds to HH:MM:SS string (for longer durations)
  */
 export function formatTimeLong(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const hours = Math.floor(seconds / SECONDS_PER_HOUR);
+  const mins = Math.floor((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
+  const secs = seconds % SECONDS_PER_MINUTE;
 
   if (hours > 0) {
     return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
@@ -124,12 +143,12 @@ export function formatTimeLong(seconds: number): string {
  * Generate time ranges for batched processing
  * @param totalSeconds - Total duration in seconds
  * @param chunkSeconds - Chunk size in seconds
- * @param secondsPerScene - Seconds per scene (default: 8 for VEO)
+ * @param secondsPerScene - Seconds per scene (default: DEFAULT_SECONDS_PER_SCENE for VEO)
  */
 export function generateTimeRanges(
   totalSeconds: number,
   chunkSeconds: number,
-  secondsPerScene = 8
+  secondsPerScene = DEFAULT_SECONDS_PER_SCENE
 ): TimeRange[] {
   const ranges: TimeRange[] = [];
 
@@ -175,8 +194,10 @@ export function sleep(ms: number): Promise<void> {
  * Generate a unique job ID
  */
 export function generateJobId(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
+  const timestamp = Date.now().toString(RANDOM_STRING_RADIX);
+  const random = Math.random()
+    .toString(RANDOM_STRING_RADIX)
+    .substring(RANDOM_STRING_MIN_LENGTH, 8);
   return `veo_${timestamp}_${random}`;
 }
 
@@ -198,8 +219,11 @@ export function estimateProcessingTime(
   batchSize = 10
 ): number {
   if (mode === "direct") {
-    // Direct mode: ~30-60 seconds for any size
-    return Math.max(30, Math.min(sceneCount * 1.5, 120));
+    // Direct mode: MIN_PROCESSING_TIME_SECONDS to MAX_PROCESSING_TIME_SECONDS for any size
+    return Math.max(
+      MIN_PROCESSING_TIME_SECONDS,
+      Math.min(sceneCount * 1.5, MAX_PROCESSING_TIME_SECONDS)
+    );
   }
 
   // Hybrid mode: ~30s per batch + 2s delay between batches
@@ -211,11 +235,11 @@ export function estimateProcessingTime(
  * Format processing time for display
  */
 export function formatProcessingTime(seconds: number): string {
-  if (seconds < 60) {
+  if (seconds < SECONDS_PER_MINUTE) {
     return `${Math.round(seconds)}s`;
   }
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
+  const mins = Math.floor(seconds / SECONDS_PER_MINUTE);
+  const secs = Math.round(seconds % SECONDS_PER_MINUTE);
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
@@ -240,7 +264,7 @@ export function getYouTubeThumbnail(
     high: "hqdefault",
     maxres: "maxresdefault",
   };
-  return `https://img.youtube.com/vi/${videoId}/${qualityMap[quality]}.jpg`;
+  return `${YOUTUBE_THUMBNAIL_BASE_URL}${videoId}/${qualityMap[quality]}.jpg`;
 }
 
 /**
@@ -276,7 +300,10 @@ export function cleanScriptText(text: string): string {
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
 
   // If the result is mostly timestamps (very short after cleaning), log warning
-  if (cleaned.length < text.length * 0.3 && text.length > 100) {
+  if (
+    cleaned.length < text.length * SCRIPT_CONTAMINATION_THRESHOLD &&
+    text.length > MIN_SCRIPT_LENGTH
+  ) {
     logger.warn("Script text heavily contaminated with timestamps", {
       originalLength: text.length,
       cleanedLength: cleaned.length,

@@ -3,6 +3,7 @@
 import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { useLang } from "@/lib/lang";
 import { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript, CinematicProfile } from "@/lib/veo";
+import { downloadJson as downloadJsonUtil, downloadText } from "@/lib/veo/download-utils";
 import VeoSceneCard from "./VeoSceneCard";
 import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoHistoryPanel from "./VeoHistoryPanel";
@@ -54,26 +55,14 @@ function VeoSceneDisplay({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Download functions
+  // Download functions (using utility functions)
   const downloadJson = useCallback((data: unknown, filename: string) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadJsonUtil(data, filename);
     setShowDownloadMenu(false);
   }, []);
 
   const downloadTxt = useCallback((content: string, filename: string) => {
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(content, filename);
     setShowDownloadMenu(false);
   }, []);
 
