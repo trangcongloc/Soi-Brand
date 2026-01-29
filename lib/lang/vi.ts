@@ -597,8 +597,11 @@ export const vi = {
             summary: "Tổng quan",
             scenes: "Scenes",
             characters: "Nhân vật",
-            color: "Màu sắc",
+            color: "Color",
             download: "Tải xuống",
+            jobFailed: "Công việc thất bại",
+            jobPartial: "Công việc hoàn thành một phần",
+            retryJob: "Thử lại từ batch cuối",
 
             summaryStats: {
                 totalScenes: "Tổng scenes",

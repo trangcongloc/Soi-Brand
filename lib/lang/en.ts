@@ -594,6 +594,9 @@ export const en = {
             characters: "Characters",
             color: "Color",
             download: "Download",
+            jobFailed: "Job failed",
+            jobPartial: "Job partially completed",
+            retryJob: "Retry from last batch",
 
             summaryStats: {
                 totalScenes: "Total Scenes",

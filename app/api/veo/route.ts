@@ -479,13 +479,14 @@ async function runScriptToScenesHybrid(
           type: mapToVeoErrorType(errorResult.type),
           message: errorMessage,
           retryable: errorResult.retryable,
-          // Include debug info in dev mode
+          failedBatch: batchNum + 1,
+          totalBatches,
+          scenesCompleted: allScenes.length,
+          // Include additional debug info in dev mode
           ...(isDev && {
             debug: {
-              batch: batchNum + 1,
               status: error.status,
               apiError: error.response?.error?.message,
-              scenesCompleted: allScenes.length,
             },
           }),
         },
@@ -798,13 +799,14 @@ async function runUrlToScenesDirect(
           type: mapToVeoErrorType(errorResult.type),
           message: errorMessage,
           retryable: errorResult.retryable,
-          // Include debug info in dev mode
+          failedBatch: batchNum + 1,
+          totalBatches,
+          scenesCompleted: allScenes.length,
+          // Include additional debug info in dev mode
           ...(isDev && {
             debug: {
-              batch: batchNum + 1,
               status: error.status,
               apiError: error.response?.error?.message,
-              scenesCompleted: allScenes.length,
             },
           }),
         },

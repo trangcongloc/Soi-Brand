@@ -253,3 +253,51 @@
     font-size: var(--fs-lg);
   }
 }
+
+/* Retry Section for Failed/Partial Jobs */
+.retrySection {
+  padding: 1rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--warning-border, #f59e0b);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.failedMessage {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.failedMessage span {
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  margin-left: 0.5rem;
+}
+
+.retryButton {
+  padding: 0.5rem 1rem;
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.retryButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.retryButton:active {
+  transform: translateY(0);
+}

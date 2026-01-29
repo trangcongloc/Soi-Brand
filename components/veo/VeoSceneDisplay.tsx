@@ -8,6 +8,7 @@ import VeoSceneCard from "./VeoSceneCard";
 import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoHistoryPanel from "./VeoHistoryPanel";
 import VeoColorProfilePanel from "./VeoColorProfilePanel";
+import { VeoJsonView } from "./VeoJsonView";
 import styles from "./VeoSceneDisplay.module.css";
 
 interface VeoSceneDisplayProps {
@@ -24,7 +25,7 @@ interface VeoSceneDisplayProps {
   onJobsChange?: () => void;
 }
 
-type TabType = "scenes" | "characters" | "color" | "history";
+type TabType = "scenes" | "json" | "characters" | "color" | "history";
 
 function VeoSceneDisplay({
   scenes,
@@ -87,6 +88,7 @@ function VeoSceneDisplay({
 
   const tabs: { key: TabType; label: string }[] = [
     { key: "scenes", label: lang.veo.result.scenes },
+    { key: "json", label: "JSON" },
     { key: "characters", label: lang.veo.result.characters },
     // Only show color tab if colorProfile is available
     ...(colorProfile ? [{ key: "color" as TabType, label: lang.veo.result.color }] : []),
@@ -162,6 +164,29 @@ function VeoSceneDisplay({
         </div>
       </div>
 
+      {/* Retry Section for Failed/Partial Jobs */}
+      {(summary.status === "failed" || summary.status === "partial") && summary.error && (
+        <div className={styles.retrySection}>
+          <p className={styles.failedMessage}>
+            {summary.status === "failed"
+              ? lang.veo.result.jobFailed
+              : lang.veo.result.jobPartial
+            }
+            {summary.error.failedBatch && summary.error.totalBatches && (
+              <span> (Failed at batch {summary.error.failedBatch}/{summary.error.totalBatches})</span>
+            )}
+          </p>
+          {summary.error.retryable && onRetryJob && (
+            <button
+              className={styles.retryButton}
+              onClick={() => onRetryJob(jobId)}
+            >
+              {lang.veo.result.retryJob}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className={styles.tabs}>
         {tabs.map((tab) => (
@@ -192,6 +217,16 @@ function VeoSceneDisplay({
               <VeoSceneCard key={index} scene={scene} index={index} />
             ))}
           </div>
+        )}
+
+        {/* JSON Tab */}
+        {activeTab === "json" && (
+          <VeoJsonView
+            scenes={scenes}
+            characterRegistry={characterRegistry}
+            summary={summary}
+            jobId={jobId}
+          />
         )}
 
         {/* Characters Tab */}

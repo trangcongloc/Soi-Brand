@@ -318,12 +318,13 @@ export interface VeoErrorEvent {
     type: VeoErrorType;
     message: string;
     retryable: boolean;
+    failedBatch?: number; // Which batch failed (always sent for batch errors)
+    totalBatches?: number; // Total batches in the job (always sent for batch errors)
+    scenesCompleted?: number; // Number of scenes completed before failure
     debug?: {
-      batch?: number;
       status?: number;
       originalMessage?: string;
       apiError?: string;
-      scenesCompleted?: number;
     };
   };
 }
@@ -367,6 +368,15 @@ export interface VeoJobSummary {
   characters: string[];
   processingTime: string;
   createdAt: string;
+  // Job status (for failed/partial jobs)
+  status?: VeoJobStatus;
+  error?: {
+    message: string;
+    type: VeoErrorType;
+    failedBatch?: number;
+    totalBatches?: number;
+    retryable: boolean;
+  };
 }
 
 export interface VeoProgress {

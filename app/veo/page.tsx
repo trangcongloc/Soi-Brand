@@ -171,7 +171,7 @@ export default function VeoPage() {
   }, [error, state]);
 
   const handleError = useCallback(
-    (errorType: string, message?: string, debug?: Record<string, unknown>, retryable = false) => {
+    (errorType: string, message?: string, failedBatch?: number, totalBatches?: number, scenesCompleted?: number, debug?: Record<string, unknown>, retryable = false) => {
       // Use the detailed message from API if available, fallback to translated error
       const errorKey = errorType as keyof typeof lang.veo.errors;
       const translatedError = lang.veo.errors[errorKey];
@@ -186,7 +186,7 @@ export default function VeoPage() {
 
       // Log debug info to console in development
       if (debug) {
-        console.error("[VEO Error Debug]", { errorType, message, debug });
+        console.error("[VEO Error Debug]", { errorType, message, failedBatch, totalBatches, scenesCompleted, debug });
       }
 
       setError(errorMessage);
@@ -197,8 +197,7 @@ export default function VeoPage() {
       const currentJobId = jobIdRef.current;
       const currentForm = formDataRef.current;
       if (currentJobId && currentForm) {
-        const failedBatch = debug?.batch as number | undefined;
-        const totalBatchesCalc = (debug?.totalBatches as number | undefined)
+        const totalBatchesCalc = totalBatches
           || (summary && typeof summary.batches === 'number' ? summary.batches : undefined)
           || Math.ceil(currentForm.sceneCount / currentForm.batchSize);
 
@@ -432,6 +431,9 @@ export default function VeoPage() {
                     handleError(
                       event.data.type,
                       event.data.message,
+                      event.data.failedBatch,
+                      event.data.totalBatches,
+                      event.data.scenesCompleted,
                       event.data.debug,
                       event.data.retryable
                     );
@@ -564,9 +566,15 @@ export default function VeoPage() {
     if (cached) {
       setScenes(cached.scenes);
       setCharacterRegistry(cached.characterRegistry);
-      setSummary(cached.summary);
+      // Merge status and error into summary for display
+      setSummary({
+        ...cached.summary,
+        status: cached.status,
+        error: cached.error,
+      });
       setJobId(viewJobId);
       setGeneratedScript(cached.script ?? null);
+      setColorProfile(cached.colorProfile ?? null);
       setState("complete");
     }
   }, []);
