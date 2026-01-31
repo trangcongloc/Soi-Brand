@@ -67,27 +67,6 @@ export const SCRIPT_CONTAMINATION_THRESHOLD = 0.3;
 export const MIN_SCRIPT_LENGTH = 100;
 
 // ============================================================================
-// DEDUPLICATION
-// ============================================================================
-
-export const MIN_WORD_LENGTH_TOKENIZE = 2;
-export const SIMILARITY_MAX = 1.0;
-export const SIMILARITY_MIN = 0.0;
-export const DEFAULT_DEDUP_THRESHOLD = 0.75;
-
-// Scene similarity weights
-export const WEIGHT_DESCRIPTION = 0.5;
-export const WEIGHT_CHARACTER = 0.15;
-export const WEIGHT_OBJECT = 0.1;
-export const WEIGHT_ENVIRONMENT = 0.05;
-export const WEIGHT_LIGHTING = 0.05;
-export const WEIGHT_COMPOSITION = 0.05;
-export const WEIGHT_PROMPT = 0.1;
-
-export const LIGHTING_FIELD_COUNT = 3;
-export const COMPOSITION_FIELD_COUNT = 3;
-
-// ============================================================================
 // CACHING
 // ============================================================================
 
@@ -126,3 +105,9 @@ export const RANDOM_STRING_MIN_LENGTH = 2;
 export const GEMINI_API_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/";
 export const YOUTUBE_THUMBNAIL_BASE_URL = "https://img.youtube.com/vi/";
+
+// ============================================================================
+// FORM SETTINGS PERSISTENCE
+// ============================================================================
+
+export const VEO_FORM_SETTINGS_KEY = "veo_form_settings";

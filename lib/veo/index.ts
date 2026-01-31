@@ -115,6 +115,13 @@ export {
   getCachedJobList,
 } from "./cache";
 
+// Form settings persistence
+export {
+  getDefaultVeoFormSettings,
+  loadVeoFormSettings,
+  saveVeoFormSettings,
+} from "./settings";
+
 // Progress tracking
 export {
   loadProgress,

@@ -17,6 +17,8 @@ import {
   GeneratedScript,
   VeoErrorType,
   CinematicProfile,
+  Veo3Options,
+  MediaType,
   setCachedJob,
   getCachedJob,
   hasProgress,
@@ -102,7 +104,13 @@ export default function VeoPage() {
     voice: VoiceLanguage;
     scriptText?: string;
     useVideoChapters: boolean;
-    deduplicationThreshold: number;
+    negativePrompt?: string;
+    extractColorProfile: boolean;
+    mediaType: MediaType;
+    autoSceneCount: boolean;
+    startTime?: string;
+    endTime?: string;
+    veo3Options?: Veo3Options;
   } | null>(null);
 
   // Resume dialog state
@@ -247,6 +255,14 @@ export default function VeoPage() {
             batchSize: currentForm.batchSize,
             sceneCount: currentForm.sceneCount,
             voice: currentForm.voice,
+            useVideoChapters: currentForm.useVideoChapters,
+                negativePrompt: currentForm.negativePrompt,
+            extractColorProfile: currentForm.extractColorProfile,
+            mediaType: currentForm.mediaType,
+            autoSceneCount: currentForm.autoSceneCount,
+            startTime: currentForm.startTime,
+            endTime: currentForm.endTime,
+            veo3Options: currentForm.veo3Options,
           } : undefined,
         });
 
@@ -270,9 +286,10 @@ export default function VeoPage() {
       batchSize: number;
       voice: VoiceLanguage;
       useVideoChapters: boolean;
-      deduplicationThreshold: number;
+        negativePrompt?: string;
       extractColorProfile: boolean;
       mediaType: "image" | "video";
+      veo3Options?: Veo3Options;
       // Resume parameters
       resumeFromBatch?: number;
       existingScenes?: Scene[];
@@ -312,7 +329,13 @@ export default function VeoPage() {
         voice: options.voice,
         scriptText: options.scriptText,
         useVideoChapters: options.useVideoChapters,
-        deduplicationThreshold: options.deduplicationThreshold,
+            negativePrompt: options.negativePrompt,
+        extractColorProfile: options.extractColorProfile,
+        mediaType: options.mediaType,
+        autoSceneCount: options.autoSceneCount,
+        startTime: options.startTime,
+        endTime: options.endTime,
+        veo3Options: options.veo3Options,
       };
       formDataRef.current = formData; // Update ref immediately for callbacks
       setCurrentFormData(formData);
@@ -505,6 +528,14 @@ export default function VeoPage() {
           batchSize: currentForm.batchSize,
           sceneCount: currentForm.sceneCount,
           voice: currentForm.voice,
+          useVideoChapters: currentForm.useVideoChapters,
+            negativePrompt: currentForm.negativePrompt,
+          extractColorProfile: currentForm.extractColorProfile,
+          mediaType: currentForm.mediaType,
+          autoSceneCount: currentForm.autoSceneCount,
+          startTime: currentForm.startTime,
+          endTime: currentForm.endTime,
+          veo3Options: currentForm.veo3Options,
         },
       });
 
@@ -545,7 +576,6 @@ export default function VeoPage() {
       voice: resumeData.voice,
       videoUrl: resumeData.videoUrl,
       useVideoChapters: true, // Default for resume
-      deduplicationThreshold: 0.75, // Default for resume
       extractColorProfile: false, // No video in script-to-scenes
       mediaType: "video", // Default for resume
       resumeFromBatch: resumeData.completedBatches,
@@ -598,36 +628,39 @@ export default function VeoPage() {
       return;
     }
 
-    const resumeData = cached.resumeData;
+    const rd = cached.resumeData;
 
     // Pre-populate state with existing data
-    setScenes(resumeData.existingScenes);
-    setCharacterRegistry(resumeData.existingCharacters);
-    setCharacters(Object.keys(resumeData.existingCharacters));
+    setScenes(rd.existingScenes);
+    setCharacterRegistry(rd.existingCharacters);
+    setCharacters(Object.keys(rd.existingCharacters));
     if (cached.script) {
       setGeneratedScript(cached.script);
     }
 
-    // Retry from the failed batch
+    // Retry from the failed batch — restore all original settings
     await handleSubmit({
-      workflow: resumeData.workflow,
+      workflow: rd.workflow,
       videoUrl: cached.videoUrl,
-      scriptText: resumeData.workflow === "script-to-scenes" || resumeData.workflow === "url-to-scenes"
+      scriptText: rd.workflow === "script-to-scenes" || rd.workflow === "url-to-scenes"
         ? cached.script?.rawText
         : undefined,
-      mode: resumeData.mode,
-      autoSceneCount: false,
-      sceneCount: resumeData.sceneCount,
-      batchSize: resumeData.batchSize,
-      voice: resumeData.voice,
-      useVideoChapters: true, // Default for resume
-      deduplicationThreshold: 0.75, // Default for resume
-      extractColorProfile: !!cached.colorProfile, // Use existing profile if available
-      mediaType: "video", // Default for resume
+      mode: rd.mode,
+      autoSceneCount: rd.autoSceneCount ?? false,
+      sceneCount: rd.sceneCount,
+      batchSize: rd.batchSize,
+      voice: rd.voice,
+      useVideoChapters: rd.useVideoChapters ?? true,
+      negativePrompt: rd.negativePrompt,
+      extractColorProfile: rd.extractColorProfile ?? !!cached.colorProfile,
+      mediaType: rd.mediaType ?? "video",
+      startTime: rd.startTime,
+      endTime: rd.endTime,
+      veo3Options: rd.veo3Options,
       // Resume parameters
-      resumeFromBatch: resumeData.completedBatches,
-      existingScenes: resumeData.existingScenes,
-      existingCharacters: resumeData.existingCharacters,
+      resumeFromBatch: rd.completedBatches,
+      existingScenes: rd.existingScenes,
+      existingCharacters: rd.existingCharacters,
     });
   }, [handleSubmit]);
 

@@ -168,7 +168,6 @@ const VeoRequestSchema = z.object({
     ])
     .default("no-voice"),
   useVideoChapters: z.boolean().default(true), // Include video description chapters
-  deduplicationThreshold: z.number().min(0).max(1).default(0.75), // Scene similarity threshold
   negativePrompt: z.string().optional(),
   resumeJobId: z.string().optional(),
   geminiApiKey: z.string().optional(),
@@ -434,13 +433,11 @@ async function runScriptToScenesHybrid(
           batchScenes,
           existingScenes: allScenes,
           existingCharacters: characterRegistry,
-          deduplicationThreshold: request.deduplicationThreshold,
           batchNum,
           totalBatches,
           jobId,
           serverProgress,
           sendEvent,
-          logPrefix: "[VEO]",
         });
 
         // Update state with processed results
@@ -752,13 +749,11 @@ async function runUrlToScenesDirect(
           batchScenes,
           existingScenes: allScenes,
           existingCharacters: characterRegistry,
-          deduplicationThreshold: request.deduplicationThreshold,
           batchNum,
           totalBatches,
           jobId,
           serverProgress,
           sendEvent,
-          logPrefix: "[VEO Direct]",
           timeRange: `${directBatchInfo.startTime}-${directBatchInfo.endTime}`,
         });
 

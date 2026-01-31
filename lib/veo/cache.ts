@@ -11,8 +11,6 @@ import {
   GeneratedScript,
   VeoJobStatus,
   VeoErrorType,
-  VoiceLanguage,
-  VeoMode,
   CinematicProfile,
 } from "./types";
 import { isBrowser } from "./browser-utils";
@@ -99,16 +97,7 @@ export function setCachedJob(
       totalBatches?: number;
       retryable: boolean;
     };
-    resumeData?: {
-      completedBatches: number;
-      existingScenes: Scene[];
-      existingCharacters: CharacterRegistry;
-      workflow: "url-to-script" | "script-to-scenes" | "url-to-scenes";
-      mode: VeoMode;
-      batchSize: number;
-      sceneCount: number;
-      voice: VoiceLanguage;
-    };
+    resumeData?: CachedVeoJob["resumeData"];
   }
 ): void {
   if (!isBrowser()) return;

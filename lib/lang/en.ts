@@ -524,8 +524,6 @@ export const en = {
             },
             useVideoChapters: "Include Description Chapters",
             useVideoChaptersDesc: "Use chapter timestamps from video description",
-            deduplicationThreshold: "Deduplication Threshold",
-            deduplicationThresholdDesc: "Similarity threshold for removing duplicate scenes (0 = no filtering, 1 = only exact matches)",
             negativePrompt: "Negative Prompt",
             negativePromptPlaceholder: "Enter unwanted elements (comma-separated)",
             negativePromptDesc: "Elements to exclude from generation (text overlays, quality issues, continuity problems). Edit to customize (max 500 characters)",

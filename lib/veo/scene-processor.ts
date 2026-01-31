@@ -9,7 +9,6 @@ import {
   VeoSSEEvent,
   VeoProgress,
 } from "./types";
-import { deduplicateScenes, getDeduplicationStats } from "./deduplication";
 import {
   extractCharacterRegistry,
   getCharacterDescription,
@@ -23,7 +22,6 @@ export interface ProcessSceneBatchOptions {
   existingCharacters: CharacterRegistry;
 
   // Configuration
-  deduplicationThreshold: number;
   batchNum: number;
   totalBatches: number;
 
@@ -38,7 +36,6 @@ export interface ProcessSceneBatchOptions {
   sendEvent: (event: VeoSSEEvent) => void;
 
   // Optional metadata
-  logPrefix?: string;
   timeRange?: string; // For direct mode: "00:00-00:08"
 }
 
@@ -46,11 +43,10 @@ export interface ProcessSceneBatchResult {
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
   newCharactersCount: number;
-  duplicatesRemoved: number;
 }
 
 /**
- * Process a batch of scenes with character extraction, deduplication, and progress tracking
+ * Process a batch of scenes with character extraction and progress tracking
  * Unified logic used across all VEO workflows
  */
 export function processSceneBatch(
@@ -60,13 +56,11 @@ export function processSceneBatch(
     batchScenes,
     existingScenes,
     existingCharacters,
-    deduplicationThreshold,
     batchNum,
     totalBatches,
     jobId,
     serverProgress,
     sendEvent,
-    logPrefix = "[VEO]",
     timeRange,
   } = options;
 
@@ -85,34 +79,11 @@ export function processSceneBatch(
     }
   }
 
-  // Deduplicate scenes before adding to collection
-  const deduplicationResult = deduplicateScenes(
-    existingScenes,
-    batchScenes,
-    deduplicationThreshold
-  );
-
-  // Log deduplication stats if duplicates were found
-  if (deduplicationResult.duplicates.length > 0) {
-    const stats = getDeduplicationStats(deduplicationResult);
-    console.log(
-      `${logPrefix} Batch ${batchNum + 1} deduplication: ` +
-        `${stats.duplicateCount} duplicates removed ` +
-        `(${(stats.removalRate * 100).toFixed(1)}% removal rate, ` +
-        `avg similarity: ${(stats.averageSimilarity * 100).toFixed(1)}%)`
-    );
-
-    // Log first few duplicate reasons for debugging
-    deduplicationResult.similarities.slice(0, 3).forEach((sim) => {
-      console.log(`  - ${sim.reason}`);
-    });
-  }
-
   // Merge characters
   const updatedCharacters = { ...existingCharacters, ...newCharacters };
 
-  // Add unique scenes to collection
-  const updatedScenes = [...existingScenes, ...deduplicationResult.unique];
+  // Add all batch scenes to collection
+  const updatedScenes = [...existingScenes, ...batchScenes];
 
   // Update progress (convert to string format for legacy compatibility)
   const stringCharacters: Record<string, string> = {};
@@ -122,20 +93,16 @@ export function processSceneBatch(
 
   const updatedProgress = updateProgressAfterBatch(
     serverProgress.get(jobId)!,
-    deduplicationResult.unique, // Use unique scenes for progress update
+    batchScenes,
     stringCharacters
   );
   serverProgress.set(jobId, updatedProgress);
 
   // Build progress message
-  let progressMessage = `Batch ${batchNum + 1} complete: ${deduplicationResult.unique.length} scenes`;
+  let progressMessage = `Batch ${batchNum + 1} complete: ${batchScenes.length} scenes`;
 
   if (timeRange) {
     progressMessage += ` from ${timeRange}`;
-  }
-
-  if (deduplicationResult.duplicates.length > 0) {
-    progressMessage += ` (${deduplicationResult.duplicates.length} duplicates removed)`;
   }
 
   // Send progress event
@@ -153,7 +120,6 @@ export function processSceneBatch(
     scenes: updatedScenes,
     characterRegistry: updatedCharacters,
     newCharactersCount,
-    duplicatesRemoved: deduplicationResult.duplicates.length,
   };
 }
 

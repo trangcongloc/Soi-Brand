@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, memo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
 import {
@@ -8,12 +8,12 @@ import {
   VeoMode,
   VoiceLanguage,
   VeoWorkflow,
-  getDefaultNegativePrompt,
   MediaType,
   ColorPaletteType,
   LightingSetup,
   Veo3Options,
 } from "@/lib/veo";
+import { loadVeoFormSettings, saveVeoFormSettings } from "@/lib/veo/settings";
 import { VeoWorkflowSelector } from "./VeoWorkflowSelector";
 import { VeoUrlInput } from "./VeoUrlInput";
 import { VeoScriptInput } from "./VeoScriptInput";
@@ -33,7 +33,6 @@ interface VeoFormProps {
     batchSize: number;
     voice: VoiceLanguage;
     useVideoChapters: boolean;
-    deduplicationThreshold: number;
     negativePrompt?: string;
     extractColorProfile: boolean;
     mediaType: MediaType;
@@ -63,28 +62,47 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   const [scriptText, setScriptText] = useState("");
   const [scriptFileName, setScriptFileName] = useState("");
 
-  // Settings
-  const [mode, setMode] = useState<VeoMode>("hybrid");
-  const [autoSceneCount, setAutoSceneCount] = useState(true);
-  const [sceneCount, setSceneCount] = useState(40);
-  const [batchSize, setBatchSize] = useState(30);
-  const [voice, setVoice] = useState<VoiceLanguage>("no-voice");
-  const [useVideoChapters, setUseVideoChapters] = useState(true);
-  const [deduplicationThreshold, setDeduplicationThreshold] = useState(0.75);
-  const [negativePrompt, setNegativePrompt] = useState(getDefaultNegativePrompt("standard"));
-  const [extractColorProfile, setExtractColorProfile] = useState(true);
-  const [mediaType, setMediaType] = useState<MediaType>("video");
+  // Load persisted settings (runs once on mount)
+  const savedSettings = useMemo(() => loadVeoFormSettings(), []);
+
+  // Settings — initialized from persisted values
+  const [mode, setMode] = useState<VeoMode>(savedSettings.mode);
+  const [autoSceneCount, setAutoSceneCount] = useState(savedSettings.autoSceneCount);
+  const [sceneCount, setSceneCount] = useState(savedSettings.sceneCount);
+  const [batchSize, setBatchSize] = useState(savedSettings.batchSize);
+  const [voice, setVoice] = useState<VoiceLanguage>(savedSettings.voice);
+  const [useVideoChapters, setUseVideoChapters] = useState(savedSettings.useVideoChapters);
+  const [negativePrompt, setNegativePrompt] = useState(savedSettings.negativePrompt);
+  const [extractColorProfile, setExtractColorProfile] = useState(savedSettings.extractColorProfile);
+  const [mediaType, setMediaType] = useState<MediaType>(savedSettings.mediaType);
   const [showSettings, setShowSettings] = useState(false);
 
-  // VEO 3 Prompting Guide Options
-  const [enableAudio, setEnableAudio] = useState(true);
-  const [enableDialogue, setEnableDialogue] = useState(true);
-  const [enableCameraPositioning, setEnableCameraPositioning] = useState(true);
-  const [enableExpressionControl, setEnableExpressionControl] = useState(true);
-  const [enableAdvancedComposition, setEnableAdvancedComposition] = useState(true);
-  const [colorPalette, setColorPalette] = useState<ColorPaletteType>("auto");
-  const [lightingSetup, setLightingSetup] = useState<LightingSetup>("auto");
-  const [selfieMode, setSelfieMode] = useState(false);
+  // VEO 3 Prompting Guide Options — initialized from persisted values
+  const [enableAudio, setEnableAudio] = useState(savedSettings.enableAudio);
+  const [enableDialogue, setEnableDialogue] = useState(savedSettings.enableDialogue);
+  const [enableCameraPositioning, setEnableCameraPositioning] = useState(savedSettings.enableCameraPositioning);
+  const [enableExpressionControl, setEnableExpressionControl] = useState(savedSettings.enableExpressionControl);
+  const [enableAdvancedComposition, setEnableAdvancedComposition] = useState(savedSettings.enableAdvancedComposition);
+  const [colorPalette, setColorPalette] = useState<ColorPaletteType>(savedSettings.colorPalette);
+  const [lightingSetup, setLightingSetup] = useState<LightingSetup>(savedSettings.lightingSetup);
+  const [selfieMode, setSelfieMode] = useState(savedSettings.selfieMode);
+
+  // Persist settings to localStorage whenever they change
+  useEffect(() => {
+    saveVeoFormSettings({
+      mode, autoSceneCount, sceneCount, batchSize, voice,
+      useVideoChapters, extractColorProfile, mediaType,
+      negativePrompt, enableAudio, enableDialogue, enableCameraPositioning,
+      enableExpressionControl, enableAdvancedComposition, colorPalette,
+      lightingSetup, selfieMode,
+    });
+  }, [
+    mode, autoSceneCount, sceneCount, batchSize, voice,
+    useVideoChapters, extractColorProfile, mediaType,
+    negativePrompt, enableAudio, enableDialogue, enableCameraPositioning,
+    enableExpressionControl, enableAdvancedComposition, colorPalette,
+    lightingSetup, selfieMode,
+  ]);
 
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,7 +191,6 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           batchSize,
           voice,
           useVideoChapters,
-          deduplicationThreshold,
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: workflow === "url-to-scenes" ? extractColorProfile : false,
           mediaType,
@@ -193,7 +210,6 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           batchSize,
           voice,
           useVideoChapters,
-          deduplicationThreshold,
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: false, // No video to extract from
           mediaType,
@@ -201,7 +217,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
         });
       }
     },
-    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, useVideoChapters, deduplicationThreshold, negativePrompt, extractColorProfile, mediaType, buildVeo3Options, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, useVideoChapters, negativePrompt, extractColorProfile, mediaType, buildVeo3Options, onError, onSubmit, lang]
   );
 
   const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
@@ -216,7 +232,6 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     batchSize,
     voice,
     useVideoChapters,
-    deduplicationThreshold,
     negativePrompt,
     extractColorProfile,
     mediaType,
@@ -238,7 +253,6 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     if (updates.batchSize !== undefined) setBatchSize(updates.batchSize);
     if (updates.voice !== undefined) setVoice(updates.voice);
     if (updates.useVideoChapters !== undefined) setUseVideoChapters(updates.useVideoChapters);
-    if (updates.deduplicationThreshold !== undefined) setDeduplicationThreshold(updates.deduplicationThreshold);
     if (updates.negativePrompt !== undefined) setNegativePrompt(updates.negativePrompt);
     if (updates.extractColorProfile !== undefined) setExtractColorProfile(updates.extractColorProfile);
     if (updates.mediaType !== undefined) setMediaType(updates.mediaType);

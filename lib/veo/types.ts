@@ -451,6 +451,15 @@ export interface CachedVeoJob {
     sceneCount: number;
     voice: VoiceLanguage;
     colorProfile?: CinematicProfile; // Phase 0: For resume
+    // Extended fields for full settings restoration
+    useVideoChapters?: boolean;
+    negativePrompt?: string;
+    extractColorProfile?: boolean;
+    mediaType?: MediaType;
+    autoSceneCount?: boolean;
+    startTime?: string;
+    endTime?: string;
+    veo3Options?: Veo3Options;
   };
 }
 
@@ -532,40 +541,14 @@ export interface GeminiApiError extends Error {
 }
 
 // ============================================================================
-// Deduplication Types
-// ============================================================================
-
-export interface SceneSimilarity {
-  scene1Index: number;
-  scene2Index: number;
-  similarity: number; // 0.0 to 1.0
-  reason: string;
-}
-
-export interface DeduplicationResult {
-  unique: Scene[];
-  duplicates: Scene[];
-  similarities: SceneSimilarity[];
-}
-
-export interface DeduplicationConfig {
-  enabled: boolean;
-  similarityThreshold: number; // 0.0-1.0, default 0.75
-  algorithm: "word-overlap" | "tfidf" | "semantic";
-}
-
-// ============================================================================
 // VEO Settings (extended)
 // ============================================================================
 
 /**
- * Extended VEO settings including deduplication, description parsing,
+ * Extended VEO settings including description parsing,
  * continuity mode, and other quality improvements.
  */
 export interface VeoSettings {
-  // Deduplication settings
-  deduplication: DeduplicationConfig;
-
   // Description parsing (Phase 2)
   useVideoDescription: boolean; // Default: true
   useVideoChapters: boolean; // Default: true
@@ -1403,4 +1386,40 @@ export interface Veo3Options {
 
   // Template
   templateId?: string;
+}
+
+// ============================================================================
+// VEO Form Settings Persistence
+// ============================================================================
+
+/**
+ * Persisted VEO form preferences.
+ * Per-video fields (url, workflow, scriptText, durationMode, startTime, endTime)
+ * are NOT persisted — they change every session.
+ */
+export interface VeoFormSettings {
+  // Core
+  mode: VeoMode;
+  autoSceneCount: boolean;
+  sceneCount: number;
+  batchSize: number;
+  voice: VoiceLanguage;
+
+  // Processing
+  useVideoChapters: boolean;
+  extractColorProfile: boolean;
+  mediaType: MediaType;
+
+  // Prompting
+  negativePrompt: string;
+
+  // VEO 3 options
+  enableAudio: boolean;
+  enableDialogue: boolean;
+  enableCameraPositioning: boolean;
+  enableExpressionControl: boolean;
+  enableAdvancedComposition: boolean;
+  colorPalette: ColorPaletteType;
+  lightingSetup: LightingSetup;
+  selfieMode: boolean;
 }

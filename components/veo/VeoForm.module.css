@@ -861,4 +861,275 @@
   .toggleSwitch input:checked + .toggleSlider:before {
     transform: translateX(18px);
   }
+
+  .inlineRow {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chipGrid {
+    gap: 0.35rem;
+  }
+
+  .settingChip {
+    font-size: 9px;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .compactInput {
+    width: 42px;
+    padding: 0.25rem 0.3rem;
+    font-size: 10px;
+  }
+
+  .compactSelect {
+    padding: 0.25rem 0.3rem;
+    font-size: 10px;
+    max-width: 100px;
+  }
+}
+
+/* ============================================================================
+   COMPACT SETTINGS PANEL — Icon-based chip layout
+   ============================================================================ */
+
+/* Inline row for core settings */
+.inlineRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* Group label inside inline row */
+.inlineLabel {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Chip grid — wrapping flex container */
+.chipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* Individual chip pill */
+.settingChip {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  font-size: var(--fs-xs);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  user-select: none;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.settingChip:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.settingChip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.settingChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settingChip .chipIcon {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Compact number input (inline, small) */
+.compactInput {
+  width: 50px;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: var(--fs-xs);
+  text-align: center;
+  transition: var(--transition);
+}
+
+.compactInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.compactInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Compact inline select */
+.compactSelect {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: var(--fs-xs);
+  transition: var(--transition);
+  max-width: 130px;
+  cursor: pointer;
+}
+
+.compactSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.compactSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sub-options row (for composition palette/lighting) */
+.subOptions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--primary);
+}
+
+/* Negative prompt collapsible trigger */
+.negativePromptToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.negativePromptToggle:hover {
+  color: var(--text-main);
+}
+
+.negativePromptToggle .toggleChevron {
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.negativePromptToggle .toggleChevronOpen {
+  transform: rotate(180deg);
+}
+
+.negativePromptTextarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 120px;
+  transition: var(--transition);
+}
+
+.negativePromptTextarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.negativePromptTextarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* CSS-only tooltip via data-tooltip attribute — scoped to .tooltip class */
+.tooltip {
+  position: relative;
+}
+
+.tooltip:hover::after,
+.tooltip:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  max-width: 250px;
+  white-space: normal;
+  z-index: 100;
+  pointer-events: none;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip:hover::before,
+.tooltip:focus-visible::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #1a1a1a;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Settings rows container */
+.settingsRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* Row separator */
+.settingsRowDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.15rem 0;
+}
+
+/* Row label (tiny) */
+.rowLabel {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
