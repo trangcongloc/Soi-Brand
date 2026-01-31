@@ -271,6 +271,7 @@ async function runScriptToScenesDirect(
     voiceLang: request.voice as VoiceLanguage,
     globalNegativePrompt: request.negativePrompt,
     mediaType: request.mediaType as MediaType,
+    veo3Options: request.veo3Options,
   });
 
   const response = await callGeminiAPIWithRetry(requestBody, {
@@ -407,6 +408,7 @@ async function runScriptToScenesHybrid(
         // Phase 2: Use pre-extracted characters from Phase 1
         preExtractedCharacters: preExtractedCharacters && preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
         preExtractedBackground: preExtractedBackground || undefined,
+        veo3Options: request.veo3Options,
       });
 
       const response = await callGeminiAPIWithRetry(requestBody, {
@@ -712,7 +714,6 @@ async function runUrlToScenesDirect(
         videoUrl: request.videoUrl!,
         sceneCount: batchSceneCount,
         voiceLang: request.voice as VoiceLanguage,
-        includeCharacterAnalysis: preExtractedCharacters.length === 0, // Fallback only if Phase 1 failed
         continuityContext,
         directBatchInfo,
         globalNegativePrompt: request.negativePrompt,
@@ -723,6 +724,7 @@ async function runUrlToScenesDirect(
         // Phase 2: Use pre-extracted characters from Phase 1
         preExtractedCharacters: preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
         preExtractedBackground: preExtractedBackground || undefined,
+        veo3Options: request.veo3Options,
       });
 
       const response = await callGeminiAPIWithRetry(requestBody, {

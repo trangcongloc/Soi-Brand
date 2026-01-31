@@ -27,7 +27,6 @@ export {
 
 // Prompt building
 export {
-  CHARACTER_ANALYSIS_PROMPT,
   DEFAULT_NEGATIVE_PROMPT,
   getDefaultNegativePrompt,
   addVoiceInstructions,

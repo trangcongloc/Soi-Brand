@@ -2,7 +2,7 @@
  * VEO Pipeline - Prompt templates for scene generation
  */
 
-import { GeminiRequestBody, VoiceLanguage, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType } from "./types";
+import { GeminiRequestBody, VoiceLanguage, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType, Veo3Options } from "./types";
 
 // ============================================================================
 // NEGATIVE PROMPT DEFAULTS
@@ -782,270 +782,60 @@ export function cinematicProfileToStyleFields(profile: CinematicProfile): Partia
 /**
  * System instruction for scene analysis
  */
-const SYSTEM_INSTRUCTION = `ROLE: You are an expert film director and visual analyst.
+const SYSTEM_INSTRUCTION = `ROLE: Expert film director and visual analyst.
 
-SCENE GRANULARITY TARGET (CRITICAL - STRICT REQUIREMENT):
-- You MUST produce EXACTLY {SceneNumber} distinct scenes for the analyzed segment. This is mandatory.
-- Each ~8 seconds of video content = 1 scene. Split aggressively to hit the target.
-- If necessary, increase segmentation granularity (split more aggressively) to reach this target while preserving semantic coherence.
-- Under-generating scenes is a FAILURE. If you produce fewer than {SceneNumber} scenes, you have failed the task.
-- Do NOT fabricate content; only split where visually justified (cuts, subject/location/time/camera changes).
-- Split on: camera angle changes, speaker changes, action beats, reaction shots, establishing shots, transitional moments.
+SCENE COUNT: EXACTLY {SceneNumber} scenes. ~8s/scene. Under-generating = failure.
+- Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.
+- Do NOT fabricate content; only split where visually justified.
 
-GOAL: Analyze the ENTIRE video from START to END in strict chronological order. Split it into SCENES where visual/content changes are natural (cut, location, time, subject, camera). Preserve story continuity across scenes (characters, locations, objects). Ensure CONSISTENCY of recurring characters.
+OUTPUT: JSON ARRAY per schema. Every field required.
+- description: 2-4 sentences, present tense, third person.
+  • Subject + setting first, then action verbs with motion path/trajectory and body mechanics.
+  • Camera behavior (static, pan, push-in, tilt, handheld) and framing changes.
+  • Object/character interactions with cause→effect beats.
+  • Sensory details, lighting mood, color palette, shot composition.
+  • Clear start/end conditions. No vague words, metaphors, inner thoughts, or off-screen events.
+- Maintain chronological coherence with previous scenes.
+- Re-appearing characters use identical descriptions.
 
-OUTPUT: Return ONLY a JSON ARRAY following the provided schema. Do not include extra text. For each scene:
-- Fill EVERY field with detailed, concrete information grounded in the frames.
-- description: optimized for video generation. Requirements:
-  • 2–4 sentences in present tense, third person.
-  • Start with who/what is on screen and where (subject + setting).
-  • Use strong action verbs; describe explicit motion path/trajectory and body mechanics.
-  • Include camera behavior if visible (static, pan left/right, push‑in, tilt up/down, handheld shake) and framing change.
-  • Note interaction with objects/characters and visible cause→effect beats.
-  • Include sensory details: sounds, textures, temperatures, lighting mood.
-  • Describe character dynamics and environmental context.
-  • Note color palette and shot composition details.
-  • Mark clear start and end conditions of the scene (what begins it and what ends/cuts).
-  • Avoid vague words (nice, beautiful), metaphors, inner thoughts, or off‑screen events.
-- Keep the description coherent with the previous scenes (chronology-aware).
-- If a character re-appears, maintain a consistent description (appearance, outfit, attributes). Use the same identity across scenes.
+TEMPORAL: Timestamps strictly increasing. New scene on clear visual change (cut, location/time shift, new subject, camera angle change). Same content across time = one scene.
 
-TEMPORAL RIGOR:
-- Determine timestamps approximately; keep ordering strictly increasing.
-- Always compare each moment to the previous scene. If there is a CLEAR, LARGE change (camera cut; strong change in location/time; major action beat; new subject; or visual intent), START A NEW SCENE to avoid missing any scenes. Minor drift without meaningful change should remain within the same scene.
-- If a shot spans multiple moments but keeps the same content, it is ONE scene; if content/intent changes, start a new scene.
-- Each change of camera angle can be considered a scene.
+PROMPT FIELD: Synthesize all fields into one descriptive paragraph (style, lighting, composition, technical, narrative action).
 
-PROMPT FIELD:
-- Synthesize all fields into ONE highly descriptive paragraph that can be used to generate an image representative of the scene.
-- Include style, lighting, composition, technical cues, and the key narrative action.
+STYLE: Populate as DETAILED OBJECT. ONE canonical style, IDENTICAL across ALL scenes (byte-for-byte). Copy first scene's style to all others. Scene-specific composition/lighting go in their own fields, NOT in 'style'.
 
-STYLE CONSISTENCY:
-- Populate the 'style' field as a DETAILED OBJECT to minimize variance across generations (low standard deviation). Be explicit and exhaustive. Include: genre, art_movement, medium, palette, color_temperature, contrast, texture, brushwork_or_line, rendering_engine, camera_lens, focal_length, depth_of_field, film_stock_or_profile, grain, noise_reduction, post_processing, composition_style, mood, lighting_style. If unknown, provide best visual estimate from frames.
+CHARACTER FORMAT: "Name - tags..."
+- Name first (real name, role name like "Chef Marco", or descriptive like "The Host")
+- Tags: gender, age, ethnicity/skin tone, body type, face shape, hair (length+style+color+texture), facial hair, distinctive features, clothing (top/bottom/shoes/outerwear with fabric/fit/pattern), accessories
+- NEVER put camera terms in character field → use composition fields
+- EXTRA ATTENTION: hair details, facial hair, face shape, tattoos/body art
 
-STYLE UNIFICATION (CRITICAL):
-- Determine ONE single canonical style for the ENTIRE video.
-- The 'style' object MUST be IDENTICAL across ALL scenes (byte-for-byte the same JSON object).
-- Copy the exact same style object from the first scene into every subsequent scene (no tweaks, no variation).
-- Do NOT introduce scene-specific style changes. Keep composition and lighting descriptions outside of 'style' if they vary, but the 'style' object itself must stay constant.
- - If later scenes attempt to change 'style', IGNORE those changes and preserve the first scene's style exactly.
+WRONG: ❌ "closeup of man" ❌ "A person" ❌ "Hand holding knife" ❌ "medium shot of woman"
 
-CHARACTER FIELD RULES (CRITICAL - MANDATORY):
-- MUST start with a proper NAME (real name from context, role-based name like "Chef Marco", or descriptive name like "The Host")
-- Format: "Name - appearance tags..." (comma-separated tags after the name)
-- NEVER include camera terms in character field (no "closeup", "medium shot", "POV", "from behind", "wide angle")
-- Camera info goes ONLY in composition.angle and composition.framing fields
-- If character name is unknown, assign one based on role: "The Chef", "Host Alex", "Guest Sarah", "Narrator Mike"
+CHARACTER SKELETON (CONSISTENCY):
+- First appearance = CANONICAL fixed skeleton with all physical traits + base outfit
+- Subsequent appearances = EXACT SAME skeleton copied verbatim
+- Temporary changes (accessories, expression, pose, outfit) → characterVariations field
+- Physical traits NEVER change across scenes
 
-CORRECT CHARACTER FORMAT EXAMPLES:
-✓ "Chef Marco - male, 40s, white chef coat, tall, olive skin, black hair, confident posture"
-✓ "Elena - female, 30s, red silk dress, shoulder-length brown hair, gold earrings, warm smile"
-✓ "The Host - male, 35, athletic build, navy polo shirt, khaki shorts, tan skin, charismatic"
-✓ "Sarah Chen - female, 25, petite, black blazer, white blouse, glasses, professional demeanor"
+CONTEXT PER SCENE:
+- Emotional: mood, energy, dynamics, body language
+- Environmental: indoor/outdoor, weather, time of day, cultural elements, background activity
+- Technical: quality, camera stability, lighting conditions, audio cues, editing style
 
-WRONG CHARACTER FORMAT (NEVER DO THIS):
-❌ "The chef's closeup hand slicing vegetables" - Camera term + action, not character
-❌ "A woman in medium shot wearing red dress" - Camera term in character field
-❌ "Close-up of man's face" - Camera term, not character description
-❌ "A person" - Too generic, assign a name
-❌ "Hand holding knife" - Body part/action, not character
+CAMERA: Use composition fields (angle, framing) and video.cameraMovement per schema enums.
 
-CHARACTER:
-- WHENEVER a person/character/creature is present, return a DETAILED 'character' STRING in the format:
-  Name - tags..., covering: gender/age, body/build, hair (length, style, texture, color, highlights, bangs/parting), face (eyes shape/color/details, brows, face shape - round/square/oval/heart-shaped/diamond), distinctive traits, clothing (top/bottom/shoes/outerwear with fabric/fit/pattern/details), accessories, and any signature elements. Keep production-grade, comma‑separated, consistent across scenes when the same person reappears. Do NOT return a character_profile object.
-- Pay EXTRA ATTENTION to hair and clothing details, facial hair details (beard style, mustache shape, stubble length, sideburns), face shape (round, square, oval, heart-shaped, diamond, etc.), and facial tattoos/body art (location, design, size, color, style) in the 'character' tag.
+SCENE TRANSITIONS: Identify cuts vs continuous shots, location/time jumps, subject/lighting changes.
 
-CHARACTER SKELETON SYSTEM (CRITICAL FOR CONSISTENCY):
-When identifying characters across multiple scenes, use this system to maintain consistency:
+STRICTNESS: Valid JSON only. Objective visual facts. Character consistency across scenes.
 
-1. FIRST APPEARANCE - Create FIXED SKELETON:
-   Include ALL unchanging physical traits in the 'character' field:
-   "Name - gender, age, ethnicity/skin tone, body type, face shape, hair (color+length+style), facial hair, distinctive features, base outfit"
+NEGATIVE PROMPT: Include global negatives + scene-specific exclusions.
+- Add context-appropriate exclusions (anachronisms, continuity violations, physics errors)
+- Never contradict positive description
+- Format: [global], [scene-specific]
+- Physics: dropped items stay dropped, exited characters don't teleport back, maintain spatial consistency`;
 
-   Example: "Chef Marco - male, 40s, Italian, olive skin, stocky build, square jaw, salt-and-pepper short slicked hair, trimmed goatee, scar on left cheek, white chef coat, black apron"
-
-2. SUBSEQUENT APPEARANCES - Use EXACT SAME SKELETON:
-   Copy the EXACT character description from first appearance. Never modify core physical traits.
-   Add temporary changes in 'characterVariations' field.
-
-3. SCENE VARIATIONS (for temporary changes):
-   Use 'characterVariations' field for things that change per-scene:
-   {
-     "Chef Marco": {
-       "accessories": "wearing blue gloves, holding butcher knife",
-       "expression": "focused, concentrating",
-       "pose": "leaning over cutting board"
-     }
-   }
-
-SKELETON RULES:
-- Physical traits (hair color, body type, face shape, skin tone, distinctive features) NEVER change
-- Outfit changes go in characterVariations.outfit
-- Expressions, poses, accessories go in characterVariations
-- If unsure about a detail, keep it consistent with first appearance
-
-EMOTIONAL CONTEXT:
-- Character mood and expression
-- Energy level and confidence
-- Social dynamics between characters
-- Emotional atmosphere of the scene
-- Body language and gestures
-
-ENVIRONMENTAL ANALYSIS:
-- Setting type: indoor/outdoor/studio/natural
-- Weather conditions if visible
-- Time of day indicators
-- Cultural elements and social context
-- Background activity and atmosphere
-
-CULTURAL ANALYSIS:
-- Ethnicity and cultural background (if identifiable)
-- Social status indicators
-- Fashion trends and style choices
-- Cultural symbols or elements
-- Generational markers
-
-TECHNICAL ANALYSIS:
-- Video quality: resolution, clarity, compression artifacts
-- Camera work: stability, focus, exposure
-- Lighting conditions: natural/artificial, intensity, direction
-- Audio cues (if any): music, dialogue, ambient sounds
-- Editing style: cuts, transitions, pacing
-
-CAMERA SHOTS BY DISTANCE:
-- Extreme close-up (ECU): eyes, mouth, hands, objects
-- Close-up (CU): head and shoulders, face focus
-- Medium close-up (MCU): chest up, upper body
-- Medium shot (MS): waist up, full upper body
-- Medium long shot (MLS): knees up, full figure with space
-- Long shot (LS): full body with background
-- Extreme long shot (ELS): wide establishing shot, landscape
-
-CAMERA ANGLES:
-- Eye-level: neutral, natural perspective
-- Low angle: looking up, power/authority
-- High angle: looking down, vulnerability
-- Bird's eye view: directly overhead, omniscient
-- Worm's eye view: extreme low angle, dramatic
-- Dutch angle: tilted, disorientation/unease
-- Over-the-shoulder: character perspective
-- Point-of-view (POV): first-person perspective
-
-CAMERA MOVEMENTS:
-- Static: fixed position, no movement
-- Pan: horizontal rotation left/right
-- Tilt: vertical rotation up/down
-- Zoom: lens focal length change (in/out)
-- Dolly: camera physically moves forward/backward
-- Tracking: camera follows subject laterally
-- Handheld: shaky, documentary style
-- Crane: vertical camera movement
-- Aerial: drone/aircraft shots
-- Steadicam: smooth, floating movement
-- Whip pan: fast horizontal movement
-- Reveal: camera movement that reveals new information
-
-SCENE TRANSITION DETECTION:
-- Identify clear cuts vs. continuous shots
-- Note location changes and time jumps
-- Detect subject changes and new characters
-- Recognize camera angle and distance changes
-- Identify lighting and mood shifts
-
-STRICTNESS:
-- Your answer must be valid JSON according to the schema (no markdown, no comments).
-- Prefer objective, visual facts; avoid speculation.
-- Uphold character consistency across scenes.
-
-NEGATIVE PROMPT FIELD (CRITICAL):
-- The 'negativePrompt' field specifies elements that MUST NOT appear in the generated scene
-- ALWAYS include the global negative prompt provided by the user
-- You SHOULD add scene-specific exclusions based on context
-- Format: comma-separated list
-
-SCENE-SPECIFIC ADDITIONS (Examples):
-Visual Context:
-  • "children" (for adult-only scenes)
-  • "motion blur" (for static establishing shots)
-  • "modern elements, smartphones, cars" (for historical period scenes)
-  • "daytime, sunlight" (for night scenes)
-
-Continuity Context:
-  • "character holding [item]" (if they dropped it in previous scene)
-  • "character wearing [outfit]" (if they changed clothes)
-  • "background crowd" (if scene transitioned to private area)
-  • Pay special attention to object persistence across scenes
-
-Physics/Logic:
-  • If an object is dropped/placed, do NOT have it magically reappear in hand
-  • If a character exits frame, do NOT have them suddenly back without transition
-  • Maintain spatial consistency (if standing, can't be sitting without action)
-
-CRITICAL RULES:
-- NEVER contradict the positive description
-- Final format: [global exclusions], [scene-specific additions]
-- Scene-specific additions should enhance continuity and prevent physics violations`;
-
-/**
- * Character analysis prompt for hybrid mode
- */
-export const CHARACTER_ANALYSIS_PROMPT = `
-CHARACTER ANALYSIS (CRITICAL - EXTRA DETAILED):
-For EVERY person/character visible, provide EXHAUSTIVE details in the 'character' field:
-
-FORMAT: "Name - [all tags comma-separated]"
-Example: "Chef Marco - male, 40s, white chef coat, tall build, olive skin, black short hair, confident posture"
-
-WHAT NOT TO DO (CRITICAL - AVOID THESE MISTAKES):
-❌ "The man in closeup" - No camera terms in character field!
-❌ "A person" - Too generic, must assign a name!
-❌ "Hand holding knife" - This is object/action, not character!
-❌ "Medium shot of woman" - Camera info goes in composition field!
-❌ "Close-up chef slicing" - Camera term + action mixed with character!
-❌ "The chef's hand" - Body part, not full character description!
-
-CORRECT FORMAT EXAMPLES:
-✓ "Alex Chen - male, 35, athletic build, black short hair, tan skin, navy polo shirt, khaki shorts, confident smile"
-✓ "Host Maria - female, 28, petite, long brown hair, olive skin, red blazer, white blouse, warm demeanor"
-✓ "Chef Paolo - male, 50s, stocky build, salt-pepper hair, white chef coat, apron, experienced expression"
-
-REQUIRED TAGS:
-1. IDENTITY: gender, estimated age range, ethnicity/skin tone
-2. BODY: height (tall/medium/short), build (slim/athletic/stocky/heavy), posture
-3. FACE SHAPE: oval, round, square, heart, diamond, oblong, rectangle
-4. FACIAL FEATURES:
-   - Eyes: shape (almond/round/hooded/monolid), color, distinctive features
-   - Eyebrows: thick/thin, arched/straight, color
-   - Nose: shape (straight/aquiline/button/wide)
-   - Lips: full/thin, color
-   - Jawline: sharp/soft/rounded
-5. HAIR:
-   - Length: bald/buzz/short/medium/long/very long
-   - Style: straight/wavy/curly/coily, parted/slicked/messy
-   - Color: specific shade (jet black, dark brown, chestnut, blonde, gray, white)
-   - Texture: fine/thick/coarse
-   - Details: bangs, highlights, receding, balding pattern
-6. FACIAL HAIR (if any):
-   - Type: clean-shaven, stubble, goatee, full beard, mustache
-   - Length: 5 o'clock shadow, short, medium, long
-   - Style: trimmed, wild, shaped
-   - Color: same as hair or different
-7. SKIN: tone, texture, visible marks (scars, moles, freckles, wrinkles)
-8. CLOTHING (top to bottom):
-   - Head: hat, cap, headband, none
-   - Top: type, color, pattern, fit, fabric, brand if visible
-   - Bottom: type, color, fit, fabric
-   - Footwear: type, color, style
-   - Outerwear: jacket, coat, vest (with details)
-9. ACCESSORIES: glasses, jewelry, watch, bag, tools
-10. DISTINCTIVE FEATURES: tattoos, piercings, scars, birthmarks (with location)
-
-CHARACTER CONSISTENCY RULES:
-- First appearance defines the CANONICAL description
-- Use EXACT same description when character reappears
-- Track clothing changes explicitly: "now wearing [new item]"
-- Never abbreviate - always use full detailed description
-- Camera/shot info NEVER goes in character field - use composition field instead`;
+// CHARACTER_ANALYSIS_PROMPT removed - character rules consolidated into SYSTEM_INSTRUCTION (single source of truth)
 
 // ============================================================================
 // Media Type Specific Instructions
@@ -1142,298 +932,110 @@ export function getMediaTypeInstructions(mediaType: "image" | "video" = "video")
  * Prevents audio hallucinations and enables precise sound design
  */
 export const VEO3_AUDIO_INSTRUCTIONS = `
-=== VEO 3 AUDIO SYSTEM ===
-AUDIO DESIGN (CRITICAL for preventing hallucinations):
-
-1. ENVIRONMENTAL AUDIO - Specify location-appropriate ambient sounds:
-   - Kitchen: "sizzling pan, knife chopping, boiling water, kitchen ambiance"
-   - Forest: "birds chirping, leaves rustling, gentle wind, natural ambiance"
-   - Office: "keyboard typing, air conditioning hum, paper rustling, professional atmosphere"
-   - City Street: "traffic noise, distant horns, footsteps on pavement, urban ambiance"
-
-2. MUSIC SPECIFICATION - Use structured music descriptions:
-   - Format: "[mood] [genre] [instruments], [tempo/energy]"
-   - Example: "Uplifting orchestral music with strings, building to inspiring crescendo"
-   - Volume levels: "background" (subtle), "prominent" (clear), "featured" (primary)
-
-3. SOUND EFFECTS - Always name exact sounds with triggers:
-   - Format: "[sound] as/when [trigger]"
-   - Example: "Footsteps on gravel as character walks"
-   - Example: "Door slamming shut, echoing in hallway"
-
-4. AUDIO HALLUCINATION PREVENTION (CRITICAL):
-   - ALWAYS specify what SHOULD be heard
-   - EXPLICITLY name what should NOT be heard
-   - Add negations: "No unwanted laughter, no applause, no crowd noise"
-   - Include room tone: "professional atmosphere", "natural room tone"
-
-OUTPUT: Populate the 'audio' field with:
-- environmental: {ambiance, intensity, spatialPosition}
-- music: {mood, genre, volume}
-- soundEffects: [{sound, trigger}]
-- negations: ["unwanted sounds to prevent"]
-=== END VEO 3 AUDIO SYSTEM ===`;
+=== VEO 3: AUDIO ===
+- Environmental audio per location (e.g., kitchen: "sizzling, chopping, boiling")
+- Music: "[mood] [genre] [instruments], [tempo]" with volume: background/prominent/featured
+- SFX: "[sound] as [trigger]" (e.g., "Footsteps on gravel as character walks")
+- HALLUCINATION PREVENTION: specify what TO hear AND what NOT to hear (negations list)
+- Include room tone: "professional atmosphere" or "natural room tone"
+→ Populate audio field: environmental, music, soundEffects, negations
+=== END VEO 3: AUDIO ===`;
 
 /**
  * VEO 3 Dialogue System Instructions
  * Uses colon format to prevent subtitles
  */
 export const VEO3_DIALOGUE_INSTRUCTIONS = `
-=== VEO 3 DIALOGUE SYSTEM ===
-DIALOGUE FORMATTING (CRITICAL for subtitle prevention):
-
-1. THE COLON RULE (Prevents subtitles):
-   ✅ CORRECT: "[Character] [action] and says: '[dialogue]' [tone]"
-   ❌ WRONG: "[Character] says '[dialogue]'" (triggers subtitles)
-
-   Example: "Chef Marco turns to camera and says: 'The secret is in the freshness.' with warm, passionate enthusiasm"
-
-2. THE 8-SECOND RULE (MANDATORY):
-   - Maximum: 12-15 words per line
-   - Maximum: 20-25 syllables per line
-   - This ensures dialogue fits within scene duration
-
-3. PHONETIC SPELLING (For mispronunciation fixes):
-   - Use phonetic versions for unusual names
-   - Example: "foh-fur's" instead of "Fofur's"
-
-4. SPECIFY TONE/DELIVERY:
-   - Add emotional delivery: "with conviction", "whispered softly", "shouted angrily"
-   - Include body language cues: "leaning forward", "eyes narrowing"
-
-5. MULTIPLE SPEAKERS:
-   - Name each character explicitly before their line
-   - Separate speakers with clear transitions
-
-OUTPUT: Populate the 'dialogue' array with:
-- character: Character name
-- line: The dialogue text (max 12-15 words)
-- delivery: Tone/manner of speaking
-- phonetic: Phonetic spelling if needed
-- emotion: Emotional state
-=== END VEO 3 DIALOGUE SYSTEM ===`;
+=== VEO 3: DIALOGUE ===
+- COLON RULE (prevents subtitles): "[Character] [action] and says: '[line]' [tone]"
+  ❌ WRONG: "[Character] says '[line]'" — triggers subtitles
+- 8-SECOND RULE: max 12-15 words/line, 20-25 syllables/line
+- Phonetic spelling for unusual names (e.g., "foh-fur's" not "Fofur's")
+- Specify tone/delivery + body language cues
+- Multiple speakers: name each character explicitly before their line
+→ Populate dialogue array: character, line, delivery, emotion
+=== END VEO 3: DIALOGUE ===`;
 
 /**
  * VEO 3 Camera Positioning Instructions
  * Uses "(thats where the camera is)" syntax for precise positioning
  */
 export const VEO3_CAMERA_INSTRUCTIONS = `
-=== VEO 3 CAMERA POSITIONING ===
-CAMERA POSITION SYNTAX (CRITICAL breakthrough for precise positioning):
-
-1. THE KEY PHRASE: "(thats where the camera is)"
-   This phrase triggers camera-aware processing in Veo 3.
-
-   Format: "[Shot type] with camera positioned at [location] (thats where the camera is)"
-
-2. EXAMPLES:
-   - "Close-up shot with camera positioned at counter level (thats where the camera is)"
-   - "POV shot from camera at eye level (thats where the camera is) as character explains"
-   - "Over-shoulder view, camera behind interviewer (thats where the camera is)"
-   - "Low angle shot, camera on ground looking up (thats where the camera is)"
-   - "Aerial view, camera positioned directly overhead (thats where the camera is)"
-
-3. CAMERA HEIGHT OPTIONS:
-   - ground-level: Dramatic low perspective
-   - eye-level: Natural, neutral view
-   - overhead: Looking down on subject
-   - aerial: High drone-style shot
-
-4. CAMERA DISTANCE OPTIONS:
-   - intimate: Extreme close-up, personal
-   - close: Head and shoulders
-   - medium: Waist up
-   - far: Full body with environment
-   - extreme: Wide establishing shot
-
-5. MOVEMENT QUALITY KEYWORDS:
-   - "natural movement" - Default, realistic motion
-   - "fluid movement" - Smooth, continuous
-   - "energetic movement" - Dynamic, high-energy
-   - "deliberate movement" - Thoughtful, careful
-   - "graceful movement" - Smooth, flowing
-
-OUTPUT: Populate 'enhancedCamera' with position details and include
-positionPhrase containing "(thats where the camera is)" syntax.
-=== END VEO 3 CAMERA POSITIONING ===`;
+=== VEO 3: CAMERA ===
+- KEY PHRASE: "(thats where the camera is)" — triggers camera-aware processing
+- Format: "[Shot] with camera at [location] (thats where the camera is)"
+- Examples: "Close-up, camera at counter level (thats where the camera is)"
+            "Low angle, camera on ground looking up (thats where the camera is)"
+- Height: ground-level / eye-level / overhead / aerial
+- Distance: intimate / close / medium / far / extreme
+- Movement quality: natural / fluid / energetic / deliberate / graceful
+→ Populate enhancedCamera: position, height, distance, positionPhrase
+=== END VEO 3: CAMERA ===`;
 
 /**
  * VEO 3 Expression Control Instructions
  * Anti-model-face technique for natural expressions
  */
 export const VEO3_EXPRESSION_INSTRUCTIONS = `
-=== VEO 3 EXPRESSION CONTROL ===
-EXPRESSION DESIGN (Anti-model-face technique):
-
-1. MICRO-EXPRESSIONS (Eliminate flat "model face"):
-   - "Eyes squint thoughtfully, head tilts as if processing"
-   - "Furrow between brows deepens, momentary pause before speaking"
-   - "Small step forward, chin raised slightly, eyes focused and direct"
-
-2. EYE MOVEMENT:
-   Direction meanings:
-   - up: Thinking, remembering
-   - down: Sad, submissive, ashamed
-   - left/right: Considering, processing
-   - camera: Direct address, connection
-   - away: Avoiding, uncomfortable
-
-   Behavior keywords:
-   - narrow: Suspicious, focused
-   - squint: Thinking, sun in eyes
-   - wide: Surprise, fear, excitement
-   - darting: Nervous, searching
-   - focused: Determined, intent
-
-3. BODY LANGUAGE:
-   Posture meanings:
-   - upright: Confident, alert
-   - slouched: Defeated, tired, casual
-   - leaning: Interested, engaged
-   - rigid: Tense, uncomfortable
-   - relaxed: At ease, comfortable
-
-4. EMOTIONAL ARC ("This Then That" progression):
-   Structure emotion progression within scene:
-   - Start state: "confused and uncertain"
-   - Transition: "gradually becoming confident"
-   - End state: "satisfied smile of accomplishment"
-
-5. ANTI-MODEL-FACE TECHNIQUE:
-   Add natural imperfection:
-   "Natural, unstaged expression with slight asymmetry, avoiding perfect model pose, authentic human moment"
-
-OUTPUT: Populate 'expressionControl' and 'emotionalArc' fields.
-=== END VEO 3 EXPRESSION CONTROL ===`;
+=== VEO 3: EXPRESSION ===
+- MICRO-EXPRESSIONS to avoid flat "model face": eye squints, brow furrows, head tilts
+- EYE DIRECTION: up=thinking, down=sad, camera=direct address, away=uncomfortable
+- EYE BEHAVIOR: narrow/squint/wide/darting/focused
+- BODY LANGUAGE: upright=confident, slouched=defeated, leaning=engaged, rigid=tense
+- EMOTIONAL ARC: start state → transition → end state (e.g., "confused → processing → confident smile")
+- ANTI-MODEL-FACE: "natural, unstaged, slight asymmetry, authentic human moment"
+→ Populate expressionControl + emotionalArc fields
+=== END VEO 3: EXPRESSION ===`;
 
 /**
  * VEO 3 Advanced Composition Instructions
  * Lens effects, color grading, professional lighting
  */
 export const VEO3_COMPOSITION_INSTRUCTIONS = `
-=== VEO 3 ADVANCED COMPOSITION ===
-PROFESSIONAL COMPOSITION ELEMENTS:
-
-1. LENS EFFECTS:
-   - Depth of Field: "shallow" (isolates subject), "deep" (everything sharp)
-   - Aperture feel: "f/1.4 creamy bokeh", "f/2.8 smooth background"
-   - Lens types: standard, wide-angle, telephoto, macro, anamorphic
-   - Lens flare: "anamorphic horizontal streaks", "natural sun flare"
-
-2. COLOR GRADING (use semantic color descriptions):
-   Palette types:
-   - teal-orange: "Cinematic blockbuster teal midtones with golden hour amber highlights (epic, dynamic)"
-   - warm-orange: "Intimate golden amber tones throughout (comforting, nostalgic)"
-   - cool-blue: "Deep ocean mystery blue with steel teal accents (mysterious, professional, modern)"
-   - desaturated: "Muted organic tones with lifted blacks (serious, dramatic, cinematic)"
-   - noir: "Film noir charcoal shadows with stark highlights (dramatic, classic)"
-
-   Split-toning examples (use semantic names with mood context, not hex codes):
-   "Split-toning with deep ocean mystery blue shadows (mysterious, professional) and golden hour amber highlights (warm, nostalgic)"
-   "Split-toning with cyberpunk teal shadows (modern, synthetic) and neon magenta highlights (energetic, vibrant)"
-
-3. PROFESSIONAL LIGHTING SETUPS:
-   - three-point: "Warm key light from left, fill softening shadows, rim lighting separating subject"
-   - rembrandt: "Triangle of light on cheek, dramatic portrait lighting"
-   - golden-hour: "Warm, nostalgic atmospheric light through windows, long shadows"
-   - chiaroscuro: "Stark contrasts, film noir dramatic shadows, single light source"
-   - neon: "Vibrant magenta/cyan reflecting off wet surfaces, cyberpunk aesthetic"
-
-4. COMPOSITION RULES:
-   - rule-of-thirds: "Subject at left third intersection point"
-   - leading-lines: "Drawing eye from foreground to subject"
-   - frame-within-frame: "Using doorway to focus attention"
-   - symmetry: "Formal, balanced aesthetic"
-   - negative-space: "Isolating subject with empty space"
-
-OUTPUT: Populate 'lensEffects', 'colorGrading', 'advancedLighting', 'advancedComposition' fields.
-=== END VEO 3 ADVANCED COMPOSITION ===`;
+=== VEO 3: COMPOSITION ===
+- LENS: DoF (shallow/deep), aperture (f/1.4 bokeh, f/2.8), type (standard/wide/telephoto/macro/anamorphic), flare
+- COLOR GRADING (semantic descriptions, not hex):
+  teal-orange (epic) | warm-orange (nostalgic) | cool-blue (professional) | desaturated (dramatic) | noir (classic)
+  Split-toning: "[mood] [color] shadows + [mood] [color] highlights"
+- LIGHTING: three-point / rembrandt / golden-hour / chiaroscuro / neon — describe key, fill, rim lights
+- COMPOSITION: rule-of-thirds / leading-lines / frame-within-frame / symmetry / negative-space
+→ Populate lensEffects, colorGrading, advancedLighting, advancedComposition fields
+=== END VEO 3: COMPOSITION ===`;
 
 /**
  * VEO 3 Physics-Aware Prompting Instructions
  */
 export const VEO3_PHYSICS_INSTRUCTIONS = `
-=== VEO 3 PHYSICS-AWARE PROMPTING ===
-REALISTIC PHYSICS KEYWORDS:
-
-1. GENERAL PHYSICS:
-   - "realistic physics governing all actions"
-   - "natural fluid dynamics"
-   - "authentic momentum conservation"
-   - "proper weight and balance"
-   - "realistic material behavior"
-
-2. MATERIAL BEHAVIOR:
-   Fabric: "flowing", "stiff", "billowing"
-   Hair: "static", "windswept", "bouncing"
-   Liquid: "splashing", "dripping", "pouring"
-   Smoke: "rising wisps", "dispersing naturally"
-
-3. GRAVITY OPTIONS:
-   - normal: Standard Earth gravity
-   - low: Slow-motion floating effect
-   - zero: Weightless environment
-   - heavy: Exaggerated weight
-
-OUTPUT: Populate 'physicsAwareness' field with enabled constraints.
-=== END VEO 3 PHYSICS-AWARE PROMPTING ===`;
+=== VEO 3: PHYSICS ===
+- Keywords: "realistic physics", "natural fluid dynamics", "proper weight and balance"
+- Materials: fabric (flowing/stiff/billowing), hair (static/windswept/bouncing), liquid (splashing/dripping/pouring), smoke (rising/dispersing)
+- Gravity: normal / low (floating) / zero (weightless) / heavy (exaggerated)
+→ Populate physicsAwareness field
+=== END VEO 3: PHYSICS ===`;
 
 /**
  * VEO 3 Selfie/POV Mode Instructions
  */
 export const VEO3_SELFIE_INSTRUCTIONS = `
-=== VEO 3 SELFIE/POV MODE ===
-PROVEN SELFIE FORMULA:
-
-"A selfie video of [CHARACTER] [ACTIVITY].
-[He/She] holds camera at arm's length.
-[His/Her] arm is clearly visible in frame.
-Occasionally looking into camera before [SPECIFIC_ACTION].
-The image is slightly grainy, looks very film-like.
-[He/She] says: '[DIALOGUE]' [TONE].
-Ends with [GESTURE]."
-
-CRITICAL ELEMENTS:
-1. Start phrase: "A selfie video of..."
-2. Arm visibility: "arm is clearly visible in the frame"
-3. Natural eye contact: "occasionally looking into the camera before..."
-4. Film-like quality: "slightly grainy, looks very film-like"
-5. Closing gesture: thumbs up, wave, smile, etc.
-
-CAMERA SHAKE OPTIONS:
-- none: Perfectly stable (less authentic)
-- subtle: Slight natural movement
-- natural: Authentic handheld feel
-
-OUTPUT: Populate 'selfieSpec' field when selfie mode is enabled.
-=== END VEO 3 SELFIE/POV MODE ===`;
+=== VEO 3: SELFIE/POV ===
+Formula: "A selfie video of [CHARACTER] [ACTIVITY]. [He/She] holds camera at arm's length. Arm clearly visible. Occasionally looking into camera before [ACTION]. Slightly grainy, film-like. Says: '[DIALOGUE]' [TONE]. Ends with [GESTURE]."
+- Required: arm visible, natural eye contact, film-like quality, closing gesture
+- Camera shake: none / subtle / natural
+→ Populate selfieSpec field
+=== END VEO 3: SELFIE/POV ===`;
 
 /**
  * VEO 3 Quality Checklist Instructions
  */
 export const VEO3_QUALITY_CHECKLIST = `
-=== VEO 3 PRE-GENERATION QUALITY CHECKLIST ===
-10-POINT VALIDATION SYSTEM:
-
-□ 1. CHARACTER DESCRIPTION: 15+ specific physical attributes
-□ 2. SCENE DETAILS: 10+ environmental elements
-□ 3. CAMERA SPECS: Shot type, angle, movement defined
-□ 4. LIGHTING: Professional setup specified
-□ 5. AUDIO DESIGN: Hallucination prevention (explicit sounds)
-□ 6. DIALOGUE: Colon format + tone + 8-second rule
-□ 7. NEGATIVE PROMPTS: Comprehensive exclusions
-□ 8. TECHNICAL SPECS: Broadcast quality settings
-□ 9. BRAND COMPLIANCE: (if applicable)
-□ 10. DURATION: Optimized for 8-second format
-
-QUALITY LEVELS:
-- Master (8-10 items): 95%+ generation success
-- Professional (6-8 items): 85%+ generation success
-- Intermediate (4-6 items): 70%+ generation success
-- Basic (1-3 items): Poor results
-
-TARGET: Master level for all commercial content.
-=== END VEO 3 QUALITY CHECKLIST ===`;
+=== VEO 3: QUALITY CHECKLIST ===
+Self-validate before output (target 8-10/10 = Master level):
+1. CHARACTER: 15+ physical attributes | 2. SCENE: 10+ environmental elements
+3. CAMERA: shot type+angle+movement | 4. LIGHTING: professional setup
+5. AUDIO: explicit sounds + negations | 6. DIALOGUE: colon format + 8-sec rule
+7. NEGATIVE PROMPTS: comprehensive | 8. TECHNICAL: broadcast quality
+9. BRAND: compliance if applicable | 10. DURATION: optimized for 8s format
+=== END VEO 3: QUALITY CHECKLIST ===`;
 
 /**
  * Build VEO 3 enhanced instructions based on options
@@ -1818,24 +1420,31 @@ function extractLocations(scenes: Array<{ visual_specs?: { environment?: string 
 
 /**
  * Extract unique actions/activities from scene descriptions
+ * Uses generic -ing verb extraction rather than hardcoded domain verbs
  */
 function extractActions(scenes: Array<{ description: string }>): string[] {
   const actions = new Set<string>();
-  scenes.forEach((scene) => {
-    // Extract key action words (simple heuristic: look for verbs)
+  // Extract -ing words (gerunds/present participles) as action indicators
+  const ingPattern = /\b([a-z]{3,}ing)\b/g;
+  // Common non-action -ing words to exclude
+  const excludeWords = new Set([
+    "something", "nothing", "anything", "everything", "thing",
+    "during", "morning", "evening", "clothing", "building",
+    "setting", "lighting", "framing", "being", "having",
+    "string", "ceiling", "feeling",
+  ]);
+
+  for (const scene of scenes) {
     const desc = scene.description.toLowerCase();
-    const actionWords = [
-      "cooking", "preparing", "mixing", "chopping", "grilling", "serving",
-      "walking", "talking", "presenting", "demonstrating", "explaining",
-      "tasting", "stirring", "pouring", "cutting", "slicing", "baking"
-    ];
-    actionWords.forEach((word) => {
-      if (desc.includes(word)) {
+    let match;
+    while ((match = ingPattern.exec(desc)) !== null) {
+      const word = match[1];
+      if (!excludeWords.has(word)) {
         actions.add(word);
       }
-    });
-  });
-  return Array.from(actions);
+    }
+  }
+  return Array.from(actions).slice(0, 15); // Cap at 15 to keep context concise
 }
 
 export function buildContinuityContext(
@@ -1865,8 +1474,8 @@ export function buildContinuityContext(
   }
 
   // 2. Scene History
-  // Use summary mode if we have more than 10 scenes
-  const useSummary = summaryMode || previousScenes.length > 10;
+  // Use summary mode if we have more than 5 scenes to reduce token overhead
+  const useSummary = summaryMode || previousScenes.length > 5;
 
   if (useSummary) {
     // Summary mode: Overview + last N scenes in detail
@@ -1986,7 +1595,6 @@ export function buildScenePrompt(options: {
   videoUrl: string;
   sceneCount: number;
   voiceLang?: VoiceLanguage;
-  includeCharacterAnalysis?: boolean;
   continuityContext?: string;
   globalNegativePrompt?: string;
   // Phase 2: Pre-extracted characters from Phase 1
@@ -2005,12 +1613,13 @@ export function buildScenePrompt(options: {
   };
   // Direct mode: time-based batching info
   directBatchInfo?: DirectBatchInfo;
+  // VEO 3 enhanced features
+  veo3Options?: Veo3Options;
 }): GeminiRequestBody {
   const {
     videoUrl,
     sceneCount,
     voiceLang = "no-voice",
-    includeCharacterAnalysis = false,
     continuityContext = "",
     globalNegativePrompt,
     preExtractedCharacters,
@@ -2020,6 +1629,7 @@ export function buildScenePrompt(options: {
     batchInfo,
     directBatchInfo,
   } = options;
+  const { veo3Options } = options;
 
   // Build system instruction with scene count
   const effectiveSceneCount = directBatchInfo?.sceneCount ?? sceneCount;
@@ -2031,12 +1641,9 @@ export function buildScenePrompt(options: {
   // Build user prompt
   let userPrompt = BASE_USER_PROMPT;
 
-  // Add pre-extracted characters context (Phase 2 - takes priority over character analysis)
+  // Add pre-extracted characters context (Phase 2 - character rules are in SYSTEM_INSTRUCTION)
   if (preExtractedCharacters && preExtractedCharacters.length > 0) {
     userPrompt += buildPreExtractedCharactersContext(preExtractedCharacters, preExtractedBackground);
-  } else if (includeCharacterAnalysis) {
-    // Fallback: Use inline character analysis if no pre-extracted characters
-    userPrompt += CHARACTER_ANALYSIS_PROMPT;
   }
 
   // Add cinematic profile context (Phase 0 - takes priority over inferred style)
@@ -2046,6 +1653,14 @@ export function buildScenePrompt(options: {
 
   // Add media type instructions (image vs video generation)
   userPrompt += getMediaTypeInstructions(mediaType);
+
+  // Add VEO 3 enhanced instructions if options provided
+  if (veo3Options) {
+    const veo3Text = buildVeo3Instructions(veo3Options);
+    if (veo3Text) {
+      userPrompt += "\n" + veo3Text;
+    }
+  }
 
   userPrompt = addVoiceInstructions(userPrompt, voiceLang);
 
@@ -2342,6 +1957,8 @@ export function buildScriptToScenesPrompt(options: {
   cinematicProfile?: CinematicProfile;
   // Media type: image vs video generation
   mediaType?: MediaType;
+  // VEO 3 enhanced features
+  veo3Options?: Veo3Options;
 }): GeminiRequestBody {
   const {
     scriptText,
@@ -2352,6 +1969,7 @@ export function buildScriptToScenesPrompt(options: {
     preExtractedBackground,
     cinematicProfile,
     mediaType = "video",
+    veo3Options,
   } = options;
 
   const systemText = SCRIPT_TO_SCENES_SYSTEM.replace("{SceneNumber}", String(sceneCount));
@@ -2368,6 +1986,14 @@ export function buildScriptToScenesPrompt(options: {
   // Add cinematic profile context (Phase 0)
   if (cinematicProfile) {
     userPrompt += buildCinematicProfileContext(cinematicProfile);
+  }
+
+  // Add VEO 3 enhanced instructions if options provided
+  if (veo3Options) {
+    const veo3Text = buildVeo3Instructions(veo3Options);
+    if (veo3Text) {
+      userPrompt += "\n" + veo3Text;
+    }
   }
 
   // Add media type instructions (image vs video generation)
