@@ -36,6 +36,7 @@ import {
   extractionResultToRegistry,
   VeoMode,
   VoiceLanguage,
+  AudioSettings,
   VeoErrorType,
   Scene,
   CharacterRegistry,
@@ -121,28 +122,6 @@ function formatErrorMessage(error: unknown, context?: string): string {
   return message;
 }
 
-// VEO 3 Options schema
-const Veo3OptionsSchema = z.object({
-  enableAudio: z.boolean().optional(),
-  audioPreset: z.enum(["minimal", "standard", "cinematic"]).optional(),
-  enableDialogue: z.boolean().optional(),
-  colonFormat: z.boolean().optional(),
-  eightSecondRule: z.boolean().optional(),
-  enableCameraPositioning: z.boolean().optional(),
-  cameraPositionSyntax: z.boolean().optional(),
-  enableExpressionControl: z.boolean().optional(),
-  antiModelFace: z.boolean().optional(),
-  emotionalArc: z.boolean().optional(),
-  enableAdvancedComposition: z.boolean().optional(),
-  colorPalette: z.enum(["auto", "monochromatic", "vibrant", "pastel", "desaturated", "sepia", "cool-blue", "warm-orange", "teal-orange", "noir"]).optional(),
-  lightingSetup: z.enum(["auto", "three-point", "rembrandt", "butterfly", "split", "chiaroscuro", "golden-hour", "blue-hour", "neon", "natural", "practical"]).optional(),
-  enableQualityChecklist: z.boolean().optional(),
-  targetQualityLevel: z.enum(["master", "professional", "intermediate", "basic"]).optional(),
-  platform: z.enum(["youtube", "tiktok", "instagram-reels", "youtube-shorts", "instagram-feed"]).optional(),
-  selfieMode: z.boolean().optional(),
-  templateId: z.string().optional(),
-}).optional();
-
 // Request schema validation
 const VeoRequestSchema = z.object({
   workflow: z.enum(["url-to-script", "script-to-scenes", "url-to-scenes"]),
@@ -167,6 +146,22 @@ const VeoRequestSchema = z.object({
       "chinese",
     ])
     .default("no-voice"),
+  audio: z.object({
+    voiceLanguage: z.enum([
+      "no-voice",
+      "english",
+      "vietnamese",
+      "spanish",
+      "french",
+      "german",
+      "japanese",
+      "korean",
+      "chinese",
+    ]),
+    music: z.boolean(),
+    soundEffects: z.boolean(),
+    environmentalAudio: z.boolean(),
+  }).optional(),
   useVideoChapters: z.boolean().default(true), // Include video description chapters
   negativePrompt: z.string().optional(),
   resumeJobId: z.string().optional(),
@@ -176,14 +171,14 @@ const VeoRequestSchema = z.object({
   // Resume parameters
   resumeFromBatch: z.number().int().min(0).optional(),
   existingScenes: z.array(z.any()).optional(),
-  existingCharacters: z.record(z.string(), z.string()).optional(),
+  existingCharacters: z.record(z.string(), z.any()).optional(),
   // Phase 0: Color profile extraction
   extractColorProfile: z.boolean().default(true), // Enable by default
   existingColorProfile: z.any().optional(), // For resume
   // Media type: image vs video generation
   mediaType: z.enum(["image", "video"]).default("video"),
-  // VEO 3 Prompting Guide options
-  veo3Options: Veo3OptionsSchema,
+  // Selfie mode (genuine shot-type toggle — VEO 3 techniques are integrated by default)
+  selfieMode: z.boolean().default(false),
 });
 
 type VeoRequest = z.infer<typeof VeoRequestSchema>;
@@ -269,9 +264,10 @@ async function runScriptToScenesDirect(
     scriptText: request.scriptText!,
     sceneCount: request.sceneCount,
     voiceLang: request.voice as VoiceLanguage,
+    audio: request.audio as AudioSettings | undefined,
     globalNegativePrompt: request.negativePrompt,
     mediaType: request.mediaType as MediaType,
-    veo3Options: request.veo3Options,
+    selfieMode: request.selfieMode,
   });
 
   const response = await callGeminiAPIWithRetry(requestBody, {
@@ -400,6 +396,7 @@ async function runScriptToScenesHybrid(
         scriptText: scriptChunk + (continuityContext ? `\n\n${continuityContext}` : ""),
         sceneCount: batchSceneCount,
         voiceLang: request.voice as VoiceLanguage,
+        audio: request.audio as AudioSettings | undefined,
         globalNegativePrompt: request.negativePrompt,
         // Phase 0: Use pre-extracted cinematic profile
         cinematicProfile: cinematicProfile || undefined,
@@ -408,7 +405,7 @@ async function runScriptToScenesHybrid(
         // Phase 2: Use pre-extracted characters from Phase 1
         preExtractedCharacters: preExtractedCharacters && preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
         preExtractedBackground: preExtractedBackground || undefined,
-        veo3Options: request.veo3Options,
+        selfieMode: request.selfieMode,
       });
 
       const response = await callGeminiAPIWithRetry(requestBody, {
@@ -714,6 +711,7 @@ async function runUrlToScenesDirect(
         videoUrl: request.videoUrl!,
         sceneCount: batchSceneCount,
         voiceLang: request.voice as VoiceLanguage,
+        audio: request.audio as AudioSettings | undefined,
         continuityContext,
         directBatchInfo,
         globalNegativePrompt: request.negativePrompt,
@@ -724,7 +722,7 @@ async function runUrlToScenesDirect(
         // Phase 2: Use pre-extracted characters from Phase 1
         preExtractedCharacters: preExtractedCharacters.length > 0 ? preExtractedCharacters : undefined,
         preExtractedBackground: preExtractedBackground || undefined,
-        veo3Options: request.veo3Options,
+        selfieMode: request.selfieMode,
       });
 
       const response = await callGeminiAPIWithRetry(requestBody, {

@@ -134,11 +134,15 @@ describe("cache", () => {
             setCachedReport("UC123", { ...mockReport, brand_name: "Report 1" });
 
             // Manually add another report with different timestamp
+            // Must wrap in CachedItem structure to match LocalStorageCache format
             const timestamp2 = Date.now() + 1000;
             mockStorage[`soibrand_report_UC123_${timestamp2}`] = JSON.stringify({
-                report: { ...mockReport, brand_name: "Report 2" },
+                data: {
+                    report: { ...mockReport, brand_name: "Report 2" },
+                    timestamp: timestamp2,
+                    channelId: "UC123",
+                },
                 timestamp: timestamp2,
-                channelId: "UC123",
             });
 
             const reports = getCachedReportsForChannel("UC123");

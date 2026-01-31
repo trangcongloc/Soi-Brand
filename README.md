@@ -46,8 +46,22 @@ npm run build        # Build production
 npm run lint         # Run ESLint
 npm run type-check   # TypeScript check
 npm run test         # Run tests
-npm run validate     # Run all checks
+npm run validate     # Run all checks (type-check + lint + test)
 ```
+
+## Testing Status
+
+![Tests](https://img.shields.io/badge/tests-307%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen)
+![ESLint](https://img.shields.io/badge/eslint-0%20warnings-brightgreen)
+
+**Current Status:**
+- ✅ 307 tests passing
+- ✅ 0 ESLint warnings
+- ✅ TypeScript strict mode
+- ✅ All validation checks passing
+
+See [CHANGELOG.md](./CHANGELOG.md) for recent fixes and updates.
 
 ## Deploy
 

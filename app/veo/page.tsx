@@ -8,7 +8,7 @@ import { GeminiModel } from "@/lib/types";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   VeoMode,
-  VoiceLanguage,
+  AudioSettings,
   VeoWorkflow,
   Scene,
   CharacterRegistry,
@@ -17,7 +17,6 @@ import {
   GeneratedScript,
   VeoErrorType,
   CinematicProfile,
-  Veo3Options,
   MediaType,
   setCachedJob,
   getCachedJob,
@@ -101,7 +100,7 @@ export default function VeoPage() {
     mode: VeoMode;
     sceneCount: number;
     batchSize: number;
-    voice: VoiceLanguage;
+    audio: AudioSettings;
     scriptText?: string;
     useVideoChapters: boolean;
     negativePrompt?: string;
@@ -110,7 +109,7 @@ export default function VeoPage() {
     autoSceneCount: boolean;
     startTime?: string;
     endTime?: string;
-    veo3Options?: Veo3Options;
+    selfieMode?: boolean;
   } | null>(null);
 
   // Resume dialog state
@@ -221,7 +220,7 @@ export default function VeoPage() {
           actualScenes: scenes.length,
           batches: totalBatchesCalc,
           batchSize: currentForm.batchSize,
-          voice: currentForm.voice === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.voice,
+          voice: currentForm.audio.voiceLanguage === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.audio.voiceLanguage,
           charactersFound: Object.keys(characterRegistry).length,
           characters: Object.keys(characterRegistry),
           processingTime: lang.common.notAvailable || "N/A",
@@ -254,7 +253,7 @@ export default function VeoPage() {
             mode: currentForm.mode,
             batchSize: currentForm.batchSize,
             sceneCount: currentForm.sceneCount,
-            voice: currentForm.voice,
+            voice: currentForm.audio.voiceLanguage,
             useVideoChapters: currentForm.useVideoChapters,
                 negativePrompt: currentForm.negativePrompt,
             extractColorProfile: currentForm.extractColorProfile,
@@ -262,7 +261,7 @@ export default function VeoPage() {
             autoSceneCount: currentForm.autoSceneCount,
             startTime: currentForm.startTime,
             endTime: currentForm.endTime,
-            veo3Options: currentForm.veo3Options,
+            selfieMode: currentForm.selfieMode,
           } : undefined,
         });
 
@@ -284,12 +283,12 @@ export default function VeoPage() {
       autoSceneCount: boolean;
       sceneCount: number;
       batchSize: number;
-      voice: VoiceLanguage;
+      audio: AudioSettings;
       useVideoChapters: boolean;
         negativePrompt?: string;
       extractColorProfile: boolean;
       mediaType: "image" | "video";
-      veo3Options?: Veo3Options;
+      selfieMode: boolean;
       // Resume parameters
       resumeFromBatch?: number;
       existingScenes?: Scene[];
@@ -326,7 +325,7 @@ export default function VeoPage() {
         mode: options.mode,
         sceneCount: options.sceneCount,
         batchSize: options.batchSize,
-        voice: options.voice,
+        audio: options.audio,
         scriptText: options.scriptText,
         useVideoChapters: options.useVideoChapters,
             negativePrompt: options.negativePrompt,
@@ -335,7 +334,7 @@ export default function VeoPage() {
         autoSceneCount: options.autoSceneCount,
         startTime: options.startTime,
         endTime: options.endTime,
-        veo3Options: options.veo3Options,
+        selfieMode: options.selfieMode,
       };
       formDataRef.current = formData; // Update ref immediately for callbacks
       setCurrentFormData(formData);
@@ -345,8 +344,10 @@ export default function VeoPage() {
 
       try {
         // Include Gemini settings from Soi-brand settings
+        // Also send `voice` for API backward compat (derived from audio.voiceLanguage)
         const requestBody = {
           ...options,
+          voice: options.audio.voiceLanguage,
           ...(geminiApiKey && { geminiApiKey }),
           ...(geminiModel && { geminiModel }),
         };
@@ -476,7 +477,7 @@ export default function VeoPage() {
         handleError("NETWORK_ERROR");
       }
     },
-    [handleError, lang, geminiApiKey, geminiModel]
+    [handleError, lang, geminiApiKey, geminiModel, colorProfile]
   );
 
   const handleCancel = useCallback(() => {
@@ -494,7 +495,7 @@ export default function VeoPage() {
         actualScenes: scenes.length,
         batches: Math.ceil(currentForm.sceneCount / currentForm.batchSize),
         batchSize: currentForm.batchSize,
-        voice: currentForm.voice === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.voice,
+        voice: currentForm.audio.voiceLanguage === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.audio.voiceLanguage,
         charactersFound: Object.keys(characterRegistry).length,
         characters: Object.keys(characterRegistry),
         processingTime: lang.veo.history.cancelled,
@@ -527,7 +528,7 @@ export default function VeoPage() {
           mode: currentForm.mode,
           batchSize: currentForm.batchSize,
           sceneCount: currentForm.sceneCount,
-          voice: currentForm.voice,
+          voice: currentForm.audio.voiceLanguage,
           useVideoChapters: currentForm.useVideoChapters,
             negativePrompt: currentForm.negativePrompt,
           extractColorProfile: currentForm.extractColorProfile,
@@ -535,7 +536,7 @@ export default function VeoPage() {
           autoSceneCount: currentForm.autoSceneCount,
           startTime: currentForm.startTime,
           endTime: currentForm.endTime,
-          veo3Options: currentForm.veo3Options,
+          selfieMode: currentForm.selfieMode,
         },
       });
 
@@ -565,7 +566,7 @@ export default function VeoPage() {
     setCharacterRegistry(resumeData.existingCharacters);
     setCharacters(Object.keys(resumeData.existingCharacters));
 
-    // Submit with resume parameters
+    // Submit with resume parameters — convert legacy voice to AudioSettings
     handleSubmit({
       workflow: "script-to-scenes",
       scriptText: resumeData.scriptText,
@@ -573,11 +574,17 @@ export default function VeoPage() {
       autoSceneCount: false,
       sceneCount: resumeData.sceneCount,
       batchSize: resumeData.batchSize,
-      voice: resumeData.voice,
+      audio: {
+        voiceLanguage: resumeData.voice,
+        music: true,
+        soundEffects: true,
+        environmentalAudio: true,
+      },
       videoUrl: resumeData.videoUrl,
       useVideoChapters: true, // Default for resume
       extractColorProfile: false, // No video in script-to-scenes
       mediaType: "video", // Default for resume
+      selfieMode: false, // Default for resume
       resumeFromBatch: resumeData.completedBatches,
       existingScenes: resumeData.existingScenes,
       existingCharacters: resumeData.existingCharacters,
@@ -639,6 +646,7 @@ export default function VeoPage() {
     }
 
     // Retry from the failed batch — restore all original settings
+    // Convert legacy voice to AudioSettings for backward compat
     await handleSubmit({
       workflow: rd.workflow,
       videoUrl: cached.videoUrl,
@@ -649,14 +657,19 @@ export default function VeoPage() {
       autoSceneCount: rd.autoSceneCount ?? false,
       sceneCount: rd.sceneCount,
       batchSize: rd.batchSize,
-      voice: rd.voice,
+      audio: {
+        voiceLanguage: rd.voice,
+        music: true,
+        soundEffects: true,
+        environmentalAudio: true,
+      },
       useVideoChapters: rd.useVideoChapters ?? true,
       negativePrompt: rd.negativePrompt,
       extractColorProfile: rd.extractColorProfile ?? !!cached.colorProfile,
       mediaType: rd.mediaType ?? "video",
       startTime: rd.startTime,
       endTime: rd.endTime,
-      veo3Options: rd.veo3Options,
+      selfieMode: rd.selfieMode ?? false,
       // Resume parameters
       resumeFromBatch: rd.completedBatches,
       existingScenes: rd.existingScenes,

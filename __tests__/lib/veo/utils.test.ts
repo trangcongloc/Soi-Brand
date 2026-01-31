@@ -193,12 +193,10 @@ describe("VEO Utils", () => {
       expect(parseDuration("45 seconds")).toBe(45);
     });
 
-    it("parses plain number > 300 as seconds", () => {
+    it("parses plain number as seconds", () => {
       expect(parseDuration("600")).toBe(600);
-    });
-
-    it("parses plain number <= 300 as minutes", () => {
-      expect(parseDuration("5")).toBe(300);
+      expect(parseDuration("5")).toBe(5);
+      expect(parseDuration("90")).toBe(90);
     });
 
     it("returns 0 for undefined input", () => {

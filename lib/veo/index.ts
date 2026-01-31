@@ -30,6 +30,8 @@ export {
   DEFAULT_NEGATIVE_PROMPT,
   getDefaultNegativePrompt,
   addVoiceInstructions,
+  addAudioInstructions,
+  voiceLanguageToAudioSettings,
   buildContinuityContext,
   buildScenePrompt,
   buildScriptPrompt,
@@ -44,16 +46,6 @@ export {
   // Phase 1: Character extraction
   buildCharacterExtractionPrompt,
   parseCharacterExtractionResponse,
-  // VEO 3 Prompting Guide instructions
-  VEO3_AUDIO_INSTRUCTIONS,
-  VEO3_DIALOGUE_INSTRUCTIONS,
-  VEO3_CAMERA_INSTRUCTIONS,
-  VEO3_EXPRESSION_INSTRUCTIONS,
-  VEO3_COMPOSITION_INSTRUCTIONS,
-  VEO3_PHYSICS_INSTRUCTIONS,
-  VEO3_SELFIE_INSTRUCTIONS,
-  VEO3_QUALITY_CHECKLIST,
-  buildVeo3Instructions,
 } from "./prompts";
 
 // VEO 3 Templates
@@ -89,8 +81,6 @@ export {
   callGeminiAPI,
   callGeminiAPIWithRetry,
   parseGeminiResponse,
-  generateScenesDirect,
-  generateScenesHybrid,
   extractCharacterRegistry,
   getCharacterDescription,
   mapErrorToType,
@@ -116,6 +106,7 @@ export {
 
 // Form settings persistence
 export {
+  DEFAULT_AUDIO_SETTINGS,
   getDefaultVeoFormSettings,
   loadVeoFormSettings,
   saveVeoFormSettings,

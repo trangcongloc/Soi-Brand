@@ -428,12 +428,14 @@ export const en = {
     },
 
     veo: {
-        title: "VEO - Video Scene Generator",
-        subtitle: "Analyze YouTube videos and generate scenes for video generation",
+        title: "VEO - Workflow",
+        subtitle:
+            "Analyze YouTube videos and generate scenes for video generation",
 
         form: {
             placeholder: "Paste YouTube video link...",
-            scriptPlaceholder: "Paste your script text here or upload a file...",
+            scriptPlaceholder:
+                "Paste your script text here or upload a file...",
             submitButton: "Generate Scenes",
             submitButtonLoading: "Processing...",
             uploadScript: "Upload File",
@@ -445,17 +447,21 @@ export const en = {
             durationAuto: "Entire Video",
             durationCustom: "Custom Range",
             durationAutoHint: "AI will analyze the entire video automatically",
-            durationCustomHint: "Specify start and end time for a specific segment",
+            durationCustomHint:
+                "Specify start and end time for a specific segment",
             from: "From",
             to: "To",
             noApiKey: "Configure your Gemini API key in Settings to use VEO",
             usingModel: "Using model",
             errors: {
                 emptyUrl: "Please enter a YouTube video link",
-                invalidUrl: "Invalid YouTube link. Please enter a video link (e.g., youtube.com/watch?v=xxx)",
-                apiKeyRequired: "Gemini API key is required to use this feature",
+                invalidUrl:
+                    "Invalid YouTube link. Please enter a video link (e.g., youtube.com/watch?v=xxx)",
+                apiKeyRequired:
+                    "Gemini API key is required to use this feature",
                 emptyScript: "Please enter or upload a script",
-                invalidFileType: "Invalid file type. Please upload a .txt or .json file",
+                invalidFileType:
+                    "Invalid file type. Please upload a .txt or .json file",
                 cannotReadFile: "Cannot read file. Please try again.",
             },
         },
@@ -467,9 +473,12 @@ export const en = {
             urlToScriptDesc: "Extract script from video",
             scriptToScenes: "Script to Scenes",
             scriptToScenesDesc: "Generate scenes from script",
-            urlHint: "Enter a YouTube URL to extract the script/transcript from the video",
-            urlToScenesHint: "Enter a YouTube URL to extract script and generate scenes automatically",
-            scriptHint: "Paste your script or upload a text file to generate visual scenes",
+            urlHint:
+                "Enter a YouTube URL to extract the script/transcript from the video",
+            urlToScenesHint:
+                "Enter a YouTube URL to extract script and generate scenes automatically",
+            scriptHint:
+                "Paste your script or upload a text file to generate visual scenes",
         },
 
         script: {
@@ -484,7 +493,8 @@ export const en = {
             transcript: "Transcript",
             copy: "Copy",
             download: "Download",
-            nextStepHint: "Copy the script and use Step 2 to generate visual scenes from it",
+            nextStepHint:
+                "Copy the script and use Step 2 to generate visual scenes from it",
         },
 
         modes: {
@@ -492,25 +502,38 @@ export const en = {
             direct: "Direct",
             directDesc: "Video → Scenes (faster, no script)",
             hybrid: "Hybrid",
-            hybridDesc: "Video → Script → Scenes (script cached, can regenerate)",
+            hybridDesc:
+                "Video → Script → Scenes (script cached, can regenerate)",
         },
 
         settings: {
             title: "Settings",
             // Section titles
             generationTitle: "Generation",
+            outputTitle: "Output",
+            audioTitle: "Audio",
+            analysisTitle: "Analysis",
+            shotTypeTitle: "Shot Type",
             contentTitle: "Content Analysis",
             qualityTitle: "Quality & Filtering",
             // Settings
             sceneCount: "Scene Count",
             sceneCountDesc: "Target number of scenes to generate",
-            sceneCountAutoDesc: "Auto-calculated based on video duration (~8s/scene)",
+            sceneCountAutoDesc:
+                "Auto-calculated based on video duration (~8s/scene)",
             auto: "Auto",
             manual: "Manual",
             batchSize: "Batch Size",
             batchSizeDesc: "Scenes per batch (hybrid mode only)",
             voice: "Voice",
             voiceDesc: "Narration language for video",
+            dialogueLanguageDesc: "Language for voice narration and dialogue",
+            audioMusic: "Music",
+            audioMusicDesc: "Background music (mood, genre, tempo)",
+            audioSFX: "SFX",
+            audioSFXDesc: "Sound effects synchronized to actions",
+            audioAmbient: "Ambient",
+            audioAmbientDesc: "Environmental sounds (room tone, atmosphere)",
             voiceOptions: {
                 "no-voice": "No voice (silent)",
                 english: "English",
@@ -523,31 +546,43 @@ export const en = {
                 chinese: "Chinese",
             },
             useVideoChapters: "Include Description Chapters",
-            useVideoChaptersDesc: "Use chapter timestamps from video description",
+            useVideoChaptersDesc:
+                "Use chapter timestamps from video description",
             negativePrompt: "Negative Prompt",
-            negativePromptPlaceholder: "Enter unwanted elements (comma-separated)",
-            negativePromptDesc: "Elements to exclude from generation (text overlays, quality issues, continuity problems). Edit to customize (max 500 characters)",
+            negativePromptPlaceholder:
+                "Enter unwanted elements (comma-separated)",
+            negativePromptDesc:
+                "Elements to exclude from generation (text overlays, quality issues, continuity problems). Edit to customize (max 500 characters)",
             extractColorProfile: "Extract Color Profile",
-            extractColorProfileDesc: "Analyze video to extract exact color palette, temperature, contrast, and film stock characteristics (Phase 0)",
+            extractColorProfileDesc:
+                "Analyze video to extract exact color palette, temperature, contrast, and film stock characteristics (Phase 0)",
             mediaType: "Output Type",
             imageMode: "Image",
             videoMode: "Video",
-            imageModeHint: "Optimized for Midjourney, DALL-E, Flux (still images)",
-            videoModeHint: "Optimized for VEO, Sora, Runway Gen-3 (motion video)",
+            imageModeHint:
+                "Optimized for Midjourney, DALL-E, Flux (still images)",
+            videoModeHint:
+                "Optimized for VEO, Sora, Runway Gen-3 (motion video)",
             // VEO 3 Advanced Features
             veo3Title: "VEO 3 Advanced Features",
             veo3Audio: "Audio System",
-            veo3AudioDesc: "Generate environmental audio, music, and sound effects with hallucination prevention",
+            veo3AudioDesc:
+                "Generate environmental audio, music, and sound effects with hallucination prevention",
             veo3Dialogue: "Dialogue System",
-            veo3DialogueDesc: "Use colon format for dialogue (prevents subtitles, 8-second rule)",
+            veo3DialogueDesc:
+                "Use colon format for dialogue (prevents subtitles, 8-second rule)",
             veo3Camera: "Camera Positioning",
-            veo3CameraDesc: "Use '(thats where the camera is)' syntax for precise positioning",
+            veo3CameraDesc:
+                "Use '(thats where the camera is)' syntax for precise positioning",
             veo3Expression: "Expression Control",
-            veo3ExpressionDesc: "Anti-model-face technique with micro-expressions and emotional arcs",
+            veo3ExpressionDesc:
+                "Anti-model-face technique with micro-expressions and emotional arcs",
             veo3Selfie: "Selfie/POV Mode",
-            veo3SelfieDesc: "Generate authentic selfie-style footage with visible arm and film-like quality",
+            veo3SelfieDesc:
+                "Generate authentic selfie-style footage with visible arm and film-like quality",
             veo3Composition: "Advanced Composition",
-            veo3CompositionDesc: "Lens effects, color grading, and professional lighting setups",
+            veo3CompositionDesc:
+                "Lens effects, color grading, and professional lighting setups",
             veo3ColorPalette: "Color Palette",
             veo3ColorAuto: "Auto (from video)",
             veo3ColorTealOrange: "Teal-Orange (Hollywood)",
@@ -722,7 +757,8 @@ export const en = {
 
         resume: {
             title: "Incomplete Job Found",
-            message: "Previous job was interrupted at batch {batch}/{total}. Would you like to continue?",
+            message:
+                "Previous job was interrupted at batch {batch}/{total}. Would you like to continue?",
             continueButton: "Continue",
             startNew: "Start New",
         },

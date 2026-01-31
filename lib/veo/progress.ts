@@ -149,20 +149,84 @@ export function createProgressTracker() {
 
 /**
  * Server-side progress storage (in-memory for API routes)
- * This is used during SSE streaming to track progress
+ * This is used during SSE streaming to track progress.
+ *
+ * Includes TTL-based eviction (30 min) and max size cap (100 entries)
+ * to prevent unbounded memory growth under load.
  */
-const serverProgressMap = new Map<string, VeoProgress>();
+const SERVER_PROGRESS_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const SERVER_PROGRESS_MAX_SIZE = 100;
+
+const serverProgressMap = new Map<string, { progress: VeoProgress; createdAt: number }>();
+
+function evictExpiredEntries(): void {
+  const now = Date.now();
+  serverProgressMap.forEach((entry, key) => {
+    if (now - entry.createdAt > SERVER_PROGRESS_TTL_MS) {
+      serverProgressMap.delete(key);
+    }
+  });
+}
+
+function evictOldestIfFull(): void {
+  if (serverProgressMap.size < SERVER_PROGRESS_MAX_SIZE) return;
+
+  // Find and remove the oldest entry
+  let oldestKey: string | null = null;
+  let oldestTime = Infinity;
+  serverProgressMap.forEach((entry, key) => {
+    if (entry.createdAt < oldestTime) {
+      oldestTime = entry.createdAt;
+      oldestKey = key;
+    }
+  });
+  if (oldestKey) {
+    serverProgressMap.delete(oldestKey);
+  }
+}
 
 export const serverProgress = {
-  get: (jobId: string): VeoProgress | undefined => serverProgressMap.get(jobId),
+  get: (jobId: string): VeoProgress | undefined => {
+    const entry = serverProgressMap.get(jobId);
+    if (!entry) return undefined;
+    // Check TTL on read
+    if (Date.now() - entry.createdAt > SERVER_PROGRESS_TTL_MS) {
+      serverProgressMap.delete(jobId);
+      return undefined;
+    }
+    return entry.progress;
+  },
   set: (jobId: string, progress: VeoProgress): void => {
-    serverProgressMap.set(jobId, progress);
+    const existing = serverProgressMap.get(jobId);
+    if (existing) {
+      // Update in place — preserve original createdAt
+      serverProgressMap.set(jobId, { progress, createdAt: existing.createdAt });
+    } else {
+      evictExpiredEntries();
+      evictOldestIfFull();
+      serverProgressMap.set(jobId, { progress, createdAt: Date.now() });
+    }
   },
   delete: (jobId: string): void => {
     serverProgressMap.delete(jobId);
   },
-  has: (jobId: string): boolean => serverProgressMap.has(jobId),
-  getAll: (): Map<string, VeoProgress> => serverProgressMap,
+  has: (jobId: string): boolean => {
+    const entry = serverProgressMap.get(jobId);
+    if (!entry) return false;
+    if (Date.now() - entry.createdAt > SERVER_PROGRESS_TTL_MS) {
+      serverProgressMap.delete(jobId);
+      return false;
+    }
+    return true;
+  },
+  getAll: (): Map<string, VeoProgress> => {
+    evictExpiredEntries();
+    const result = new Map<string, VeoProgress>();
+    serverProgressMap.forEach((entry, key) => {
+      result.set(key, entry.progress);
+    });
+    return result;
+  },
   clear: (): void => serverProgressMap.clear(),
 };
 

@@ -437,7 +437,7 @@ export const vi = {
             generateFromUrl: "Tạo từ URL",
             extractScript: "Trích xuất Script",
             processing: "Đang xử lý...",
-            duration: "Thời lượng Video",
+            duration: "Thời lượng phân tích",
             durationAuto: "Toàn bộ Video",
             durationCustom: "Tùy chỉnh",
             durationAutoHint: "AI sẽ tự động phân tích toàn bộ video",
@@ -503,6 +503,10 @@ export const vi = {
             title: "Cài đặt",
             // Section titles
             generationTitle: "Tạo scene",
+            outputTitle: "Đầu ra",
+            audioTitle: "Âm thanh",
+            analysisTitle: "Phân tích",
+            shotTypeTitle: "Kiểu quay",
             contentTitle: "Phân tích nội dung",
             qualityTitle: "Chất lượng & Lọc",
             // Settings
@@ -516,8 +520,16 @@ export const vi = {
             batchSizeDesc: "Số scene mỗi batch (chỉ cho hybrid mode)",
             voice: "Giọng nói",
             voiceDesc: "Ngôn ngữ narration cho video",
+            dialogueLanguageDesc: "Ngôn ngữ cho giọng nói và hội thoại",
+            audioMusic: "Nhạc",
+            audioMusicDesc: "Nhạc nền (mood, thể loại, tempo)",
+            audioSFX: "SFX",
+            audioSFXDesc: "Hiệu ứng âm thanh đồng bộ với hành động",
+            audioAmbient: "Môi trường",
+            audioAmbientDesc:
+                "Âm thanh môi trường (tiếng phòng, bầu không khí)",
             voiceOptions: {
-                "no-voice": "Không có giọng (silent)",
+                "no-voice": "Không giọng nói",
                 english: "Tiếng Anh",
                 vietnamese: "Tiếng Việt",
                 spanish: "Tiếng Tây Ban Nha",
@@ -530,29 +542,39 @@ export const vi = {
             useVideoChapters: "Bao gồm chapters trong mô tả",
             useVideoChaptersDesc: "Sử dụng thông tin chapters từ mô tả video",
             negativePrompt: "Prompt Phủ Định",
-            negativePromptPlaceholder: "Nhập yếu tố không mong muốn (phân tách bằng dấu phẩy)",
-            negativePromptDesc: "Yếu tố để loại trừ khỏi video (văn bản, vấn đề chất lượng, vấn đề liên tục). Chỉnh sửa để tùy chỉnh (tối đa 500 ký tự)",
+            negativePromptPlaceholder:
+                "Nhập yếu tố không mong muốn (phân tách bằng dấu phẩy)",
+            negativePromptDesc:
+                "Yếu tố để loại trừ khỏi video (văn bản, vấn đề chất lượng, vấn đề liên tục). Chỉnh sửa để tùy chỉnh (tối đa 500 ký tự)",
             extractColorProfile: "Trích xuất Hồ sơ Màu",
-            extractColorProfileDesc: "Phân tích video để trích xuất bảng màu, nhiệt độ màu, độ tương phản và đặc điểm phim (Giai đoạn 0)",
+            extractColorProfileDesc:
+                "Phân tích video để trích xuất bảng màu, nhiệt độ màu, độ tương phản và đặc điểm phim (Giai đoạn 0)",
             mediaType: "Loại đầu ra",
             imageMode: "Hình ảnh",
             videoMode: "Video",
             imageModeHint: "Tối ưu cho Midjourney, DALL-E, Flux (ảnh tĩnh)",
-            videoModeHint: "Tối ưu cho VEO, Sora, Runway Gen-3 (video chuyển động)",
+            videoModeHint:
+                "Tối ưu cho VEO, Sora, Runway Gen-3 (video chuyển động)",
             // VEO 3 Advanced Features
             veo3Title: "Tính năng VEO 3 Nâng cao",
             veo3Audio: "Hệ thống Âm thanh",
-            veo3AudioDesc: "Tạo âm thanh môi trường, nhạc nền và hiệu ứng âm thanh với chống ảo giác",
+            veo3AudioDesc:
+                "Tạo âm thanh môi trường, nhạc nền và hiệu ứng âm thanh với chống ảo giác",
             veo3Dialogue: "Hệ thống Đối thoại",
-            veo3DialogueDesc: "Sử dụng định dạng dấu hai chấm cho đối thoại (ngăn phụ đề, quy tắc 8 giây)",
+            veo3DialogueDesc:
+                "Sử dụng định dạng dấu hai chấm cho đối thoại (ngăn phụ đề, quy tắc 8 giây)",
             veo3Camera: "Vị trí Camera",
-            veo3CameraDesc: "Sử dụng cú pháp '(thats where the camera is)' để định vị chính xác",
+            veo3CameraDesc:
+                "Sử dụng cú pháp '(thats where the camera is)' để định vị chính xác",
             veo3Expression: "Kiểm soát Biểu cảm",
-            veo3ExpressionDesc: "Kỹ thuật chống mặt người mẫu với biểu cảm vi mô và cung cảm xúc",
+            veo3ExpressionDesc:
+                "Kỹ thuật chống mặt người mẫu với biểu cảm vi mô và cung cảm xúc",
             veo3Selfie: "Chế độ Selfie/POV",
-            veo3SelfieDesc: "Tạo cảnh quay kiểu selfie chân thực với tay hiện rõ và chất lượng như phim",
+            veo3SelfieDesc:
+                "Tạo cảnh quay kiểu selfie chân thực với tay hiện rõ và chất lượng như phim",
             veo3Composition: "Bố cục Nâng cao",
-            veo3CompositionDesc: "Hiệu ứng ống kính, phân màu và thiết lập ánh sáng chuyên nghiệp",
+            veo3CompositionDesc:
+                "Hiệu ứng ống kính, phân màu và thiết lập ánh sáng chuyên nghiệp",
             veo3ColorPalette: "Bảng màu",
             veo3ColorAuto: "Tự động (từ video)",
             veo3ColorTealOrange: "Teal-Orange (Hollywood)",

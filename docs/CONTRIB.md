@@ -3,7 +3,7 @@
 Development workflow, setup, and testing procedures.
 
 > **Source of truth**: `package.json`, `.env.example`
-> **Last updated**: 2026-01-25
+> **Last updated**: 2026-01-31
 
 ## Quick Start
 
@@ -96,6 +96,75 @@ __tests__/
 
 ### Coverage Target
 Minimum 80% coverage required.
+
+### Testing Best Practices
+
+#### LocalStorageCache Mock Structure
+
+When testing code that uses `LocalStorageCache<T>`, remember that items are wrapped in a `CachedItem` structure:
+
+```typescript
+// Storage format in localStorage
+{
+  data: T,           // Your actual data
+  timestamp: number  // Cache timestamp
+}
+
+// getAll() returns
+Array<{
+  id: string,        // Item ID (without prefix)
+  data: T,           // Your actual data
+  timestamp: number  // Cache timestamp
+}>
+```
+
+**Test Helper Pattern:**
+
+```typescript
+// ✅ CORRECT - Wrap data in CachedItem structure
+function storeJob(job: CachedVeoJob): void {
+  const key = `veo_job_${job.jobId}`;
+  const cachedItem = {
+    data: job,
+    timestamp: job.timestamp,
+  };
+  localStorageData[key] = JSON.stringify(cachedItem);
+}
+
+// ❌ WRONG - Missing wrapper
+function storeJob(job: CachedVeoJob): void {
+  const key = `veo_job_${job.jobId}`;
+  localStorageData[key] = JSON.stringify(job);  // Missing wrapper!
+}
+```
+
+#### React Hooks Testing
+
+When testing components with `useCallback` or `useMemo`:
+
+1. **Complete dependency arrays** - Include all variables used inside the hook
+2. **Memoize complex objects** - Use `useMemo` for objects used in callbacks
+3. **Stable identities** - Avoid creating objects inline in dependency arrays
+
+Example:
+```typescript
+// ✅ GOOD - Memoized object with stable identity
+const data = useMemo(() => ({
+  id,
+  name,
+  items
+}), [id, name, items]);
+
+const handler = useCallback(() => {
+  process(data);
+}, [data]);
+
+// ❌ BAD - Object recreated on every render
+const data = { id, name, items };
+const handler = useCallback(() => {
+  process(data);
+}, [data]);  // Triggers re-creation on every render
+```
 
 ## Code Quality
 

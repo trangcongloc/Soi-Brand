@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Scene, CharacterRegistry, VeoJobSummary } from "@/lib/veo/types";
 import styles from "./VeoJsonView.module.css";
 
@@ -14,7 +14,7 @@ interface VeoJsonViewProps {
 export function VeoJsonView({ scenes, characterRegistry, summary, jobId }: VeoJsonViewProps) {
   const [copyStatus, setCopyStatus] = useState<string>("");
 
-  const jsonData = {
+  const jsonData = useMemo(() => ({
     jobId,
     summary: {
       videoId: summary.videoId,
@@ -64,7 +64,7 @@ export function VeoJsonView({ scenes, characterRegistry, summary, jobId }: VeoJs
       advancedComposition: scene.advancedComposition,
       qualityScore: scene.qualityScore,
     })),
-  };
+  }), [jobId, summary, characterRegistry, scenes]);
 
   const handleCopy = useCallback(async () => {
     try {

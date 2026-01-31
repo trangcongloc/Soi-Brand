@@ -123,9 +123,14 @@ describe("VEO Cache", () => {
   }
 
   // Helper to store a job in mock localStorage
+  // Must wrap in CachedItem structure to match LocalStorageCache format
   function storeJob(job: CachedVeoJob): void {
     const key = `veo_job_${job.jobId}`;
-    localStorageData[key] = JSON.stringify(job);
+    const cachedItem = {
+      data: job,
+      timestamp: job.timestamp,
+    };
+    localStorageData[key] = JSON.stringify(cachedItem);
   }
 
   // ============================================================================
@@ -281,8 +286,8 @@ describe("VEO Cache", () => {
       expect(localStorageData["veo_job_new-job-123"]).toBeDefined();
 
       const stored = JSON.parse(localStorageData["veo_job_new-job-123"]);
-      expect(stored.jobId).toBe("new-job-123");
-      expect(stored.videoId).toBe("video-test");
+      expect(stored.data.jobId).toBe("new-job-123");
+      expect(stored.data.videoId).toBe("video-test");
     });
 
     it("dispatches custom event after storing", () => {
@@ -525,10 +530,14 @@ describe("VEO Cache", () => {
     });
 
     it("handles missing required fields gracefully", () => {
-      // Store job with missing jobId
+      // Store job with missing jobId (wrapped in CachedItem structure)
+      const now = Date.now();
       localStorageData["veo_job_incomplete"] = JSON.stringify({
-        videoId: "video-1",
-        timestamp: Date.now(),
+        data: {
+          videoId: "video-1",
+          timestamp: now,
+        },
+        timestamp: now,
       });
       storeJob(createMockCachedJob("valid", "video-1"));
 

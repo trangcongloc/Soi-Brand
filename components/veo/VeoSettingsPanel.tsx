@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { VeoMode, VoiceLanguage, VeoWorkflow, MediaType, ColorPaletteType, LightingSetup } from "@/lib/veo";
+import { VeoMode, VoiceLanguage, AudioSettings, VeoWorkflow, MediaType } from "@/lib/veo";
 import { useLang } from "@/lib/lang";
 import styles from "./VeoForm.module.css";
 
@@ -11,18 +11,11 @@ interface SettingsState {
   autoSceneCount: boolean;
   sceneCount: number;
   batchSize: number;
-  voice: VoiceLanguage;
+  audio: AudioSettings;
   useVideoChapters: boolean;
   negativePrompt: string;
   extractColorProfile: boolean;
   mediaType: MediaType;
-  enableAudio: boolean;
-  enableDialogue: boolean;
-  enableCameraPositioning: boolean;
-  enableExpressionControl: boolean;
-  enableAdvancedComposition: boolean;
-  colorPalette: ColorPaletteType;
-  lightingSetup: LightingSetup;
   selfieMode: boolean;
 }
 
@@ -152,51 +145,51 @@ export function VeoSettingsPanel({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Row 1: Core Settings */}
-            <div className={styles.inlineRow}>
-              <span className={styles.rowLabel}>{lang.veo.settings.sceneCount}</span>
+            {/* Generation Group */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>{lang.veo.settings.generationTitle}</div>
+              <div className={styles.settingsGroupContent}>
+                <span className={styles.rowLabel}>{lang.veo.settings.sceneCount}</span>
 
-              {/* Auto/Manual toggle (url-to-scenes only) */}
-              {isUrlWorkflow && (
-                <div className={styles.autoToggle}>
-                  <button
-                    type="button"
-                    className={`${styles.autoToggleBtn} ${styles.tooltip} ${settings.autoSceneCount ? styles.active : ""}`}
-                    onClick={() => onSettingsChange({ autoSceneCount: true })}
+                {isUrlWorkflow && (
+                  <div className={styles.autoToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${settings.autoSceneCount ? styles.active : ""}`}
+                      onClick={() => onSettingsChange({ autoSceneCount: true })}
+                      disabled={isLoading}
+                      data-tooltip={lang.veo.settings.sceneCountAutoDesc}
+                    >
+                      {lang.veo.settings.auto}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${!settings.autoSceneCount ? styles.active : ""}`}
+                      onClick={() => onSettingsChange({ autoSceneCount: false })}
+                      disabled={isLoading}
+                      data-tooltip={lang.veo.settings.sceneCountDesc}
+                    >
+                      {lang.veo.settings.manual}
+                    </button>
+                  </div>
+                )}
+
+                {(!isUrlWorkflow || !settings.autoSceneCount) && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={settings.sceneCount}
+                    onChange={(e) => onSettingsChange({ sceneCount: parseInt(e.target.value) || 40 })}
                     disabled={isLoading}
-                    data-tooltip={lang.veo.settings.sceneCountAutoDesc}
-                  >
-                    {lang.veo.settings.auto}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.autoToggleBtn} ${styles.tooltip} ${!settings.autoSceneCount ? styles.active : ""}`}
-                    onClick={() => onSettingsChange({ autoSceneCount: false })}
-                    disabled={isLoading}
+                    className={`${styles.compactInput} ${styles.tooltip}`}
                     data-tooltip={lang.veo.settings.sceneCountDesc}
-                  >
-                    {lang.veo.settings.manual}
-                  </button>
-                </div>
-              )}
+                  />
+                )}
 
-              {/* Scene count input (when not auto) */}
-              {(!isUrlWorkflow || !settings.autoSceneCount) && (
-                <input
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={settings.sceneCount}
-                  onChange={(e) => onSettingsChange({ sceneCount: parseInt(e.target.value) || 40 })}
-                  disabled={isLoading}
-                  className={`${styles.compactInput} ${styles.tooltip}`}
-                  data-tooltip={lang.veo.settings.sceneCountDesc}
-                />
-              )}
-
-              {/* Batch size (hybrid only) */}
+              </div>
               {settings.mode === "hybrid" && (
-                <>
+                <div className={styles.settingsGroupContent} style={{ marginTop: "0.4rem" }}>
                   <span className={styles.rowLabel}>{lang.veo.settings.batchSize}</span>
                   <input
                     type="number"
@@ -208,48 +201,82 @@ export function VeoSettingsPanel({
                     className={`${styles.compactInput} ${styles.tooltip}`}
                     data-tooltip={lang.veo.settings.batchSizeDesc}
                   />
-                </>
+                </div>
               )}
-
-              {/* Media Type pills */}
-              <Chip
-                icon="🖼"
-                label={lang.veo.settings.imageMode}
-                active={settings.mediaType === "image"}
-                tooltip={lang.veo.settings.imageModeHint}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ mediaType: "image" })}
-              />
-              <Chip
-                icon="🎬"
-                label={lang.veo.settings.videoMode}
-                active={settings.mediaType === "video"}
-                tooltip={lang.veo.settings.videoModeHint}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ mediaType: "video" })}
-              />
-
-              {/* Voice select */}
-              <select
-                value={settings.voice}
-                onChange={(e) => onSettingsChange({ voice: e.target.value as VoiceLanguage })}
-                disabled={isLoading}
-                className={`${styles.compactSelect} ${styles.tooltip}`}
-                data-tooltip={lang.veo.settings.voiceDesc}
-              >
-                {voiceOptions.map((v) => (
-                  <option key={v} value={v}>
-                    {lang.veo.settings.voiceOptions[v]}
-                  </option>
-                ))}
-              </select>
             </div>
 
-            {/* Row 2: Analysis Toggles (url-to-scenes only) */}
+            {/* Output Group */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>{lang.veo.settings.outputTitle}</div>
+              <div className={styles.settingsGroupContent}>
+                <Chip
+                  icon="🖼"
+                  label={lang.veo.settings.imageMode}
+                  active={settings.mediaType === "image"}
+                  tooltip={lang.veo.settings.imageModeHint}
+                  disabled={isLoading}
+                  onClick={() => onSettingsChange({ mediaType: "image" })}
+                />
+                <Chip
+                  icon="🎬"
+                  label={lang.veo.settings.videoMode}
+                  active={settings.mediaType === "video"}
+                  tooltip={lang.veo.settings.videoModeHint}
+                  disabled={isLoading}
+                  onClick={() => onSettingsChange({ mediaType: "video" })}
+                />
+              </div>
+            </div>
+
+            {/* Audio Group */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>{lang.veo.settings.audioTitle}</div>
+              <div className={styles.settingsGroupContent}>
+                <select
+                  value={settings.audio.voiceLanguage}
+                  onChange={(e) => onSettingsChange({ audio: { ...settings.audio, voiceLanguage: e.target.value as VoiceLanguage } })}
+                  disabled={isLoading}
+                  className={`${styles.compactSelect} ${styles.tooltip}`}
+                  data-tooltip={lang.veo.settings.dialogueLanguageDesc}
+                >
+                  {voiceOptions.map((v) => (
+                    <option key={v} value={v}>
+                      {lang.veo.settings.voiceOptions[v]}
+                    </option>
+                  ))}
+                </select>
+                <Chip
+                  icon="M"
+                  label={lang.veo.settings.audioMusic}
+                  active={settings.audio.music}
+                  tooltip={lang.veo.settings.audioMusicDesc}
+                  disabled={isLoading}
+                  onClick={() => onSettingsChange({ audio: { ...settings.audio, music: !settings.audio.music } })}
+                />
+                <Chip
+                  icon="S"
+                  label={lang.veo.settings.audioSFX}
+                  active={settings.audio.soundEffects}
+                  tooltip={lang.veo.settings.audioSFXDesc}
+                  disabled={isLoading}
+                  onClick={() => onSettingsChange({ audio: { ...settings.audio, soundEffects: !settings.audio.soundEffects } })}
+                />
+                <Chip
+                  icon="A"
+                  label={lang.veo.settings.audioAmbient}
+                  active={settings.audio.environmentalAudio}
+                  tooltip={lang.veo.settings.audioAmbientDesc}
+                  disabled={isLoading}
+                  onClick={() => onSettingsChange({ audio: { ...settings.audio, environmentalAudio: !settings.audio.environmentalAudio } })}
+                />
+              </div>
+            </div>
+
+            {/* Analysis Group (url-to-scenes only) */}
             {isUrlWorkflow && (
-              <>
-                <div className={styles.settingsRowDivider} />
-                <div className={styles.chipGrid}>
+              <div className={styles.settingsGroup}>
+                <div className={styles.settingsGroupHeader}>{lang.veo.settings.analysisTitle}</div>
+                <div className={styles.settingsGroupContent}>
                   <Chip
                     icon="🎨"
                     label={lang.veo.settings.extractColorProfile}
@@ -266,107 +293,26 @@ export function VeoSettingsPanel({
                     disabled={isLoading}
                     onClick={() => onSettingsChange({ useVideoChapters: !settings.useVideoChapters })}
                   />
-
                 </div>
-              </>
+              </div>
             )}
 
-            {/* Row 3: VEO 3 Feature Chips */}
-            <div className={styles.settingsRowDivider} />
-            <div className={styles.chipGrid}>
-              <Chip
-                icon="🔊"
-                label={lang.veo.settings.veo3Audio || "Audio"}
-                active={settings.enableAudio}
-                tooltip={lang.veo.settings.veo3AudioDesc || "Generate environmental audio, music, and sound effects"}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ enableAudio: !settings.enableAudio })}
-              />
-              <Chip
-                icon="💬"
-                label={lang.veo.settings.veo3Dialogue || "Dialogue"}
-                active={settings.enableDialogue}
-                tooltip={lang.veo.settings.veo3DialogueDesc || "Use colon format for dialogue (prevents subtitles)"}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ enableDialogue: !settings.enableDialogue })}
-              />
-              <Chip
-                icon="🎥"
-                label={lang.veo.settings.veo3Camera || "Camera"}
-                active={settings.enableCameraPositioning}
-                tooltip={lang.veo.settings.veo3CameraDesc || "Precise camera positioning syntax"}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ enableCameraPositioning: !settings.enableCameraPositioning })}
-              />
-              <Chip
-                icon="😊"
-                label={lang.veo.settings.veo3Expression || "Expression"}
-                active={settings.enableExpressionControl}
-                tooltip={lang.veo.settings.veo3ExpressionDesc || "Anti-model-face with micro-expressions"}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ enableExpressionControl: !settings.enableExpressionControl })}
-              />
-              <Chip
-                icon="🤳"
-                label={lang.veo.settings.veo3Selfie || "Selfie"}
-                active={settings.selfieMode}
-                tooltip={lang.veo.settings.veo3SelfieDesc || "Authentic selfie-style footage"}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ selfieMode: !settings.selfieMode })}
-              />
-              <Chip
-                icon="✨"
-                label={lang.veo.settings.veo3Composition || "Composition"}
-                active={settings.enableAdvancedComposition}
-                tooltip={lang.veo.settings.veo3CompositionDesc || "Lens effects, color grading, and lighting"}
-                disabled={isLoading}
-                onClick={() => onSettingsChange({ enableAdvancedComposition: !settings.enableAdvancedComposition })}
-              />
+            {/* Shot Type Group */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>{lang.veo.settings.shotTypeTitle}</div>
+              <div className={styles.settingsGroupContent}>
+                <Chip
+                  icon="🤳"
+                  label={lang.veo.settings.veo3Selfie || "Selfie"}
+                  active={settings.selfieMode}
+                  tooltip={lang.veo.settings.veo3SelfieDesc || "Authentic selfie-style footage"}
+                  disabled={isLoading}
+                  onClick={() => onSettingsChange({ selfieMode: !settings.selfieMode })}
+                />
+              </div>
             </div>
 
-            {/* Row 4: Composition Sub-options (when Composition is active) */}
-            {settings.enableAdvancedComposition && (
-              <>
-                <div className={styles.subOptions}>
-                  <span className={styles.rowLabel}>{lang.veo.settings.veo3ColorPalette || "Palette"}</span>
-                  <select
-                    value={settings.colorPalette}
-                    onChange={(e) => onSettingsChange({ colorPalette: e.target.value as ColorPaletteType })}
-                    disabled={isLoading}
-                    className={styles.compactSelect}
-                  >
-                    <option value="auto">{lang.veo.settings.veo3ColorAuto || "Auto"}</option>
-                    <option value="teal-orange">{lang.veo.settings.veo3ColorTealOrange || "Teal-Orange"}</option>
-                    <option value="warm-orange">{lang.veo.settings.veo3ColorWarm || "Warm Orange"}</option>
-                    <option value="cool-blue">{lang.veo.settings.veo3ColorCool || "Cool Blue"}</option>
-                    <option value="desaturated">{lang.veo.settings.veo3ColorDesaturated || "Desaturated"}</option>
-                    <option value="vibrant">{lang.veo.settings.veo3ColorVibrant || "Vibrant"}</option>
-                    <option value="pastel">{lang.veo.settings.veo3ColorPastel || "Pastel"}</option>
-                    <option value="noir">{lang.veo.settings.veo3ColorNoir || "Noir"}</option>
-                  </select>
-
-                  <span className={styles.rowLabel}>{lang.veo.settings.veo3Lighting || "Lighting"}</span>
-                  <select
-                    value={settings.lightingSetup}
-                    onChange={(e) => onSettingsChange({ lightingSetup: e.target.value as LightingSetup })}
-                    disabled={isLoading}
-                    className={styles.compactSelect}
-                  >
-                    <option value="auto">{lang.veo.settings.veo3LightingAuto || "Auto"}</option>
-                    <option value="three-point">{lang.veo.settings.veo3LightingThreePoint || "Three-Point"}</option>
-                    <option value="rembrandt">{lang.veo.settings.veo3LightingRembrandt || "Rembrandt"}</option>
-                    <option value="golden-hour">{lang.veo.settings.veo3LightingGoldenHour || "Golden Hour"}</option>
-                    <option value="blue-hour">{lang.veo.settings.veo3LightingBlueHour || "Blue Hour"}</option>
-                    <option value="chiaroscuro">{lang.veo.settings.veo3LightingChiaroscuro || "Chiaroscuro"}</option>
-                    <option value="neon">{lang.veo.settings.veo3LightingNeon || "Neon"}</option>
-                    <option value="natural">{lang.veo.settings.veo3LightingNatural || "Natural"}</option>
-                  </select>
-                </div>
-              </>
-            )}
-
-            {/* Row 5: Negative Prompt (collapsible) */}
-            <div className={styles.settingsRowDivider} />
+            {/* Negative Prompt (collapsible) */}
             <div>
               <button
                 type="button"

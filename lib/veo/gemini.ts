@@ -257,107 +257,6 @@ export async function callGeminiAPIWithRetry(
 }
 
 /**
- * Generate scenes from a video URL (direct mode)
- */
-export async function generateScenesDirect(
-  requestBody: GeminiRequestBody,
-  options: {
-    apiKey: string;
-    model?: string;
-    onProgress?: (message: string) => void;
-  }
-): Promise<Scene[]> {
-  const { apiKey, model, onProgress } = options;
-
-  onProgress?.("Sending request to Gemini API...");
-
-  const response = await callGeminiAPIWithRetry(requestBody, {
-    apiKey,
-    model,
-    onRetry: (attempt) => {
-      onProgress?.(`Retry ${attempt}...`);
-    },
-  });
-
-  onProgress?.("Parsing response...");
-
-  return parseGeminiResponse(response);
-}
-
-/**
- * Generate scenes with batching (hybrid mode)
- */
-export async function generateScenesHybrid(
-  buildRequestFn: (batchNum: number) => GeminiRequestBody,
-  options: {
-    apiKey: string;
-    model?: string;
-    totalBatches: number;
-    startBatch?: number;
-    delayBetweenBatches?: number;
-    onBatchStart?: (batchNum: number, totalBatches: number) => void;
-    onBatchComplete?: (
-      batchNum: number,
-      scenes: Scene[],
-      totalScenes: number
-    ) => void;
-    onError?: (batchNum: number, error: Error) => void;
-  }
-): Promise<{
-  scenes: Scene[];
-  failedBatch?: number;
-  error?: Error;
-}> {
-  const {
-    apiKey,
-    model,
-    totalBatches,
-    startBatch = 0,
-    delayBetweenBatches = DEFAULT_RETRY_BASE_DELAY_MS * 2,
-    onBatchStart,
-    onBatchComplete,
-    onError,
-  } = options;
-
-  const allScenes: Scene[] = [];
-
-  for (let batchNum = startBatch; batchNum < totalBatches; batchNum++) {
-    onBatchStart?.(batchNum + 1, totalBatches);
-
-    try {
-      const requestBody = buildRequestFn(batchNum);
-
-      const response = await callGeminiAPIWithRetry(requestBody, {
-        apiKey,
-        model,
-      });
-
-      const batchScenes = parseGeminiResponse(response);
-
-      if (Array.isArray(batchScenes)) {
-        allScenes.push(...batchScenes);
-        onBatchComplete?.(batchNum + 1, batchScenes, allScenes.length);
-      }
-
-      // Delay between batches (except for last batch)
-      if (batchNum < totalBatches - 1) {
-        await new Promise((r) => setTimeout(r, delayBetweenBatches));
-      }
-    } catch (err) {
-      const error = err as Error;
-      onError?.(batchNum + 1, error);
-      return {
-        scenes: allScenes,
-        failedBatch: batchNum + 1,
-        error,
-      };
-    }
-  }
-
-  return { scenes: allScenes };
-}
-
-/**
  * Parse a character string into a CharacterSkeleton if possible
  * Format: "Name - gender, age, ethnicity, bodyType, faceShape, hair, facialHair, distinctiveFeatures, baseOutfit"
  */
@@ -366,14 +265,14 @@ function parseCharacterSkeleton(characterStr: string): CharacterSkeleton | null 
     return null;
   }
 
-  // Try to extract name and tags
-  const match = characterStr.match(/^([^-]+)\s*-\s*(.+)$/);
-  if (!match) {
+  // Split on first " - " delimiter (supports hyphenated names like "Jean-Paul")
+  const separatorIdx = characterStr.indexOf(" - ");
+  if (separatorIdx === -1) {
     return null;
   }
 
-  const name = match[1].trim();
-  const tagsPart = match[2].trim();
+  const name = characterStr.slice(0, separatorIdx).trim();
+  const tagsPart = characterStr.slice(separatorIdx + 3).trim();
   const tags = tagsPart.split(",").map(t => t.trim().toLowerCase());
 
   // Try to identify skeleton fields from tags

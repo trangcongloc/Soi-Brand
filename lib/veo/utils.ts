@@ -8,7 +8,6 @@ import {
   MAX_FOLDER_NAME_LENGTH,
   SECONDS_PER_HOUR,
   SECONDS_PER_MINUTE,
-  DURATION_THRESHOLD_FOR_MINUTES,
   DEFAULT_SECONDS_PER_SCENE,
   RANDOM_STRING_RADIX,
   RANDOM_STRING_MIN_LENGTH,
@@ -104,13 +103,10 @@ export function parseDuration(durationStr: string | undefined): number {
     return Math.round(totalSeconds);
   }
 
-  // Handle plain number (assume seconds if small, minutes if larger)
+  // Handle plain number — always treat as seconds (unambiguous)
   const plainNum = parseFloat(str);
   if (!isNaN(plainNum) && plainNum > 0) {
-    // If number is > DURATION_THRESHOLD_FOR_MINUTES, assume it's seconds; otherwise assume minutes
-    return plainNum > DURATION_THRESHOLD_FOR_MINUTES
-      ? Math.round(plainNum)
-      : Math.round(plainNum * SECONDS_PER_MINUTE);
+    return Math.round(plainNum);
   }
 
   return 0;

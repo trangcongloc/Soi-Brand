@@ -887,6 +887,18 @@
     font-size: 10px;
     max-width: 100px;
   }
+
+  .settingsGroup {
+    padding: 0.5rem;
+  }
+
+  .settingsGroupContent {
+    gap: 0.35rem;
+  }
+
+  .settingChip {
+    min-height: 30px;
+  }
 }
 
 /* ============================================================================
@@ -944,6 +956,7 @@
   background: var(--primary);
   border-color: var(--primary);
   color: white;
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.1));
 }
 
 .settingChip:disabled {
@@ -1083,7 +1096,8 @@
   border-radius: var(--radius-md);
   font-size: var(--fs-xs);
   font-weight: 400;
-  max-width: 250px;
+  max-width: 320px;
+  width: max-content;
   white-space: normal;
   z-index: 100;
   pointer-events: none;
@@ -1121,6 +1135,39 @@
   height: 1px;
   background: var(--border);
   margin: 0.15rem 0;
+}
+
+/* Settings group card */
+.settingsGroup {
+  background: var(--bg-main);
+  border-radius: var(--radius-md);
+  padding: 0.6rem;
+}
+
+.settingsGroupHeader {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settingsGroupContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Keep paired chips on one line */
+.chipPair {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 /* Row label (tiny) */

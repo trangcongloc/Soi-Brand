@@ -81,10 +81,23 @@ export function findNearestCinematicColor(
     ? CINEMATIC_COLORS.filter(c => c.usageContexts.includes(context))
     : CINEMATIC_COLORS;
 
-  // Handle edge case: empty vocabulary after filtering
+  // Handle edge case: empty vocabulary after filtering — fall back to full list
   if (vocabulary.length === 0) {
-    console.warn(`No colors found for context "${context}", using full vocabulary`);
-    return findNearestCinematicColor(hex); // Retry without context
+    if (CINEMATIC_COLORS.length === 0) {
+      // Absolute fallback — no colors defined at all
+      return {
+        id: "unknown",
+        semanticName: "Unknown",
+        hex,
+        rgb,
+        moods: [],
+        usageContexts: [],
+        temperature: "neutral" as ColorTemperature,
+        psychologyNotes: "",
+        confidence: 0,
+      };
+    }
+    return findNearestCinematicColor(hex); // Retry with full vocabulary (no context)
   }
 
   let minDistance = Infinity;

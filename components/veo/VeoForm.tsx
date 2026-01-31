@@ -6,12 +6,9 @@ import { useLang } from "@/lib/lang";
 import {
   isValidYouTubeUrl,
   VeoMode,
-  VoiceLanguage,
+  AudioSettings,
   VeoWorkflow,
   MediaType,
-  ColorPaletteType,
-  LightingSetup,
-  Veo3Options,
 } from "@/lib/veo";
 import { loadVeoFormSettings, saveVeoFormSettings } from "@/lib/veo/settings";
 import { VeoWorkflowSelector } from "./VeoWorkflowSelector";
@@ -31,13 +28,12 @@ interface VeoFormProps {
     autoSceneCount: boolean;
     sceneCount: number;
     batchSize: number;
-    voice: VoiceLanguage;
+    audio: AudioSettings;
     useVideoChapters: boolean;
     negativePrompt?: string;
     extractColorProfile: boolean;
     mediaType: MediaType;
-    // VEO 3 Options
-    veo3Options?: Veo3Options;
+    selfieMode: boolean;
   }) => void;
   onError: (msg: string) => void;
   isLoading: boolean;
@@ -70,38 +66,27 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   const [autoSceneCount, setAutoSceneCount] = useState(savedSettings.autoSceneCount);
   const [sceneCount, setSceneCount] = useState(savedSettings.sceneCount);
   const [batchSize, setBatchSize] = useState(savedSettings.batchSize);
-  const [voice, setVoice] = useState<VoiceLanguage>(savedSettings.voice);
+  const [audio, setAudio] = useState<AudioSettings>(savedSettings.audio);
   const [useVideoChapters, setUseVideoChapters] = useState(savedSettings.useVideoChapters);
   const [negativePrompt, setNegativePrompt] = useState(savedSettings.negativePrompt);
   const [extractColorProfile, setExtractColorProfile] = useState(savedSettings.extractColorProfile);
   const [mediaType, setMediaType] = useState<MediaType>(savedSettings.mediaType);
   const [showSettings, setShowSettings] = useState(false);
 
-  // VEO 3 Prompting Guide Options — initialized from persisted values
-  const [enableAudio, setEnableAudio] = useState(savedSettings.enableAudio);
-  const [enableDialogue, setEnableDialogue] = useState(savedSettings.enableDialogue);
-  const [enableCameraPositioning, setEnableCameraPositioning] = useState(savedSettings.enableCameraPositioning);
-  const [enableExpressionControl, setEnableExpressionControl] = useState(savedSettings.enableExpressionControl);
-  const [enableAdvancedComposition, setEnableAdvancedComposition] = useState(savedSettings.enableAdvancedComposition);
-  const [colorPalette, setColorPalette] = useState<ColorPaletteType>(savedSettings.colorPalette);
-  const [lightingSetup, setLightingSetup] = useState<LightingSetup>(savedSettings.lightingSetup);
+  // Selfie mode — genuine shot-type toggle (VEO 3 techniques are integrated by default)
   const [selfieMode, setSelfieMode] = useState(savedSettings.selfieMode);
 
   // Persist settings to localStorage whenever they change
   useEffect(() => {
     saveVeoFormSettings({
-      mode, autoSceneCount, sceneCount, batchSize, voice,
+      mode, autoSceneCount, sceneCount, batchSize, audio,
       useVideoChapters, extractColorProfile, mediaType,
-      negativePrompt, enableAudio, enableDialogue, enableCameraPositioning,
-      enableExpressionControl, enableAdvancedComposition, colorPalette,
-      lightingSetup, selfieMode,
+      negativePrompt, selfieMode,
     });
   }, [
-    mode, autoSceneCount, sceneCount, batchSize, voice,
+    mode, autoSceneCount, sceneCount, batchSize, audio,
     useVideoChapters, extractColorProfile, mediaType,
-    negativePrompt, enableAudio, enableDialogue, enableCameraPositioning,
-    enableExpressionControl, enableAdvancedComposition, colorPalette,
-    lightingSetup, selfieMode,
+    negativePrompt, selfieMode,
   ]);
 
   const handleFileUpload = useCallback(
@@ -146,29 +131,11 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     [onError, lang]
   );
 
-  // Build VEO 3 options object
-  const buildVeo3Options = useCallback((): Veo3Options => ({
-    enableAudio,
-    enableDialogue,
-    colonFormat: enableDialogue, // Use colon format when dialogue is enabled
-    eightSecondRule: enableDialogue,
-    enableCameraPositioning,
-    cameraPositionSyntax: enableCameraPositioning,
-    enableExpressionControl,
-    antiModelFace: enableExpressionControl,
-    emotionalArc: enableExpressionControl,
-    enableAdvancedComposition,
-    colorPalette,
-    lightingSetup,
-    selfieMode,
-  }), [enableAudio, enableDialogue, enableCameraPositioning, enableExpressionControl, enableAdvancedComposition, colorPalette, lightingSetup, selfieMode]);
-
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
 
       const trimmedNegativePrompt = negativePrompt.trim();
-      const veo3Options = buildVeo3Options();
 
       if (workflow === "url-to-script" || workflow === "url-to-scenes") {
         if (!url.trim()) {
@@ -189,12 +156,12 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           autoSceneCount: workflow === "url-to-scenes" ? autoSceneCount : false,
           sceneCount,
           batchSize,
-          voice,
+          audio,
           useVideoChapters,
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: workflow === "url-to-scenes" ? extractColorProfile : false,
           mediaType,
-          veo3Options,
+          selfieMode,
         });
       } else {
         if (!scriptText.trim()) {
@@ -208,16 +175,16 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           autoSceneCount: false,
           sceneCount,
           batchSize,
-          voice,
+          audio,
           useVideoChapters,
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: false, // No video to extract from
           mediaType,
-          veo3Options,
+          selfieMode,
         });
       }
     },
-    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, voice, useVideoChapters, negativePrompt, extractColorProfile, mediaType, buildVeo3Options, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, audio, useVideoChapters, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
   );
 
   const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
@@ -230,18 +197,11 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     autoSceneCount,
     sceneCount,
     batchSize,
-    voice,
+    audio,
     useVideoChapters,
     negativePrompt,
     extractColorProfile,
     mediaType,
-    enableAudio,
-    enableDialogue,
-    enableCameraPositioning,
-    enableExpressionControl,
-    enableAdvancedComposition,
-    colorPalette,
-    lightingSetup,
     selfieMode,
   };
 
@@ -251,18 +211,11 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     if (updates.autoSceneCount !== undefined) setAutoSceneCount(updates.autoSceneCount);
     if (updates.sceneCount !== undefined) setSceneCount(updates.sceneCount);
     if (updates.batchSize !== undefined) setBatchSize(updates.batchSize);
-    if (updates.voice !== undefined) setVoice(updates.voice);
+    if (updates.audio !== undefined) setAudio(updates.audio);
     if (updates.useVideoChapters !== undefined) setUseVideoChapters(updates.useVideoChapters);
     if (updates.negativePrompt !== undefined) setNegativePrompt(updates.negativePrompt);
     if (updates.extractColorProfile !== undefined) setExtractColorProfile(updates.extractColorProfile);
     if (updates.mediaType !== undefined) setMediaType(updates.mediaType);
-    if (updates.enableAudio !== undefined) setEnableAudio(updates.enableAudio);
-    if (updates.enableDialogue !== undefined) setEnableDialogue(updates.enableDialogue);
-    if (updates.enableCameraPositioning !== undefined) setEnableCameraPositioning(updates.enableCameraPositioning);
-    if (updates.enableExpressionControl !== undefined) setEnableExpressionControl(updates.enableExpressionControl);
-    if (updates.enableAdvancedComposition !== undefined) setEnableAdvancedComposition(updates.enableAdvancedComposition);
-    if (updates.colorPalette !== undefined) setColorPalette(updates.colorPalette);
-    if (updates.lightingSetup !== undefined) setLightingSetup(updates.lightingSetup);
     if (updates.selfieMode !== undefined) setSelfieMode(updates.selfieMode);
   }, []);
 

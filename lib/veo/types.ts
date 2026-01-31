@@ -226,6 +226,18 @@ export type VoiceLanguage =
   | "korean"
   | "chinese";
 
+/**
+ * Granular audio layer controls for VEO 3 generation.
+ * Each layer can be independently toggled ON/OFF.
+ * When OFF, the prompt explicitly tells Gemini NOT to generate that layer.
+ */
+export interface AudioSettings {
+  voiceLanguage: VoiceLanguage;
+  music: boolean;
+  soundEffects: boolean;
+  environmentalAudio: boolean;
+}
+
 // ============================================================================
 // Script Types (for Step 1 and Step 2)
 // ============================================================================
@@ -459,7 +471,7 @@ export interface CachedVeoJob {
     autoSceneCount?: boolean;
     startTime?: string;
     endTime?: string;
-    veo3Options?: Veo3Options;
+    selfieMode?: boolean;
   };
 }
 
@@ -1345,48 +1357,8 @@ export interface PromptTemplate {
   tips: string[];
 }
 
-// ============================================================================
-// VEO 3 Settings (Veo3Options)
-// ============================================================================
-
-/**
- * VEO 3 generation options to pass to prompt builders
- */
-export interface Veo3Options {
-  // Audio System
-  enableAudio?: boolean;
-  audioPreset?: "minimal" | "standard" | "cinematic";
-
-  // Dialogue System
-  enableDialogue?: boolean;
-  colonFormat?: boolean;        // Use "says: 'dialogue'" format
-  eightSecondRule?: boolean;    // Enforce 12-15 word limit
-
-  // Camera System
-  enableCameraPositioning?: boolean;
-  cameraPositionSyntax?: boolean; // Use "(thats where the camera is)" syntax
-
-  // Expression System
-  enableExpressionControl?: boolean;
-  antiModelFace?: boolean;
-  emotionalArc?: boolean;
-
-  // Advanced Composition
-  enableAdvancedComposition?: boolean;
-  colorPalette?: ColorPaletteType;
-  lightingSetup?: LightingSetup;
-
-  // Quality Systems
-  enableQualityChecklist?: boolean;
-  targetQualityLevel?: QualityLevel;
-
-  // Platform Optimization
-  platform?: PlatformFormat["platform"];
-  selfieMode?: boolean;
-
-  // Template
-  templateId?: string;
-}
+// VEO 3 techniques are now integrated into base instructions (not optional toggles).
+// Only selfieMode remains as a genuine shot-type toggle.
 
 // ============================================================================
 // VEO Form Settings Persistence
@@ -1403,7 +1375,7 @@ export interface VeoFormSettings {
   autoSceneCount: boolean;
   sceneCount: number;
   batchSize: number;
-  voice: VoiceLanguage;
+  audio: AudioSettings;
 
   // Processing
   useVideoChapters: boolean;
@@ -1413,13 +1385,6 @@ export interface VeoFormSettings {
   // Prompting
   negativePrompt: string;
 
-  // VEO 3 options
-  enableAudio: boolean;
-  enableDialogue: boolean;
-  enableCameraPositioning: boolean;
-  enableExpressionControl: boolean;
-  enableAdvancedComposition: boolean;
-  colorPalette: ColorPaletteType;
-  lightingSetup: LightingSetup;
+  // Selfie mode (genuine shot-type toggle — VEO 3 techniques are integrated by default)
   selfieMode: boolean;
 }
