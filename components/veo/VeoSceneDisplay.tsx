@@ -1,15 +1,17 @@
 "use client";
 
-import { memo, useState, useCallback, useRef, useEffect } from "react";
+import { memo, useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useLang } from "@/lib/lang";
-import { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript, CinematicProfile } from "@/lib/veo";
+import type { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript, CinematicProfile, GeminiLogEntry } from "@/lib/veo";
 import { downloadJson as downloadJsonUtil, downloadText } from "@/lib/veo/download-utils";
-import VeoSceneCard from "./VeoSceneCard";
 import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoHistoryPanel from "./VeoHistoryPanel";
 import VeoColorProfilePanel from "./VeoColorProfilePanel";
+import VeoLogPanel from "./VeoLogPanel";
 import { VeoJsonView } from "./VeoJsonView";
+import { highlightJson } from "./json-highlight";
 import styles from "./VeoSceneDisplay.module.css";
+import jsonStyles from "./VeoJsonView.module.css";
 
 interface VeoSceneDisplayProps {
   scenes: Scene[];
@@ -19,13 +21,14 @@ interface VeoSceneDisplayProps {
   script?: GeneratedScript;
   colorProfile?: CinematicProfile;
   colorProfileConfidence?: number;
+  logEntries?: GeminiLogEntry[];
   onViewJob?: (jobId: string) => void;
   onRegenerateJob?: (jobId: string) => void;
   onRetryJob?: (jobId: string) => void;
   onJobsChange?: () => void;
 }
 
-type TabType = "scenes" | "json" | "characters" | "color" | "history";
+type TabType = "scenes" | "json" | "characters" | "color" | "history" | "logs";
 
 function VeoSceneDisplay({
   scenes,
@@ -35,6 +38,7 @@ function VeoSceneDisplay({
   script,
   colorProfile,
   colorProfileConfidence,
+  logEntries,
   onViewJob,
   onRegenerateJob,
   onRetryJob,
@@ -43,6 +47,7 @@ function VeoSceneDisplay({
   const lang = useLang();
   const [activeTab, setActiveTab] = useState<TabType>("scenes");
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [scenesCopyStatus, setScenesCopyStatus] = useState("");
   const downloadRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -86,13 +91,29 @@ function VeoSceneDisplay({
     }
   }, [script, jobId, downloadJson]);
 
+  // Scenes JSON for the scenes tab code view
+  const scenesJson = useMemo(() => JSON.stringify(scenes, null, 2), [scenes]);
+  const highlightedScenesJson = useMemo(() => highlightJson(scenesJson, jsonStyles), [scenesJson]);
+
+  const handleCopyScenesJson = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(scenesJson);
+      setScenesCopyStatus("Copied!");
+      setTimeout(() => setScenesCopyStatus(""), 2000);
+    } catch {
+      setScenesCopyStatus("Failed");
+      setTimeout(() => setScenesCopyStatus(""), 2000);
+    }
+  }, [scenesJson]);
+
+  const hasLogs = logEntries && logEntries.length > 0;
+
   const tabs: { key: TabType; label: string }[] = [
     { key: "scenes", label: lang.veo.result.scenes },
     { key: "json", label: "JSON" },
     { key: "characters", label: lang.veo.result.characters },
-    // Only show color tab if colorProfile is available
     ...(colorProfile ? [{ key: "color" as TabType, label: lang.veo.result.color }] : []),
-    // Only show history tab if onViewJob handler is provided
+    ...(hasLogs ? [{ key: "logs" as TabType, label: "Logs" }] : []),
     ...(onViewJob ? [{ key: "history" as TabType, label: lang.veo.history.title }] : []),
   ];
 
@@ -204,18 +225,31 @@ function VeoSceneDisplay({
                 {Object.keys(characterRegistry).length}
               </span>
             )}
+            {tab.key === "logs" && hasLogs && (
+              <span className={styles.badge}>{logEntries.length}</span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       <div className={styles.content}>
-        {/* Scenes Tab */}
+        {/* Scenes Tab - JSON code view */}
         {activeTab === "scenes" && (
-          <div className={styles.scenesList}>
-            {scenes.map((scene, index) => (
-              <VeoSceneCard key={index} scene={scene} index={index} />
-            ))}
+          <div className={jsonStyles.jsonViewContainer}>
+            <div className={jsonStyles.jsonHeader}>
+              <h3>Scenes ({scenes.length})</h3>
+              <button onClick={handleCopyScenesJson} className={jsonStyles.copyButton}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                {scenesCopyStatus || "Copy All"}
+              </button>
+            </div>
+            <pre className={jsonStyles.jsonContent}>
+              <code>{highlightedScenesJson}</code>
+            </pre>
           </div>
         )}
 
@@ -244,6 +278,11 @@ function VeoSceneDisplay({
             confidence={colorProfileConfidence ?? 0}
             defaultExpanded={true}
           />
+        )}
+
+        {/* Logs Tab */}
+        {activeTab === "logs" && hasLogs && (
+          <VeoLogPanel entries={logEntries} />
         )}
 
         {/* History Tab */}

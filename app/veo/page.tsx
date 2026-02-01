@@ -1050,21 +1050,11 @@ export default function VeoPage() {
                 script={generatedScript ?? undefined}
                 colorProfile={colorProfile ?? undefined}
                 colorProfileConfidence={colorProfileConfidence}
+                logEntries={logEntries}
                 onViewJob={handleViewJob}
                 onRegenerateJob={handleRegenerateJob}
                 onRetryJob={handleRetryJob}
               />
-              {logEntries.length > 0 && (
-                <div className={styles.logToggleWrapper}>
-                  <button
-                    className={styles.logToggleButton}
-                    onClick={() => setShowLogs(!showLogs)}
-                  >
-                    {showLogs ? "Hide Logs" : `Show Logs (${logEntries.length})`}
-                  </button>
-                  {showLogs && <VeoLogPanel entries={logEntries} />}
-                </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>

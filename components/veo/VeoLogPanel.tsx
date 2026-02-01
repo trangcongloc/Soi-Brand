@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import type { GeminiLogEntry } from "@/lib/veo/types";
+import { highlightJson } from "./json-highlight";
 import styles from "./VeoLogPanel.module.css";
 
 type LogMode = "compact" | "verbose";
@@ -56,70 +57,10 @@ function formatChars(n: number): string {
 }
 
 /**
- * Basic JSON syntax highlighting using CSS classes.
- * Returns an array of React elements.
+ * Wrapper around shared highlightJson that passes local CSS module classes.
  */
-function highlightJson(json: string): React.ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  // Simple regex-based highlighting
-  const regex = /("(?:[^"\\]|\\.)*")\s*:|("(?:[^"\\]|\\.)*")|(true|false)|(null)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
-
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(json)) !== null) {
-    // Text before match
-    if (match.index > lastIndex) {
-      nodes.push(json.slice(lastIndex, match.index));
-    }
-
-    if (match[1]) {
-      // Key
-      nodes.push(
-        <span key={`k${match.index}`} className={styles.jsonKey}>
-          {match[1]}
-        </span>
-      );
-      nodes.push(":");
-    } else if (match[2]) {
-      // String value
-      nodes.push(
-        <span key={`s${match.index}`} className={styles.jsonString}>
-          {match[2]}
-        </span>
-      );
-    } else if (match[3]) {
-      // Boolean
-      nodes.push(
-        <span key={`b${match.index}`} className={styles.jsonBool}>
-          {match[3]}
-        </span>
-      );
-    } else if (match[4]) {
-      // Null
-      nodes.push(
-        <span key={`n${match.index}`} className={styles.jsonNull}>
-          {match[4]}
-        </span>
-      );
-    } else if (match[5]) {
-      // Number
-      nodes.push(
-        <span key={`d${match.index}`} className={styles.jsonNumber}>
-          {match[5]}
-        </span>
-      );
-    }
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Remaining text
-  if (lastIndex < json.length) {
-    nodes.push(json.slice(lastIndex));
-  }
-
-  return nodes;
+function highlightJsonLocal(json: string): React.ReactNode[] {
+  return highlightJson(json, styles);
 }
 
 /**
@@ -198,12 +139,12 @@ function VerboseEntry({ entry }: { entry: GeminiLogEntry }) {
       <div className={`${styles.sectionLabel} ${styles.requestLabel}`}>
         {"▶"} REQUEST ({formatChars(entry.request.promptLength)} chars)
       </div>
-      <div className={styles.codeBlock}>{highlightJson(prettyRequest)}</div>
+      <div className={styles.codeBlock}>{highlightJsonLocal(prettyRequest)}</div>
 
       <div className={`${styles.sectionLabel} ${styles.responseLabel}`}>
         {"◀"} RESPONSE ({entry.tokens ? `${formatChars(entry.tokens.total)} tokens` : `${formatChars(entry.response.responseLength)} chars`} {"\u00B7"} {formatDuration(entry.timing.durationMs)})
       </div>
-      <div className={styles.codeBlock}>{highlightJson(prettyResponse)}</div>
+      <div className={styles.codeBlock}>{highlightJsonLocal(prettyResponse)}</div>
 
       <div className={styles.verboseMeta}>
         <span>Model: {entry.request.model}</span>

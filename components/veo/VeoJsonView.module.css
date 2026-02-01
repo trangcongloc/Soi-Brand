@@ -88,6 +88,27 @@
   background: var(--text-tertiary);
 }
 
+/* JSON syntax highlighting */
+.jsonKey {
+  color: #4fc3f7;
+}
+
+.jsonString {
+  color: #81c784;
+}
+
+.jsonNumber {
+  color: #ffb74d;
+}
+
+.jsonBool {
+  color: #ce93d8;
+}
+
+.jsonNull {
+  color: #ef5350;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .jsonHeader {
