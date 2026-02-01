@@ -404,3 +404,26 @@
     font-size: 52px;
   }
 }
+
+/* Log panel toggle */
+.logToggleWrapper {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.logToggleButton {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: monospace;
+  transition: all 0.15s ease;
+}
+
+.logToggleButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}

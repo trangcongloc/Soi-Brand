@@ -92,6 +92,8 @@ export {
   extractionResultToRegistry,
 } from "./gemini";
 
+export type { GeminiCallMeta } from "./gemini";
+
 // Caching
 export {
   getCachedJobsForVideo,
@@ -111,6 +113,18 @@ export {
   loadVeoFormSettings,
   saveVeoFormSettings,
 } from "./settings";
+
+// Phase-level caching
+export {
+  getPhaseCache,
+  cachePhase0,
+  cachePhase1,
+  cachePhase2Batch,
+  addPhaseLog,
+  clearPhaseCache,
+  getAllPhaseCaches,
+  createPhaseCacheSettings,
+} from "./phase-cache";
 
 // Progress tracking
 export {

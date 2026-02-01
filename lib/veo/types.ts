@@ -341,13 +341,92 @@ export interface VeoErrorEvent {
   };
 }
 
+// ============================================================================
+// Gemini API Logging
+// ============================================================================
+
+/**
+ * Log entry for a single Gemini API call.
+ * Captures full request/response for debugging and phase-level caching.
+ */
+export interface GeminiLogEntry {
+  id: string;
+  timestamp: string;
+  phase: "phase-0" | "phase-1" | "phase-2";
+  batchNumber?: number;
+  request: {
+    model: string;
+    body: string; // Full JSON request body (stringified)
+    promptLength: number;
+    videoUrl?: string;
+  };
+  response: {
+    success: boolean;
+    finishReason?: string;
+    body: string; // Full JSON response (stringified)
+    responseLength: number;
+    parsedItemCount?: number; // Number of scenes/characters parsed
+    parsedSummary: string; // e.g. "10 scenes" or "3 characters, 92% confidence"
+  };
+  timing: { durationMs: number; retries: number };
+  tokens?: { prompt: number; candidates: number; total: number };
+  error?: { type: string; message: string };
+}
+
+/**
+ * Phase-level cache for resumable VEO jobs.
+ * Stores results from each phase individually so resume can skip completed phases.
+ */
+export interface VeoPhaseCache {
+  jobId: string;
+  videoUrl: string;
+  timestamp: number;
+  phase0?: { colorProfile: CinematicProfile; confidence: number };
+  phase1?: {
+    characters: CharacterSkeleton[];
+    background: string;
+    registry: CharacterRegistry;
+  };
+  phase2Batches: Record<
+    number,
+    { scenes: Scene[]; characters: CharacterRegistry }
+  >;
+  logs: GeminiLogEntry[];
+  settings: {
+    mode: VeoMode;
+    sceneCount: number;
+    batchSize: number;
+    workflow: VeoWorkflow;
+  };
+}
+
+// ============================================================================
+// Log SSE Event
+// ============================================================================
+
+export interface VeoLogEvent {
+  event: "log";
+  data: GeminiLogEntry;
+}
+
+export interface VeoBatchCompleteEvent {
+  event: "batchComplete";
+  data: {
+    batchNumber: number;
+    scenes: Scene[];
+    characters: CharacterRegistry;
+  };
+}
+
 export type VeoSSEEvent =
   | VeoProgressEvent
   | VeoCharacterEvent
   | VeoCompleteEvent
   | VeoErrorEvent
   | VeoScriptEvent
-  | VeoColorProfileEvent;
+  | VeoColorProfileEvent
+  | VeoLogEvent
+  | VeoBatchCompleteEvent;
 
 // ============================================================================
 // Error Types

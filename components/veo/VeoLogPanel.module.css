@@ -1,0 +1,219 @@
+/* VeoLogPanel - Terminal-style log display */
+
+.panel {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Mode toggle tabs */
+.modeTabs {
+  display: flex;
+  gap: 0;
+  background: #1a1a1a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modeTab {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  border-bottom: 2px solid transparent;
+}
+
+.modeTab:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.modeTabActive {
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom-color: #4fc3f7;
+  background: rgba(79, 195, 247, 0.05);
+}
+
+/* Terminal body */
+.terminal {
+  background: #1e1e1e;
+  padding: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.terminal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.terminal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* ===== COMPACT MODE ===== */
+
+.compactEntry {
+  margin-bottom: 0.5rem;
+}
+
+.compactHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.phaseLabel {
+  font-weight: 600;
+  min-width: 180px;
+}
+
+.phaseLabel0 { color: #ce93d8; }
+.phaseLabel1 { color: #80cbc4; }
+.phaseLabel2 { color: #90caf9; }
+
+.duration {
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 50px;
+  text-align: right;
+}
+
+.statusOk {
+  color: #81c784;
+  font-weight: 600;
+}
+
+.statusErr {
+  color: #ef5350;
+  font-weight: 600;
+}
+
+.statusRetry {
+  color: #ffb74d;
+}
+
+.compactDetail {
+  padding-left: 2rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sentLabel {
+  color: #4fc3f7;
+}
+
+.recvLabel {
+  color: #81c784;
+}
+
+.tokens {
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 0.5rem;
+}
+
+.separator {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0.75rem 0;
+}
+
+.totalSummary {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  padding-top: 0.25rem;
+}
+
+/* ===== VERBOSE MODE ===== */
+
+.verboseEntry {
+  margin-bottom: 1.5rem;
+}
+
+.verboseHeader {
+  font-weight: 700;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionLabel {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.requestLabel {
+  color: #4fc3f7;
+}
+
+.responseLabel {
+  color: #81c784;
+}
+
+.codeBlock {
+  background: #141414;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 0.25rem 0 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+/* Basic JSON syntax highlighting */
+.jsonKey {
+  color: #4fc3f7;
+}
+
+.jsonString {
+  color: #81c784;
+}
+
+.jsonNumber {
+  color: #ffb74d;
+}
+
+.jsonBool {
+  color: #ce93d8;
+}
+
+.jsonNull {
+  color: #ef5350;
+}
+
+/* Meta info */
+.verboseMeta {
+  display: flex;
+  gap: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  margin-top: 0.25rem;
+}
+
+.empty {
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+}

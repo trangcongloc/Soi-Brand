@@ -221,7 +221,7 @@ async function runUrlToScript(
     videoDescription,
   });
 
-  const response = await callGeminiAPIWithRetry(requestBody, {
+  const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
     model: request.geminiModel,
     onRetry: (attempt) => {
@@ -229,6 +229,31 @@ async function runUrlToScript(
         event: "progress",
         data: { batch: 1, total: 1, scenes: 0, message: `Retry ${attempt}...` },
       });
+    },
+  });
+
+  // Send log event for script extraction
+  sendEvent({
+    event: "log",
+    data: {
+      id: `log_script_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      phase: "phase-0",
+      request: {
+        model: meta.model,
+        body: JSON.stringify(requestBody),
+        promptLength: meta.promptLength,
+        videoUrl: request.videoUrl,
+      },
+      response: {
+        success: true,
+        finishReason: response.candidates?.[0]?.finishReason,
+        body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
+        responseLength: meta.responseLength,
+        parsedSummary: "script extracted",
+      },
+      timing: { durationMs: meta.durationMs, retries: meta.retries },
+      tokens: meta.tokens,
     },
   });
 
@@ -270,7 +295,7 @@ async function runScriptToScenesDirect(
     selfieMode: request.selfieMode,
   });
 
-  const response = await callGeminiAPIWithRetry(requestBody, {
+  const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
     model: request.geminiModel,
     onRetry: (attempt) => {
@@ -289,6 +314,31 @@ async function runScriptToScenesDirect(
   const scenes = parseGeminiResponse(response);
   const characterRegistry = extractCharacterRegistry(scenes);
   const elapsed = (Date.now() - startTime) / 1000;
+
+  // Send log event for direct scene generation
+  sendEvent({
+    event: "log",
+    data: {
+      id: `log_direct_scenes_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      phase: "phase-2",
+      request: {
+        model: meta.model,
+        body: JSON.stringify(requestBody),
+        promptLength: meta.promptLength,
+      },
+      response: {
+        success: true,
+        finishReason: response.candidates?.[0]?.finishReason,
+        body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
+        responseLength: meta.responseLength,
+        parsedItemCount: scenes.length,
+        parsedSummary: `${scenes.length} scenes`,
+      },
+      timing: { durationMs: meta.durationMs, retries: meta.retries },
+      tokens: meta.tokens,
+    },
+  });
 
   // Send character events
   for (const [name, charData] of Object.entries(characterRegistry)) {
@@ -408,7 +458,7 @@ async function runScriptToScenesHybrid(
         selfieMode: request.selfieMode,
       });
 
-      const response = await callGeminiAPIWithRetry(requestBody, {
+      const { response, meta: batchMeta } = await callGeminiAPIWithRetry(requestBody, {
         apiKey,
         model: request.geminiModel,
         onRetry: (attempt) => {
@@ -442,6 +492,42 @@ async function runScriptToScenesHybrid(
         // Update state with processed results
         allScenes = result.scenes;
         characterRegistry = result.characterRegistry;
+
+        // Send log event for this batch
+        sendEvent({
+          event: "log",
+          data: {
+            id: `log_phase2_batch${batchNum}_${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            phase: "phase-2",
+            batchNumber: batchNum,
+            request: {
+              model: batchMeta.model,
+              body: JSON.stringify(requestBody),
+              promptLength: batchMeta.promptLength,
+            },
+            response: {
+              success: true,
+              finishReason: response.candidates?.[0]?.finishReason,
+              body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
+              responseLength: batchMeta.responseLength,
+              parsedItemCount: batchScenes.length,
+              parsedSummary: `${batchScenes.length} scenes`,
+            },
+            timing: { durationMs: batchMeta.durationMs, retries: batchMeta.retries },
+            tokens: batchMeta.tokens,
+          },
+        });
+
+        // Send batchComplete event for client-side phase caching
+        sendEvent({
+          event: "batchComplete",
+          data: {
+            batchNumber: batchNum,
+            scenes: batchScenes,
+            characters: result.characterRegistry,
+          },
+        });
       }
 
       // Delay between batches (except for last batch)
@@ -607,6 +693,7 @@ async function runUrlToScenesDirect(
             data: { batch: 0, total: totalBatches, scenes: 0, message: msg },
           });
         },
+        onLog: (entry) => sendEvent({ event: "log", data: entry }),
       });
 
       preExtractedCharacters = characterData.characters;
@@ -725,7 +812,7 @@ async function runUrlToScenesDirect(
         selfieMode: request.selfieMode,
       });
 
-      const response = await callGeminiAPIWithRetry(requestBody, {
+      const { response, meta: batchMeta } = await callGeminiAPIWithRetry(requestBody, {
         apiKey,
         model: request.geminiModel,
         onRetry: (attempt) => {
@@ -760,6 +847,43 @@ async function runUrlToScenesDirect(
         // Update state with processed results
         allScenes = result.scenes;
         characterRegistry = result.characterRegistry;
+
+        // Send log event for this batch
+        sendEvent({
+          event: "log",
+          data: {
+            id: `log_phase2_batch${batchNum}_${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            phase: "phase-2",
+            batchNumber: batchNum,
+            request: {
+              model: batchMeta.model,
+              body: JSON.stringify(requestBody),
+              promptLength: batchMeta.promptLength,
+              videoUrl: request.videoUrl,
+            },
+            response: {
+              success: true,
+              finishReason: response.candidates?.[0]?.finishReason,
+              body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
+              responseLength: batchMeta.responseLength,
+              parsedItemCount: batchScenes.length,
+              parsedSummary: `${batchScenes.length} scenes`,
+            },
+            timing: { durationMs: batchMeta.durationMs, retries: batchMeta.retries },
+            tokens: batchMeta.tokens,
+          },
+        });
+
+        // Send batchComplete event for client-side phase caching
+        sendEvent({
+          event: "batchComplete",
+          data: {
+            batchNumber: batchNum,
+            scenes: batchScenes,
+            characters: result.characterRegistry,
+          },
+        });
       }
 
       // Delay between batches (except for last batch)
@@ -1101,6 +1225,7 @@ export async function POST(request: NextRequest) {
                       data: { batch: 0, total: 0, scenes: 0, message: msg },
                     });
                   },
+                  onLog: (entry) => sendEvent({ event: "log", data: entry }),
                 });
 
                 extractedColorProfile = colorResult.profile;
@@ -1266,6 +1391,7 @@ export async function POST(request: NextRequest) {
                       data: { batch: 0, total: 0, scenes: 0, message: msg },
                     });
                   },
+                  onLog: (entry) => sendEvent({ event: "log", data: entry }),
                 });
 
                 extractedColorProfile = colorResult.profile;
@@ -1338,6 +1464,7 @@ export async function POST(request: NextRequest) {
                     data: { batch: 0, total: 0, scenes: 0, message: msg },
                   });
                 },
+                onLog: (entry) => sendEvent({ event: "log", data: entry }),
               });
 
               hybridPreExtractedCharacters = characterData.characters;

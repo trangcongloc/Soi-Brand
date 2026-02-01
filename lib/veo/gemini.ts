@@ -6,6 +6,7 @@ import {
   GeminiRequestBody,
   GeminiResponse,
   GeminiApiError,
+  GeminiLogEntry,
   Scene,
   VeoErrorType,
   CharacterRegistry,
@@ -212,7 +213,23 @@ export function parseGeminiResponse(response: GeminiResponse): Scene[] {
 }
 
 /**
- * Call Gemini API with retry logic
+ * Metadata returned alongside a Gemini API response.
+ * Captures timing, token usage, and request/response previews for logging.
+ */
+export interface GeminiCallMeta {
+  promptPreview: string;
+  promptLength: number;
+  responsePreview: string;
+  responseLength: number;
+  durationMs: number;
+  retries: number;
+  model: string;
+  tokens?: { prompt: number; candidates: number; total: number };
+}
+
+/**
+ * Call Gemini API with retry logic.
+ * Returns both the response and metadata for logging.
  */
 export async function callGeminiAPIWithRetry(
   requestBody: GeminiRequestBody,
@@ -224,7 +241,7 @@ export async function callGeminiAPIWithRetry(
     baseDelayMs?: number;
     onRetry?: (attempt: number, error: Error) => void;
   }
-): Promise<GeminiResponse> {
+): Promise<{ response: GeminiResponse; meta: GeminiCallMeta }> {
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
     baseDelayMs = DEFAULT_RETRY_BASE_DELAY_MS,
@@ -232,13 +249,45 @@ export async function callGeminiAPIWithRetry(
     ...callOptions
   } = options;
 
+  const model = options.model || DEFAULT_GEMINI_MODEL;
   let lastError: GeminiApiError | undefined;
+  let retryCount = 0;
+  const startTime = Date.now();
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      return await callGeminiAPI(requestBody, callOptions);
+      const response = await callGeminiAPI(requestBody, callOptions);
+      const durationMs = Date.now() - startTime;
+
+      // Extract token usage from response
+      const usage = response.usageMetadata;
+      const tokens = usage
+        ? {
+            prompt: usage.promptTokenCount,
+            candidates: usage.candidatesTokenCount,
+            total: usage.totalTokenCount,
+          }
+        : undefined;
+
+      // Build request preview from body
+      const bodyStr = JSON.stringify(requestBody);
+      const responseStr = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      const meta: GeminiCallMeta = {
+        promptPreview: bodyStr.slice(0, 200),
+        promptLength: bodyStr.length,
+        responsePreview: responseStr.slice(0, 200),
+        responseLength: responseStr.length,
+        durationMs,
+        retries: retryCount,
+        model,
+        tokens,
+      };
+
+      return { response, meta };
     } catch (err) {
       lastError = err as GeminiApiError;
+      retryCount = attempt + 1;
 
       // Check if error is retryable
       if (!isRetryableError(lastError)) {
@@ -424,9 +473,10 @@ export async function extractCharactersFromVideo(
     startTime?: string;
     endTime?: string;
     onProgress?: (message: string) => void;
+    onLog?: (entry: GeminiLogEntry) => void;
   }
 ): Promise<CharacterExtractionResult> {
-  const { apiKey, model, startTime, endTime, onProgress } = options;
+  const { apiKey, model, startTime, endTime, onProgress, onLog } = options;
 
   onProgress?.("Phase 1: Extracting characters from video...");
 
@@ -436,7 +486,7 @@ export async function extractCharactersFromVideo(
     endTime,
   });
 
-  const response = await callGeminiAPIWithRetry(requestBody, {
+  const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
     model,
     onRetry: (attempt) => {
@@ -447,6 +497,32 @@ export async function extractCharactersFromVideo(
   onProgress?.("Phase 1: Parsing character data...");
 
   const result = parseCharacterExtractionResponse(response);
+
+  // Emit log entry
+  if (onLog) {
+    const logEntry: GeminiLogEntry = {
+      id: `log_phase1_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      phase: "phase-1",
+      request: {
+        model: meta.model,
+        body: JSON.stringify(requestBody),
+        promptLength: meta.promptLength,
+        videoUrl,
+      },
+      response: {
+        success: true,
+        finishReason: response.candidates?.[0]?.finishReason,
+        body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
+        responseLength: meta.responseLength,
+        parsedItemCount: result.characters.length,
+        parsedSummary: `${result.characters.length} characters`,
+      },
+      timing: { durationMs: meta.durationMs, retries: meta.retries },
+      tokens: meta.tokens,
+    };
+    onLog(logEntry);
+  }
 
   onProgress?.(
     `Phase 1 complete: Found ${result.characters.length} character(s)`
@@ -492,9 +568,10 @@ export async function extractColorProfileFromVideo(
     startTime?: string;
     endTime?: string;
     onProgress?: (message: string) => void;
+    onLog?: (entry: GeminiLogEntry) => void;
   }
 ): Promise<ColorProfileExtractionResult> {
-  const { apiKey, model, startTime, endTime, onProgress } = options;
+  const { apiKey, model, startTime, endTime, onProgress, onLog } = options;
 
   onProgress?.("Phase 0: Extracting cinematic color profile from video...");
 
@@ -504,7 +581,7 @@ export async function extractColorProfileFromVideo(
     endTime,
   });
 
-  const response = await callGeminiAPIWithRetry(requestBody, {
+  const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
     model,
     onRetry: (attempt) => {
@@ -515,6 +592,32 @@ export async function extractColorProfileFromVideo(
   onProgress?.("Phase 0: Parsing color profile data...");
 
   const result = parseColorProfileResponse(response);
+
+  // Emit log entry
+  if (onLog) {
+    const logEntry: GeminiLogEntry = {
+      id: `log_phase0_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      phase: "phase-0",
+      request: {
+        model: meta.model,
+        body: JSON.stringify(requestBody),
+        promptLength: meta.promptLength,
+        videoUrl,
+      },
+      response: {
+        success: true,
+        finishReason: response.candidates?.[0]?.finishReason,
+        body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
+        responseLength: meta.responseLength,
+        parsedItemCount: result.profile.dominantColors.length,
+        parsedSummary: `${result.profile.dominantColors.length} colors, ${(result.confidence * 100).toFixed(0)}% confidence`,
+      },
+      timing: { durationMs: meta.durationMs, retries: meta.retries },
+      tokens: meta.tokens,
+    };
+    onLog(logEntry);
+  }
 
   onProgress?.(
     `Phase 0 complete: Extracted ${result.profile.dominantColors.length} dominant colors (confidence: ${(result.confidence * 100).toFixed(0)}%)`

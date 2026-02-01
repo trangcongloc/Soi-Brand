@@ -18,6 +18,7 @@ import {
   VeoErrorType,
   CinematicProfile,
   MediaType,
+  GeminiLogEntry,
   setCachedJob,
   getCachedJob,
   hasProgress,
@@ -28,7 +29,14 @@ import {
   VeoProgress,
   extractVideoId,
 } from "@/lib/veo";
-import { VeoForm, VeoLoadingState, VeoSceneDisplay, VeoHistoryPanel } from "@/components/veo";
+import {
+  cachePhase0,
+  cachePhase2Batch,
+  addPhaseLog,
+  clearPhaseCache,
+  createPhaseCacheSettings,
+} from "@/lib/veo/phase-cache";
+import { VeoForm, VeoLoadingState, VeoSceneDisplay, VeoHistoryPanel, VeoLogPanel } from "@/components/veo";
 import { getCachedJobList } from "@/lib/veo";
 import styles from "./page.module.css";
 
@@ -91,6 +99,11 @@ export default function VeoPage() {
   // Color profile state (Phase 0)
   const [colorProfile, setColorProfile] = useState<CinematicProfile | null>(null);
   const [colorProfileConfidence, setColorProfileConfidence] = useState<number>(0);
+
+  // Logging state
+  const [logEntries, setLogEntries] = useState<GeminiLogEntry[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const logAutoShownRef = useRef(false);
 
   // Current form data (for retry/resume)
   const [currentFormData, setCurrentFormData] = useState<{
@@ -168,6 +181,14 @@ export default function VeoPage() {
       }
     }
   }, []);
+
+  // Auto-show log panel when first log entry arrives
+  useEffect(() => {
+    if (logEntries.length > 0 && !logAutoShownRef.current && state === "loading") {
+      setShowLogs(true);
+      logAutoShownRef.current = true;
+    }
+  }, [logEntries.length, state]);
 
   // Auto dismiss error after 5 seconds (only for toast notifications, not error state)
   useEffect(() => {
@@ -316,6 +337,8 @@ export default function VeoPage() {
       setCharacterRegistry(options.existingCharacters || {});
       setColorProfile(null);
       setColorProfileConfidence(0);
+      setLogEntries([]);
+      logAutoShownRef.current = false;
 
       // Save current form data for retry/error handling
       const formData = {
@@ -412,6 +435,46 @@ export default function VeoPage() {
                   case "colorProfile":
                     setColorProfile(event.data.profile);
                     setColorProfileConfidence(event.data.confidence);
+                    // Cache Phase 0 result
+                    if (jobIdRef.current && formDataRef.current) {
+                      const fd = formDataRef.current;
+                      cachePhase0(
+                        jobIdRef.current,
+                        fd.videoUrl || "",
+                        createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
+                        event.data.profile,
+                        event.data.confidence
+                      );
+                    }
+                    break;
+
+                  case "log":
+                    setLogEntries((prev) => [...prev, event.data]);
+                    // Persist log to phase cache
+                    if (jobIdRef.current && formDataRef.current) {
+                      const fd = formDataRef.current;
+                      addPhaseLog(
+                        jobIdRef.current,
+                        fd.videoUrl || "",
+                        createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
+                        event.data
+                      );
+                    }
+                    break;
+
+                  case "batchComplete":
+                    // Cache individual Phase 2 batch
+                    if (jobIdRef.current && formDataRef.current) {
+                      const fd = formDataRef.current;
+                      cachePhase2Batch(
+                        jobIdRef.current,
+                        fd.videoUrl || "",
+                        createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
+                        event.data.batchNumber,
+                        event.data.scenes,
+                        event.data.characters
+                      );
+                    }
                     break;
 
                   case "complete":
@@ -445,6 +508,11 @@ export default function VeoPage() {
                         // Update history state to reflect new job
                         setHasHistory(true);
                       }
+                    }
+
+                    // Clear phase cache on successful completion
+                    if (event.data.jobId) {
+                      clearPhaseCache(event.data.jobId);
                     }
 
                     // Clear any in-progress state
@@ -689,6 +757,8 @@ export default function VeoPage() {
     setGeneratedScript(null);
     setColorProfile(null);
     setColorProfileConfidence(0);
+    setLogEntries([]);
+    setShowLogs(false);
   }, []);
 
   const handleDownloadScript = useCallback(() => {
@@ -800,7 +870,7 @@ export default function VeoPage() {
           {state === "loading" && (
             <motion.div
               key="loading"
-              className={styles.container}
+              className={logEntries.length > 0 ? styles.containerWide : styles.container}
               aria-live="polite"
               aria-busy="true"
               initial={{ opacity: 0 }}
@@ -817,6 +887,17 @@ export default function VeoPage() {
                 generatedScript={generatedScript}
                 onCancel={handleCancel}
               />
+              {logEntries.length > 0 && (
+                <div className={styles.logToggleWrapper}>
+                  <button
+                    className={styles.logToggleButton}
+                    onClick={() => setShowLogs(!showLogs)}
+                  >
+                    {showLogs ? "Hide Logs" : `Show Logs (${logEntries.length})`}
+                  </button>
+                  {showLogs && <VeoLogPanel entries={logEntries} />}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -973,6 +1054,17 @@ export default function VeoPage() {
                 onRegenerateJob={handleRegenerateJob}
                 onRetryJob={handleRetryJob}
               />
+              {logEntries.length > 0 && (
+                <div className={styles.logToggleWrapper}>
+                  <button
+                    className={styles.logToggleButton}
+                    onClick={() => setShowLogs(!showLogs)}
+                  >
+                    {showLogs ? "Hide Logs" : `Show Logs (${logEntries.length})`}
+                  </button>
+                  {showLogs && <VeoLogPanel entries={logEntries} />}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
