@@ -11,17 +11,19 @@ interface GenerateImageRequest {
 
 function buildCharacterImagePrompt(name: string, description: string): string {
   return [
-    `Generate a full-body character illustration of "${name}".`,
-    `Character details: ${description}`,
+    `Photorealistic photograph of a real person: "${name}".`,
+    `Person details: ${description}`,
     "",
     "REQUIREMENTS:",
+    "- Photorealistic, real human being — NOT cartoon, NOT illustration, NOT 2D, NOT 3D render, NOT anime, NOT animated",
+    "- Studio photography style, shot with a professional DSLR camera",
     "- Full body shot from head to feet",
-    "- Plain white background, no scenery, no props, no other objects",
-    "- Character standing in a neutral but natural pose",
-    "- High quality, detailed illustration",
+    "- Plain white studio background, no scenery, no props, no other objects",
+    "- Natural standing pose, like a real person in a photo studio",
+    "- Realistic skin texture, natural lighting, soft shadows",
     "- Clean edges suitable for cutout/compositing",
     "- No text, no watermarks, no borders",
-    "- Only the character, nothing else",
+    "- Only the person, nothing else",
   ].join("\n");
 }
 
