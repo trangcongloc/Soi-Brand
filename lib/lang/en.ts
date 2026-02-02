@@ -546,9 +546,18 @@ export const en = {
                 korean: "Korean",
                 chinese: "Chinese",
             },
-            useVideoChapters: "Include Description Chapters",
+            useVideoTitle: "Video Title",
+            useVideoTitleDesc:
+                "Include the video title for context about the video's topic and purpose",
+            useVideoDescription: "Video Description",
+            useVideoDescriptionDesc:
+                "Include the full description text for additional context about the video content",
+            useVideoChapters: "Description Chapters",
             useVideoChaptersDesc:
-                "Use chapter timestamps from video description",
+                "Use chapter timestamps from video description to structure transcript segments",
+            useVideoCaptions: "On-Screen Captions",
+            useVideoCaptionsDesc:
+                "Extract on-screen text, subtitles, and captions visible in the video frames",
             negativePrompt: "Negative Prompt",
             negativePromptPlaceholder:
                 "Enter unwanted elements (comma-separated)",

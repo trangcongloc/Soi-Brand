@@ -1812,9 +1812,22 @@ export function buildScriptPrompt(options: {
   startTime?: string;
   endTime?: string;
   videoDescription?: { fullText: string; chapters?: Array<{ timestamp: string; seconds: number; title: string }> };
+  videoTitle?: string;
+  videoDescriptionText?: string;
+  useVideoCaptions?: boolean;
 }): GeminiRequestBody {
   let userPrompt = SCRIPT_USER_PROMPT;
   let systemInstruction = SCRIPT_SYSTEM_INSTRUCTION;
+
+  // Add video title to system instruction when provided
+  if (options.videoTitle) {
+    systemInstruction += `\n\nVIDEO TITLE: ${options.videoTitle}\nUse this title for context about the video's topic and purpose.`;
+  }
+
+  // Add full description text to system instruction when provided
+  if (options.videoDescriptionText) {
+    systemInstruction += `\n\nVIDEO DESCRIPTION:\n${options.videoDescriptionText}\nUse this for additional context about the video content.`;
+  }
 
   // Add video chapters to system instruction if available
   if (options.videoDescription?.chapters && options.videoDescription.chapters.length > 0) {
@@ -1823,6 +1836,11 @@ export function buildScriptPrompt(options: {
       systemInstruction += `- ${chapter.timestamp} (${chapter.seconds}s): ${chapter.title}\n`;
     }
     systemInstruction += `\nCRITICAL: Use these chapter timestamps to structure your script segments. Ensure all chapter topics are covered in the transcript.`;
+  }
+
+  // Add caption extraction instruction when enabled
+  if (options.useVideoCaptions) {
+    systemInstruction += `\n\nCAPTION EXTRACTION:\nExtract all on-screen text, subtitles, and captions visible in the video frames. Include them as part of the transcript with speaker identification where possible.`;
   }
 
   // Add time range instruction if provided

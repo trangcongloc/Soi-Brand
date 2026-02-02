@@ -162,7 +162,10 @@ const VeoRequestSchema = z.object({
     soundEffects: z.boolean(),
     environmentalAudio: z.boolean(),
   }).optional(),
+  useVideoTitle: z.boolean().default(true), // Include video title in script prompt
+  useVideoDescription: z.boolean().default(true), // Include full description text in script prompt
   useVideoChapters: z.boolean().default(true), // Include video description chapters
+  useVideoCaptions: z.boolean().default(true), // Extract on-screen captions/subtitles
   negativePrompt: z.string().optional(),
   resumeJobId: z.string().optional(),
   geminiApiKey: z.string().optional(),
@@ -207,7 +210,10 @@ async function runUrlToScript(
   request: VeoRequest,
   apiKey: string,
   sendEvent: (event: VeoSSEEvent) => void,
-  videoDescription?: VideoDescription
+  videoDescription?: VideoDescription,
+  videoTitle?: string,
+  videoDescriptionText?: string,
+  useVideoCaptions?: boolean,
 ): Promise<GeneratedScript> {
   sendEvent({
     event: "progress",
@@ -219,6 +225,9 @@ async function runUrlToScript(
     startTime: request.startTime,
     endTime: request.endTime,
     videoDescription,
+    videoTitle,
+    videoDescriptionText,
+    useVideoCaptions,
   });
 
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
@@ -1127,6 +1136,8 @@ export async function POST(request: NextRequest) {
 
           let youtubeDurationSeconds = 0;
           let videoDescription: VideoDescription | undefined;
+          let videoTitle: string | undefined;
+          let videoDescriptionText: string | undefined;
           try {
             const videoInfo = await getVideoInfo(videoId);
             if (videoInfo?.contentDetails?.duration) {
@@ -1137,6 +1148,14 @@ export async function POST(request: NextRequest) {
                 seconds: youtubeDurationSeconds,
                 title: videoInfo.title,
               });
+            }
+            // Collect video title (if enabled)
+            if (veoRequest.useVideoTitle && videoInfo?.title) {
+              videoTitle = videoInfo.title;
+            }
+            // Collect full description text (if enabled)
+            if (veoRequest.useVideoDescription && videoInfo?.description) {
+              videoDescriptionText = videoInfo.description;
             }
             // Parse video description for chapters (if enabled)
             if (veoRequest.useVideoChapters && videoInfo?.description) {
@@ -1300,7 +1319,7 @@ export async function POST(request: NextRequest) {
               data: { batch: 0, total: 0, scenes: 0, message: "Step 1/2: Analyzing video and extracting transcript..." },
             });
 
-            script = await runUrlToScript(veoRequest, apiKey, sendEvent, videoDescription);
+            script = await runUrlToScript(veoRequest, apiKey, sendEvent, videoDescription, videoTitle, videoDescriptionText, veoRequest.useVideoCaptions);
 
             // Send script event so client can show/download it
             sendEvent({

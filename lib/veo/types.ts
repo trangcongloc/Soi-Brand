@@ -543,7 +543,10 @@ export interface CachedVeoJob {
     voice: VoiceLanguage;
     colorProfile?: CinematicProfile; // Phase 0: For resume
     // Extended fields for full settings restoration
+    useVideoTitle?: boolean;
+    useVideoDescription?: boolean;
     useVideoChapters?: boolean;
+    useVideoCaptions?: boolean;
     negativePrompt?: string;
     extractColorProfile?: boolean;
     mediaType?: MediaType;
@@ -640,9 +643,11 @@ export interface GeminiApiError extends Error {
  * continuity mode, and other quality improvements.
  */
 export interface VeoSettings {
-  // Description parsing (Phase 2)
+  // Video metadata options (Phase 2)
+  useVideoTitle: boolean; // Default: true
   useVideoDescription: boolean; // Default: true
   useVideoChapters: boolean; // Default: true
+  useVideoCaptions: boolean; // Default: true
 
   // Continuity settings (Phase 3)
   continuityMode: "last-scene" | "full-history" | "summary"; // Default: full-history
@@ -1457,7 +1462,10 @@ export interface VeoFormSettings {
   audio: AudioSettings;
 
   // Processing
+  useVideoTitle: boolean;
+  useVideoDescription: boolean;
   useVideoChapters: boolean;
+  useVideoCaptions: boolean;
   extractColorProfile: boolean;
   mediaType: MediaType;
 

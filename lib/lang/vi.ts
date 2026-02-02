@@ -540,8 +540,17 @@ export const vi = {
                 korean: "Tiếng Hàn",
                 chinese: "Tiếng Trung",
             },
-            useVideoChapters: "Bao gồm chapters trong mô tả",
-            useVideoChaptersDesc: "Sử dụng thông tin chapters từ mô tả video",
+            useVideoTitle: "Tiêu đề Video",
+            useVideoTitleDesc:
+                "Bao gồm tiêu đề video để hiểu chủ đề và mục đích của video",
+            useVideoDescription: "Mô tả Video",
+            useVideoDescriptionDesc:
+                "Bao gồm toàn bộ nội dung mô tả để hiểu thêm về nội dung video",
+            useVideoChapters: "Chapters trong mô tả",
+            useVideoChaptersDesc: "Sử dụng thông tin chapters từ mô tả video để cấu trúc phân đoạn",
+            useVideoCaptions: "Phụ đề trên màn hình",
+            useVideoCaptionsDesc:
+                "Trích xuất văn bản, phụ đề và chú thích hiển thị trên khung hình video",
             negativePrompt: "Prompt Phủ Định",
             negativePromptPlaceholder:
                 "Nhập yếu tố không mong muốn (phân tách bằng dấu phẩy)",

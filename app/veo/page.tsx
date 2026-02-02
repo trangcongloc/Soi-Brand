@@ -115,7 +115,10 @@ export default function VeoPage() {
     batchSize: number;
     audio: AudioSettings;
     scriptText?: string;
+    useVideoTitle: boolean;
+    useVideoDescription: boolean;
     useVideoChapters: boolean;
+    useVideoCaptions: boolean;
     negativePrompt?: string;
     extractColorProfile: boolean;
     mediaType: MediaType;
@@ -275,7 +278,10 @@ export default function VeoPage() {
             batchSize: currentForm.batchSize,
             sceneCount: currentForm.sceneCount,
             voice: currentForm.audio.voiceLanguage,
+            useVideoTitle: currentForm.useVideoTitle,
+            useVideoDescription: currentForm.useVideoDescription,
             useVideoChapters: currentForm.useVideoChapters,
+            useVideoCaptions: currentForm.useVideoCaptions,
                 negativePrompt: currentForm.negativePrompt,
             extractColorProfile: currentForm.extractColorProfile,
             mediaType: currentForm.mediaType,
@@ -305,7 +311,10 @@ export default function VeoPage() {
       sceneCount: number;
       batchSize: number;
       audio: AudioSettings;
+      useVideoTitle: boolean;
+      useVideoDescription: boolean;
       useVideoChapters: boolean;
+      useVideoCaptions: boolean;
         negativePrompt?: string;
       extractColorProfile: boolean;
       mediaType: "image" | "video";
@@ -350,7 +359,10 @@ export default function VeoPage() {
         batchSize: options.batchSize,
         audio: options.audio,
         scriptText: options.scriptText,
+        useVideoTitle: options.useVideoTitle,
+        useVideoDescription: options.useVideoDescription,
         useVideoChapters: options.useVideoChapters,
+        useVideoCaptions: options.useVideoCaptions,
             negativePrompt: options.negativePrompt,
         extractColorProfile: options.extractColorProfile,
         mediaType: options.mediaType,
@@ -597,7 +609,10 @@ export default function VeoPage() {
           batchSize: currentForm.batchSize,
           sceneCount: currentForm.sceneCount,
           voice: currentForm.audio.voiceLanguage,
+          useVideoTitle: currentForm.useVideoTitle,
+          useVideoDescription: currentForm.useVideoDescription,
           useVideoChapters: currentForm.useVideoChapters,
+          useVideoCaptions: currentForm.useVideoCaptions,
             negativePrompt: currentForm.negativePrompt,
           extractColorProfile: currentForm.extractColorProfile,
           mediaType: currentForm.mediaType,
@@ -649,7 +664,10 @@ export default function VeoPage() {
         environmentalAudio: true,
       },
       videoUrl: resumeData.videoUrl,
+      useVideoTitle: true, // Default for resume
+      useVideoDescription: true, // Default for resume
       useVideoChapters: true, // Default for resume
+      useVideoCaptions: true, // Default for resume
       extractColorProfile: false, // No video in script-to-scenes
       mediaType: "video", // Default for resume
       selfieMode: false, // Default for resume
@@ -731,7 +749,10 @@ export default function VeoPage() {
         soundEffects: true,
         environmentalAudio: true,
       },
+      useVideoTitle: rd.useVideoTitle ?? true,
+      useVideoDescription: rd.useVideoDescription ?? true,
       useVideoChapters: rd.useVideoChapters ?? true,
+      useVideoCaptions: rd.useVideoCaptions ?? true,
       negativePrompt: rd.negativePrompt,
       extractColorProfile: rd.extractColorProfile ?? !!cached.colorProfile,
       mediaType: rd.mediaType ?? "video",

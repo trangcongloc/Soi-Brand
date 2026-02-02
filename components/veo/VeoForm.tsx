@@ -29,7 +29,10 @@ interface VeoFormProps {
     sceneCount: number;
     batchSize: number;
     audio: AudioSettings;
+    useVideoTitle: boolean;
+    useVideoDescription: boolean;
     useVideoChapters: boolean;
+    useVideoCaptions: boolean;
     negativePrompt?: string;
     extractColorProfile: boolean;
     mediaType: MediaType;
@@ -67,7 +70,10 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   const [sceneCount, setSceneCount] = useState(savedSettings.sceneCount);
   const [batchSize, setBatchSize] = useState(savedSettings.batchSize);
   const [audio, setAudio] = useState<AudioSettings>(savedSettings.audio);
+  const [useVideoTitle, setUseVideoTitle] = useState(savedSettings.useVideoTitle);
+  const [useVideoDescription, setUseVideoDescription] = useState(savedSettings.useVideoDescription);
   const [useVideoChapters, setUseVideoChapters] = useState(savedSettings.useVideoChapters);
+  const [useVideoCaptions, setUseVideoCaptions] = useState(savedSettings.useVideoCaptions);
   const [negativePrompt, setNegativePrompt] = useState(savedSettings.negativePrompt);
   const [extractColorProfile, setExtractColorProfile] = useState(savedSettings.extractColorProfile);
   const [mediaType, setMediaType] = useState<MediaType>(savedSettings.mediaType);
@@ -80,12 +86,14 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   useEffect(() => {
     saveVeoFormSettings({
       mode, autoSceneCount, sceneCount, batchSize, audio,
-      useVideoChapters, extractColorProfile, mediaType,
+      useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions,
+      extractColorProfile, mediaType,
       negativePrompt, selfieMode,
     });
   }, [
     mode, autoSceneCount, sceneCount, batchSize, audio,
-    useVideoChapters, extractColorProfile, mediaType,
+    useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions,
+    extractColorProfile, mediaType,
     negativePrompt, selfieMode,
   ]);
 
@@ -157,7 +165,10 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           sceneCount,
           batchSize,
           audio,
+          useVideoTitle,
+          useVideoDescription,
           useVideoChapters,
+          useVideoCaptions,
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: workflow === "url-to-scenes" ? extractColorProfile : false,
           mediaType,
@@ -176,7 +187,10 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           sceneCount,
           batchSize,
           audio,
+          useVideoTitle,
+          useVideoDescription,
           useVideoChapters,
+          useVideoCaptions,
           negativePrompt: trimmedNegativePrompt || undefined,
           extractColorProfile: false, // No video to extract from
           mediaType,
@@ -184,7 +198,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
         });
       }
     },
-    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, audio, useVideoChapters, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, audio, useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
   );
 
   const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
@@ -198,7 +212,10 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     sceneCount,
     batchSize,
     audio,
+    useVideoTitle,
+    useVideoDescription,
     useVideoChapters,
+    useVideoCaptions,
     negativePrompt,
     extractColorProfile,
     mediaType,
@@ -212,7 +229,10 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
     if (updates.sceneCount !== undefined) setSceneCount(updates.sceneCount);
     if (updates.batchSize !== undefined) setBatchSize(updates.batchSize);
     if (updates.audio !== undefined) setAudio(updates.audio);
+    if (updates.useVideoTitle !== undefined) setUseVideoTitle(updates.useVideoTitle);
+    if (updates.useVideoDescription !== undefined) setUseVideoDescription(updates.useVideoDescription);
     if (updates.useVideoChapters !== undefined) setUseVideoChapters(updates.useVideoChapters);
+    if (updates.useVideoCaptions !== undefined) setUseVideoCaptions(updates.useVideoCaptions);
     if (updates.negativePrompt !== undefined) setNegativePrompt(updates.negativePrompt);
     if (updates.extractColorProfile !== undefined) setExtractColorProfile(updates.extractColorProfile);
     if (updates.mediaType !== undefined) setMediaType(updates.mediaType);

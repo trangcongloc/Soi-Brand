@@ -12,7 +12,10 @@ interface SettingsState {
   sceneCount: number;
   batchSize: number;
   audio: AudioSettings;
+  useVideoTitle: boolean;
+  useVideoDescription: boolean;
   useVideoChapters: boolean;
+  useVideoCaptions: boolean;
   negativePrompt: string;
   extractColorProfile: boolean;
   mediaType: MediaType;
@@ -286,12 +289,36 @@ export function VeoSettingsPanel({
                     onClick={() => onSettingsChange({ extractColorProfile: !settings.extractColorProfile })}
                   />
                   <Chip
+                    icon="📌"
+                    label={lang.veo.settings.useVideoTitle}
+                    active={settings.useVideoTitle}
+                    tooltip={lang.veo.settings.useVideoTitleDesc}
+                    disabled={isLoading}
+                    onClick={() => onSettingsChange({ useVideoTitle: !settings.useVideoTitle })}
+                  />
+                  <Chip
+                    icon="📝"
+                    label={lang.veo.settings.useVideoDescription}
+                    active={settings.useVideoDescription}
+                    tooltip={lang.veo.settings.useVideoDescriptionDesc}
+                    disabled={isLoading}
+                    onClick={() => onSettingsChange({ useVideoDescription: !settings.useVideoDescription })}
+                  />
+                  <Chip
                     icon="📑"
                     label={lang.veo.settings.useVideoChapters}
                     active={settings.useVideoChapters}
                     tooltip={lang.veo.settings.useVideoChaptersDesc}
                     disabled={isLoading}
                     onClick={() => onSettingsChange({ useVideoChapters: !settings.useVideoChapters })}
+                  />
+                  <Chip
+                    icon="💬"
+                    label={lang.veo.settings.useVideoCaptions}
+                    active={settings.useVideoCaptions}
+                    tooltip={lang.veo.settings.useVideoCaptionsDesc}
+                    disabled={isLoading}
+                    onClick={() => onSettingsChange({ useVideoCaptions: !settings.useVideoCaptions })}
                   />
                 </div>
               </div>
