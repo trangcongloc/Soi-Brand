@@ -354,6 +354,7 @@ export interface GeminiLogEntry {
   timestamp: string;
   phase: "phase-0" | "phase-1" | "phase-2";
   batchNumber?: number;
+  status?: "pending" | "completed"; // "pending" = request sent, "completed" = response received
   request: {
     model: string;
     body: string; // Full JSON request body (stringified)
@@ -409,6 +410,11 @@ export interface VeoLogEvent {
   data: GeminiLogEntry;
 }
 
+export interface VeoLogUpdateEvent {
+  event: "logUpdate";
+  data: GeminiLogEntry;
+}
+
 export interface VeoBatchCompleteEvent {
   event: "batchComplete";
   data: {
@@ -426,6 +432,7 @@ export type VeoSSEEvent =
   | VeoScriptEvent
   | VeoColorProfileEvent
   | VeoLogEvent
+  | VeoLogUpdateEvent
   | VeoBatchCompleteEvent;
 
 // ============================================================================

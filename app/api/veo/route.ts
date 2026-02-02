@@ -230,6 +230,26 @@ async function runUrlToScript(
     useVideoCaptions,
   });
 
+  // Send pending log before API call
+  const scriptLogId = `log_script_${Date.now()}`;
+  sendEvent({
+    event: "log",
+    data: {
+      id: scriptLogId,
+      timestamp: new Date().toISOString(),
+      phase: "phase-0",
+      status: "pending",
+      request: {
+        model: request.geminiModel || "default",
+        body: JSON.stringify(requestBody),
+        promptLength: JSON.stringify(requestBody).length,
+        videoUrl: request.videoUrl,
+      },
+      response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
+      timing: { durationMs: 0, retries: 0 },
+    },
+  });
+
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
     model: request.geminiModel,
@@ -241,13 +261,14 @@ async function runUrlToScript(
     },
   });
 
-  // Send log event for script extraction
+  // Send log update with completed data
   sendEvent({
-    event: "log",
+    event: "logUpdate",
     data: {
-      id: `log_script_${Date.now()}`,
+      id: scriptLogId,
       timestamp: new Date().toISOString(),
       phase: "phase-0",
+      status: "completed",
       request: {
         model: meta.model,
         body: JSON.stringify(requestBody),
@@ -304,6 +325,25 @@ async function runScriptToScenesDirect(
     selfieMode: request.selfieMode,
   });
 
+  // Send pending log before API call
+  const directLogId = `log_direct_scenes_${Date.now()}`;
+  sendEvent({
+    event: "log",
+    data: {
+      id: directLogId,
+      timestamp: new Date().toISOString(),
+      phase: "phase-2",
+      status: "pending",
+      request: {
+        model: request.geminiModel || "default",
+        body: JSON.stringify(requestBody),
+        promptLength: JSON.stringify(requestBody).length,
+      },
+      response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
+      timing: { durationMs: 0, retries: 0 },
+    },
+  });
+
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
     model: request.geminiModel,
@@ -324,13 +364,14 @@ async function runScriptToScenesDirect(
   const characterRegistry = extractCharacterRegistry(scenes);
   const elapsed = (Date.now() - startTime) / 1000;
 
-  // Send log event for direct scene generation
+  // Send log update with completed data
   sendEvent({
-    event: "log",
+    event: "logUpdate",
     data: {
-      id: `log_direct_scenes_${Date.now()}`,
+      id: directLogId,
       timestamp: new Date().toISOString(),
       phase: "phase-2",
+      status: "completed",
       request: {
         model: meta.model,
         body: JSON.stringify(requestBody),
@@ -467,6 +508,26 @@ async function runScriptToScenesHybrid(
         selfieMode: request.selfieMode,
       });
 
+      // Send pending log before API call
+      const hybridLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
+      sendEvent({
+        event: "log",
+        data: {
+          id: hybridLogId,
+          timestamp: new Date().toISOString(),
+          phase: "phase-2",
+          batchNumber: batchNum,
+          status: "pending",
+          request: {
+            model: request.geminiModel || "default",
+            body: JSON.stringify(requestBody),
+            promptLength: JSON.stringify(requestBody).length,
+          },
+          response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
+          timing: { durationMs: 0, retries: 0 },
+        },
+      });
+
       const { response, meta: batchMeta } = await callGeminiAPIWithRetry(requestBody, {
         apiKey,
         model: request.geminiModel,
@@ -502,14 +563,15 @@ async function runScriptToScenesHybrid(
         allScenes = result.scenes;
         characterRegistry = result.characterRegistry;
 
-        // Send log event for this batch
+        // Send log update with completed data
         sendEvent({
-          event: "log",
+          event: "logUpdate",
           data: {
-            id: `log_phase2_batch${batchNum}_${Date.now()}`,
+            id: hybridLogId,
             timestamp: new Date().toISOString(),
             phase: "phase-2",
             batchNumber: batchNum,
+            status: "completed",
             request: {
               model: batchMeta.model,
               body: JSON.stringify(requestBody),
@@ -821,6 +883,27 @@ async function runUrlToScenesDirect(
         selfieMode: request.selfieMode,
       });
 
+      // Send pending log before API call
+      const directBatchLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
+      sendEvent({
+        event: "log",
+        data: {
+          id: directBatchLogId,
+          timestamp: new Date().toISOString(),
+          phase: "phase-2",
+          batchNumber: batchNum,
+          status: "pending",
+          request: {
+            model: request.geminiModel || "default",
+            body: JSON.stringify(requestBody),
+            promptLength: JSON.stringify(requestBody).length,
+            videoUrl: request.videoUrl,
+          },
+          response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
+          timing: { durationMs: 0, retries: 0 },
+        },
+      });
+
       const { response, meta: batchMeta } = await callGeminiAPIWithRetry(requestBody, {
         apiKey,
         model: request.geminiModel,
@@ -857,14 +940,15 @@ async function runUrlToScenesDirect(
         allScenes = result.scenes;
         characterRegistry = result.characterRegistry;
 
-        // Send log event for this batch
+        // Send log update with completed data
         sendEvent({
-          event: "log",
+          event: "logUpdate",
           data: {
-            id: `log_phase2_batch${batchNum}_${Date.now()}`,
+            id: directBatchLogId,
             timestamp: new Date().toISOString(),
             phase: "phase-2",
             batchNumber: batchNum,
+            status: "completed",
             request: {
               model: batchMeta.model,
               body: JSON.stringify(requestBody),

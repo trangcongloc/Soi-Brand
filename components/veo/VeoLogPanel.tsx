@@ -80,42 +80,88 @@ function tryPrettyJson(str: string): string {
 function CompactEntry({ entry }: { entry: GeminiLogEntry }) {
   const phaseLabel = getPhaseLabel(entry);
   const phaseCls = getPhaseLabelClass(entry.phase);
+  const isPending = entry.status === "pending";
   const hasRetries = entry.timing.retries > 0;
   const hasError = !!entry.error;
+  const [expandedSection, setExpandedSection] = useState<"sent" | "recv" | null>(null);
+
+  const prettyRequest = useMemo(() => tryPrettyJson(entry.request.body), [entry.request.body]);
+  const prettyResponse = useMemo(() => tryPrettyJson(entry.response.body), [entry.response.body]);
+
+  const toggleSection = (section: "sent" | "recv") => {
+    setExpandedSection((prev) => (prev === section ? null : section));
+  };
 
   return (
-    <div className={styles.compactEntry}>
+    <div className={`${styles.compactEntry} ${isPending ? styles.compactEntryPending : ""}`}>
       <div className={styles.compactHeader}>
         <span className={`${styles.phaseLabel} ${phaseCls}`}>
           [{entry.phase === "phase-2" ? "Phase 2" : entry.phase === "phase-1" ? "Phase 1" : "Phase 0"}] {phaseLabel}
         </span>
-        <span className={styles.duration}>
-          {formatDuration(entry.timing.durationMs)}
-        </span>
-        {hasError ? (
-          <span className={styles.statusErr}>ERR</span>
-        ) : hasRetries ? (
+        {isPending ? (
           <>
-            <span className={styles.statusRetry}>
-              ERR {"\u2192"} RETRY({entry.timing.retries})
-            </span>
-            <span className={styles.statusOk}>{"\u2192"} OK</span>
+            <span className={styles.pendingDot} />
+            <span className={styles.statusPending}>SENDING</span>
           </>
         ) : (
-          <span className={styles.statusOk}>OK</span>
+          <>
+            <span className={styles.duration}>
+              {formatDuration(entry.timing.durationMs)}
+            </span>
+            {hasError ? (
+              <span className={styles.statusErr}>ERR</span>
+            ) : hasRetries ? (
+              <>
+                <span className={styles.statusRetry}>
+                  ERR {"\u2192"} RETRY({entry.timing.retries})
+                </span>
+                <span className={styles.statusOk}>{"\u2192"} OK</span>
+              </>
+            ) : (
+              <span className={styles.statusOk}>OK</span>
+            )}
+          </>
         )}
       </div>
       <div className={styles.compactDetail}>
-        <span className={styles.sentLabel}>{"> "} Sent:</span>{" "}
+        <button
+          className={`${styles.compactExpandBtn} ${styles.sentLabel}`}
+          onClick={() => toggleSection("sent")}
+          title="Click to expand request body"
+        >
+          {expandedSection === "sent" ? "\u25BC" : ">"} Sent:
+        </button>{" "}
         {formatChars(entry.request.promptLength)} chars{" "}
-        <span className={styles.recvLabel}>{"< "} Recv:</span>{" "}
-        {entry.response.parsedSummary}
-        {entry.tokens && (
-          <span className={styles.tokens}>
-            {formatChars(entry.tokens.total)} tokens
-          </span>
+        {isPending ? (
+          <span className={styles.pendingLabel}>Awaiting response...</span>
+        ) : (
+          <>
+            <button
+              className={`${styles.compactExpandBtn} ${styles.recvLabel}`}
+              onClick={() => toggleSection("recv")}
+              title="Click to expand response body"
+            >
+              {expandedSection === "recv" ? "\u25BC" : "<"} Recv:
+            </button>{" "}
+            {entry.response.parsedSummary}
+            {entry.tokens && (
+              <span className={styles.tokens}>
+                {formatChars(entry.tokens.total)} tokens
+              </span>
+            )}
+          </>
         )}
       </div>
+      {expandedSection === "sent" && (
+        <div className={styles.compactCodeBlock}>
+          {highlightJsonLocal(prettyRequest)}
+        </div>
+      )}
+      {expandedSection === "recv" && !isPending && (
+        <div className={styles.compactCodeBlock}>
+          {highlightJsonLocal(prettyResponse)}
+        </div>
+      )}
     </div>
   );
 }
@@ -126,14 +172,18 @@ function CompactEntry({ entry }: { entry: GeminiLogEntry }) {
 function VerboseEntry({ entry }: { entry: GeminiLogEntry }) {
   const phaseLabel = getPhaseLabel(entry);
   const phaseCls = getPhaseLabelClass(entry.phase);
+  const isPending = entry.status === "pending";
 
   const prettyRequest = useMemo(() => tryPrettyJson(entry.request.body), [entry.request.body]);
   const prettyResponse = useMemo(() => tryPrettyJson(entry.response.body), [entry.response.body]);
 
   return (
-    <div className={styles.verboseEntry}>
+    <div className={`${styles.verboseEntry} ${isPending ? styles.verboseEntryPending : ""}`}>
       <div className={`${styles.verboseHeader} ${phaseCls}`}>
-        {"━━━"} [{entry.phase === "phase-2" ? "Phase 2" : entry.phase === "phase-1" ? "Phase 1" : "Phase 0"}] {phaseLabel} {"━".repeat(30)}
+        {"━━━"} [{entry.phase === "phase-2" ? "Phase 2" : entry.phase === "phase-1" ? "Phase 1" : "Phase 0"}] {phaseLabel}
+        {isPending && <span className={styles.pendingDot} />}
+        {isPending && <span className={styles.statusPending}>SENDING</span>}
+        {" "}{"━".repeat(30)}
       </div>
 
       <div className={`${styles.sectionLabel} ${styles.requestLabel}`}>
@@ -141,10 +191,18 @@ function VerboseEntry({ entry }: { entry: GeminiLogEntry }) {
       </div>
       <div className={styles.codeBlock}>{highlightJsonLocal(prettyRequest)}</div>
 
-      <div className={`${styles.sectionLabel} ${styles.responseLabel}`}>
-        {"◀"} RESPONSE ({entry.tokens ? `${formatChars(entry.tokens.total)} tokens` : `${formatChars(entry.response.responseLength)} chars`} {"\u00B7"} {formatDuration(entry.timing.durationMs)})
-      </div>
-      <div className={styles.codeBlock}>{highlightJsonLocal(prettyResponse)}</div>
+      {isPending ? (
+        <div className={`${styles.sectionLabel} ${styles.pendingLabel}`}>
+          {"◀"} RESPONSE — awaiting response...
+        </div>
+      ) : (
+        <>
+          <div className={`${styles.sectionLabel} ${styles.responseLabel}`}>
+            {"◀"} RESPONSE ({entry.tokens ? `${formatChars(entry.tokens.total)} tokens` : `${formatChars(entry.response.responseLength)} chars`} {"\u00B7"} {formatDuration(entry.timing.durationMs)})
+          </div>
+          <div className={styles.codeBlock}>{highlightJsonLocal(prettyResponse)}</div>
+        </>
+      )}
 
       <div className={styles.verboseMeta}>
         <span>Model: {entry.request.model}</span>

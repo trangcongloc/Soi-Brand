@@ -474,6 +474,12 @@ export default function VeoPage() {
                     }
                     break;
 
+                  case "logUpdate":
+                    setLogEntries((prev) =>
+                      prev.map((e) => (e.id === event.data.id ? event.data : e))
+                    );
+                    break;
+
                   case "batchComplete":
                     // Cache individual Phase 2 batch
                     if (jobIdRef.current && formDataRef.current) {
