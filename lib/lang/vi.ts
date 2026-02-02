@@ -348,6 +348,7 @@ export const vi = {
     settings: {
         title: "Cài đặt",
         aiModel: "Mô hình AI",
+        imageModel: "Mô hình tạo ảnh",
         language: "Ngôn ngữ",
         footerNote: "API keys được lưu trữ cục bộ trên trình duyệt của bạn.",
         validating: "Đang xác thực...",

@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import { useLanguage, useLang } from "@/lib/lang";
 import { getUserSettingsAsync, saveUserSettingsAsync } from "@/lib/userSettings";
 import { getQuotaUsage, updateGeminiQuotaLimits } from "@/lib/apiQuota";
-import { DEFAULT_MODEL } from "@/lib/geminiModels";
-import { GeminiModel } from "@/lib/types";
+import { DEFAULT_MODEL, DEFAULT_IMAGE_MODEL } from "@/lib/geminiModels";
+import { GeminiModel, GeminiImageModel } from "@/lib/types";
 import { useSettingsValidation } from "./useSettingsValidation";
 import ModelSelector from "./ModelSelector";
+import ImageModelSelector from "./ImageModelSelector";
 import ApiKeyInput from "./ApiKeyInput";
 import LanguageToggle from "./LanguageToggle";
 import styles from "./SettingsButton.module.css";
@@ -18,7 +19,10 @@ export default function SettingsButton() {
     const [youtubeKey, setYoutubeKey] = useState("");
     const [selectedModel, setSelectedModel] =
         useState<GeminiModel>(DEFAULT_MODEL);
+    const [selectedImageModel, setSelectedImageModel] =
+        useState<GeminiImageModel>(DEFAULT_IMAGE_MODEL);
     const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+    const [imageModelDropdownOpen, setImageModelDropdownOpen] = useState(false);
 
     const { langCode, setLanguage } = useLanguage();
     const lang = useLang();
@@ -47,6 +51,7 @@ export default function SettingsButton() {
             setGeminiKey(settings.geminiApiKey || "");
             setYoutubeKey(settings.youtubeApiKey || "");
             setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
+            setSelectedImageModel(settings.geminiImageModel || DEFAULT_IMAGE_MODEL);
         };
 
         loadSettings();
@@ -70,6 +75,7 @@ export default function SettingsButton() {
                 setGeminiKey(settings.geminiApiKey || "");
                 setYoutubeKey(settings.youtubeApiKey || "");
                 setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
+                setSelectedImageModel(settings.geminiImageModel || DEFAULT_IMAGE_MODEL);
             }
         };
 
@@ -105,11 +111,14 @@ export default function SettingsButton() {
             if (e.key === "Escape" && modelDropdownOpen) {
                 setModelDropdownOpen(false);
             }
+            if (e.key === "Escape" && imageModelDropdownOpen) {
+                setImageModelDropdownOpen(false);
+            }
         };
 
         document.addEventListener("keydown", handleEscape);
         return () => document.removeEventListener("keydown", handleEscape);
-    }, [isOpen, modelDropdownOpen]);
+    }, [isOpen, modelDropdownOpen, imageModelDropdownOpen]);
 
     const handleModelSelect = async (modelId: GeminiModel) => {
         setSelectedModel(modelId);
@@ -124,6 +133,17 @@ export default function SettingsButton() {
         await saveUserSettingsAsync({
             ...settings,
             geminiModel: modelId,
+        });
+    };
+
+    const handleImageModelSelect = async (modelId: GeminiImageModel) => {
+        setSelectedImageModel(modelId);
+        setImageModelDropdownOpen(false);
+
+        const settings = await getUserSettingsAsync();
+        await saveUserSettingsAsync({
+            ...settings,
+            geminiImageModel: modelId,
         });
     };
 
@@ -201,6 +221,20 @@ export default function SettingsButton() {
                     langCode={langCode}
                     lang={{
                         aiModel: lang.settings.aiModel,
+                        free: lang.settings.free,
+                        paid: lang.settings.paid,
+                    }}
+                />
+
+                {/* Image Generation Model Selection */}
+                <ImageModelSelector
+                    selectedModel={selectedImageModel}
+                    isOpen={imageModelDropdownOpen}
+                    onToggle={() => setImageModelDropdownOpen(!imageModelDropdownOpen)}
+                    onSelect={handleImageModelSelect}
+                    langCode={langCode}
+                    lang={{
+                        imageModel: lang.settings.imageModel || "Image Model",
                         free: lang.settings.free,
                         paid: lang.settings.paid,
                     }}

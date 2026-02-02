@@ -2,7 +2,7 @@
  * Gemini AI Model Configuration
  */
 
-import { GeminiModel, GeminiModelInfo } from "./types";
+import { GeminiModel, GeminiModelInfo, GeminiImageModel, GeminiImageModelInfo } from "./types";
 
 export const GEMINI_MODELS: GeminiModelInfo[] = [
     // Gemini 2.5 Series (Free + Paid)
@@ -83,4 +83,31 @@ export const DEFAULT_MODEL: GeminiModel = "gemini-2.5-flash-lite";
 
 export function getModelInfo(modelId: GeminiModel): GeminiModelInfo | undefined {
     return GEMINI_MODELS.find((m) => m.id === modelId);
+}
+
+// ============================================================================
+// Image Generation Models
+// ============================================================================
+
+export const GEMINI_IMAGE_MODELS: GeminiImageModelInfo[] = [
+    {
+        id: "gemini-2.5-flash-image",
+        name: "Nano Banana",
+        description: "Fast image generation, optimized for speed and efficiency.",
+        descriptionVi: "Tạo ảnh nhanh, tối ưu cho tốc độ và hiệu quả.",
+        tier: "free",
+    },
+    {
+        id: "gemini-3-pro-image-preview",
+        name: "Nano Banana Pro",
+        description: "Professional asset production with advanced reasoning.",
+        descriptionVi: "Tạo ảnh chuyên nghiệp với suy luận nâng cao.",
+        tier: "paid",
+    },
+];
+
+export const DEFAULT_IMAGE_MODEL: GeminiImageModel = "gemini-2.5-flash-image";
+
+export function getImageModelInfo(modelId: GeminiImageModel): GeminiImageModelInfo | undefined {
+    return GEMINI_IMAGE_MODELS.find((m) => m.id === modelId);
 }

@@ -8,6 +8,18 @@ export type GeminiModel =
     | "gemini-3-flash-preview"
     | "gemini-3-pro-preview";
 
+export type GeminiImageModel =
+    | "gemini-2.5-flash-image"
+    | "gemini-3-pro-image-preview";
+
+export interface GeminiImageModelInfo {
+    id: GeminiImageModel;
+    name: string;
+    description: string;
+    descriptionVi: string;
+    tier: "free" | "paid";
+}
+
 export interface GeminiModelInfo {
     id: GeminiModel;
     name: string;

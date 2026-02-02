@@ -351,6 +351,7 @@ export const en = {
     settings: {
         title: "Settings",
         aiModel: "AI Model",
+        imageModel: "Image Model",
         language: "Language",
         footerNote: "API keys are stored locally in your browser.",
         validating: "Verifying...",

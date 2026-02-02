@@ -2,13 +2,14 @@
 
 import { isBrowser } from "./utils";
 import { logger } from "./logger";
-import { ApiQuotaUsage, GeminiModel } from "./types";
+import { ApiQuotaUsage, GeminiModel, GeminiImageModel } from "./types";
 import { encrypt, decrypt, isEncryptionAvailable } from "./crypto";
 
 export interface UserSettings {
     youtubeApiKey?: string;
     geminiApiKey?: string;
     geminiModel?: GeminiModel;
+    geminiImageModel?: GeminiImageModel;
     quotaUsage?: ApiQuotaUsage;
 }
 
@@ -16,6 +17,7 @@ interface StoredSettings {
     youtubeApiKey?: string; // encrypted
     geminiApiKey?: string; // encrypted
     geminiModel?: GeminiModel;
+    geminiImageModel?: GeminiImageModel;
     quotaUsage?: ApiQuotaUsage;
     encrypted?: boolean;
 }
@@ -68,6 +70,7 @@ export async function getUserSettingsAsync(): Promise<UserSettings> {
         if (parsed.encrypted && isEncryptionAvailable()) {
             const settings: UserSettings = {
                 geminiModel: parsed.geminiModel,
+                geminiImageModel: parsed.geminiImageModel,
                 quotaUsage: parsed.quotaUsage,
             };
 
@@ -119,6 +122,7 @@ export function getUserSettings(): UserSettings {
         if (parsed.encrypted) {
             return {
                 geminiModel: parsed.geminiModel,
+                geminiImageModel: parsed.geminiImageModel,
                 quotaUsage: parsed.quotaUsage,
             };
         }
@@ -140,6 +144,7 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
     try {
         const stored: StoredSettings = {
             geminiModel: settings.geminiModel,
+            geminiImageModel: settings.geminiImageModel,
             quotaUsage: settings.quotaUsage,
         };
 
