@@ -161,6 +161,183 @@ function VerboseEntry({ entry }: { entry: GeminiLogEntry }) {
   );
 }
 
+interface PhaseGroups {
+  phase0: GeminiLogEntry[];
+  phase1: GeminiLogEntry[];
+  phase2Batches: Map<number, GeminiLogEntry[]>;
+}
+
+function groupByPhase(entries: GeminiLogEntry[]): PhaseGroups {
+  const result: PhaseGroups = {
+    phase0: [],
+    phase1: [],
+    phase2Batches: new Map(),
+  };
+
+  for (const entry of entries) {
+    switch (entry.phase) {
+      case "phase-0":
+        result.phase0.push(entry);
+        break;
+      case "phase-1":
+        result.phase1.push(entry);
+        break;
+      case "phase-2": {
+        const batch = entry.batchNumber ?? 0;
+        const existing = result.phase2Batches.get(batch);
+        if (existing) {
+          existing.push(entry);
+        } else {
+          result.phase2Batches.set(batch, [entry]);
+        }
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+function PhaseGroupHeader({
+  label,
+  count,
+  phaseClass,
+  isOpen,
+  onToggle,
+}: {
+  label: string;
+  count: number;
+  phaseClass: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button className={`${styles.phaseGroupHeader} ${phaseClass}`} onClick={onToggle}>
+      <svg
+        className={`${styles.groupChevron} ${isOpen ? styles.groupChevronOpen : ""}`}
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <path d="M9 18l6-6-6-6" />
+      </svg>
+      {label}
+      <span className={styles.groupCount}>({count})</span>
+    </button>
+  );
+}
+
+function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
+  const groups = useMemo(() => groupByPhase(entries), [entries]);
+  const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({
+    phase0: false,
+    phase1: false,
+    phase2: false,
+  });
+  const [openBatches, setOpenBatches] = useState<Record<number, boolean>>({});
+
+  const togglePhase = (phase: string) => {
+    setOpenPhases((prev) => ({ ...prev, [phase]: !prev[phase] }));
+  };
+
+  const toggleBatch = (batch: number) => {
+    setOpenBatches((prev) => ({ ...prev, [batch]: !(prev[batch] ?? false) }));
+  };
+
+  const sortedBatches = useMemo(
+    () => Array.from(groups.phase2Batches.entries()).sort(([a], [b]) => a - b),
+    [groups.phase2Batches]
+  );
+
+  const phase2TotalEntries = useMemo(
+    () => sortedBatches.reduce((sum, [, entries]) => sum + entries.length, 0),
+    [sortedBatches]
+  );
+
+  return (
+    <>
+      {/* Phase 0: Color Profile Extraction */}
+      {groups.phase0.length > 0 && (
+        <div className={`${styles.phaseGroup} ${styles.phaseGroup0}`}>
+          <PhaseGroupHeader
+            label="Phase 0: Color Profile Extraction"
+            count={groups.phase0.length}
+            phaseClass={styles.phaseHeader0}
+            isOpen={openPhases.phase0 ?? false}
+            onToggle={() => togglePhase("phase0")}
+          />
+          {(openPhases.phase0 ?? false) &&
+            groups.phase0.map((entry) => (
+              <VerboseEntry key={entry.id} entry={entry} />
+            ))}
+        </div>
+      )}
+
+      {/* Phase 1: Character Extraction */}
+      {groups.phase1.length > 0 && (
+        <div className={`${styles.phaseGroup} ${styles.phaseGroup1}`}>
+          <PhaseGroupHeader
+            label="Phase 1: Character Extraction"
+            count={groups.phase1.length}
+            phaseClass={styles.phaseHeader1}
+            isOpen={openPhases.phase1 ?? false}
+            onToggle={() => togglePhase("phase1")}
+          />
+          {(openPhases.phase1 ?? false) &&
+            groups.phase1.map((entry) => (
+              <VerboseEntry key={entry.id} entry={entry} />
+            ))}
+        </div>
+      )}
+
+      {/* Phase 2: Scene Generation — sub-grouped by batch */}
+      {phase2TotalEntries > 0 && (
+        <div className={`${styles.phaseGroup} ${styles.phaseGroup2}`}>
+          <PhaseGroupHeader
+            label="Phase 2: Scene Generation"
+            count={phase2TotalEntries}
+            phaseClass={styles.phaseHeader2}
+            isOpen={openPhases.phase2 ?? false}
+            onToggle={() => togglePhase("phase2")}
+          />
+          {(openPhases.phase2 ?? false) &&
+            sortedBatches.map(([batchNum, batchEntries]) => (
+              <div key={batchNum} className={styles.batchGroup}>
+                <button
+                  className={styles.batchGroupHeader}
+                  onClick={() => toggleBatch(batchNum)}
+                >
+                  <svg
+                    className={`${styles.groupChevron} ${(openBatches[batchNum] ?? false) ? styles.groupChevronOpen : ""}`}
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                  Batch {batchNum + 1}
+                  <span className={styles.groupCount}>
+                    ({batchEntries.length})
+                  </span>
+                </button>
+                {(openBatches[batchNum] ?? false) &&
+                  batchEntries.map((entry) => (
+                    <VerboseEntry key={entry.id} entry={entry} />
+                  ))}
+              </div>
+            ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function VeoLogPanel({ entries }: VeoLogPanelProps) {
   const [mode, setMode] = useState<LogMode>("compact");
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -222,9 +399,7 @@ export default function VeoLogPanel({ entries }: VeoLogPanelProps) {
             </div>
           </>
         ) : (
-          entries.map((entry) => (
-            <VerboseEntry key={entry.id} entry={entry} />
-          ))
+          <VerboseGrouped entries={entries} />
         )}
       </div>
     </div>

@@ -1,0 +1,188 @@
+/* VeoSceneCards - Interactive expandable scene cards */
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: var(--text-secondary);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sceneNumber {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 2.5rem;
+}
+
+.mediaBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mediaBadgeImage {
+  background: rgba(206, 147, 216, 0.15);
+  color: #ce93d8;
+}
+
+.mediaBadgeVideo {
+  background: rgba(79, 195, 247, 0.15);
+  color: #4fc3f7;
+}
+
+.promptPreview {
+  flex: 1;
+  font-size: var(--fs-sm);
+  color: var(--text-main);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expandIcon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+}
+
+.expandIconOpen {
+  transform: rotate(180deg);
+}
+
+/* Expanded details */
+.cardDetails {
+  border-top: 1px solid var(--border);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.detailLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detailLabelScene {
+  color: #ce93d8;
+}
+
+.detailLabelRequest {
+  color: #4fc3f7;
+}
+
+.detailLabelResponse {
+  color: #81c784;
+}
+
+.codeBlock {
+  background: var(--bg-tertiary, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-code, #d4d4d4);
+}
+
+.codeBlock::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.codeBlock::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.codeBlock::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.noData {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* JSON syntax highlighting */
+.jsonKey {
+  color: #4fc3f7;
+}
+
+.jsonString {
+  color: #81c784;
+}
+
+.jsonNumber {
+  color: #ffb74d;
+}
+
+.jsonBool {
+  color: #ce93d8;
+}
+
+.jsonNull {
+  color: #ef5350;
+}
+
+@media (max-width: 768px) {
+  .cardHeader {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .promptPreview {
+    font-size: var(--fs-xs);
+  }
+
+  .codeBlock {
+    font-size: 0.7rem;
+    max-height: 200px;
+  }
+}

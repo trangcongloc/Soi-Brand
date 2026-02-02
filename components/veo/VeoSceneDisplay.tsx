@@ -8,7 +8,7 @@ import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoHistoryPanel from "./VeoHistoryPanel";
 import VeoColorProfilePanel from "./VeoColorProfilePanel";
 import VeoLogPanel from "./VeoLogPanel";
-import { VeoJsonView } from "./VeoJsonView";
+import VeoSceneCards from "./VeoSceneCards";
 import { highlightJson } from "./json-highlight";
 import styles from "./VeoSceneDisplay.module.css";
 import jsonStyles from "./VeoJsonView.module.css";
@@ -234,8 +234,17 @@ function VeoSceneDisplay({
 
       {/* Tab Content */}
       <div className={styles.content}>
-        {/* Scenes Tab - JSON code view */}
+        {/* Scenes Tab - Interactive card list */}
         {activeTab === "scenes" && (
+          <VeoSceneCards
+            scenes={scenes}
+            logEntries={logEntries}
+            batchSize={summary.batchSize}
+          />
+        )}
+
+        {/* JSON Tab - Raw scenes JSON code view */}
+        {activeTab === "json" && (
           <div className={jsonStyles.jsonViewContainer}>
             <div className={jsonStyles.jsonHeader}>
               <h3>Scenes ({scenes.length})</h3>
@@ -251,16 +260,6 @@ function VeoSceneDisplay({
               <code>{highlightedScenesJson}</code>
             </pre>
           </div>
-        )}
-
-        {/* JSON Tab */}
-        {activeTab === "json" && (
-          <VeoJsonView
-            scenes={scenes}
-            characterRegistry={characterRegistry}
-            summary={summary}
-            jobId={jobId}
-          />
         )}
 
         {/* Characters Tab */}

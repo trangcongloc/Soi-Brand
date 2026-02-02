@@ -217,3 +217,113 @@
   padding: 2rem;
   font-style: italic;
 }
+
+/* ===== PHASE/BATCH GROUPING ===== */
+
+.phaseGroup {
+  margin-bottom: 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.phaseGroup0 {
+  border-left-color: #ce93d8;
+}
+
+.phaseGroup1 {
+  border-left-color: #80cbc4;
+}
+
+.phaseGroup2 {
+  border-left-color: #90caf9;
+}
+
+.phaseGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.75rem;
+}
+
+.phaseGroupHeader:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+.phaseHeader0 {
+  color: #ce93d8;
+}
+
+.phaseHeader0:hover {
+  color: #e1bee7;
+}
+
+.phaseHeader1 {
+  color: #80cbc4;
+}
+
+.phaseHeader1:hover {
+  color: #b2dfdb;
+}
+
+.phaseHeader2 {
+  color: #90caf9;
+}
+
+.phaseHeader2:hover {
+  color: #bbdefb;
+}
+
+.groupChevron {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.groupChevronOpen {
+  transform: rotate(90deg);
+}
+
+.groupCount {
+  font-weight: 400;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.batchGroup {
+  margin-left: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(144, 202, 249, 0.25);
+}
+
+.batchGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.35rem 0;
+  background: transparent;
+  border: none;
+  color: #90caf9;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 0.5rem;
+}
+
+.batchGroupHeader:hover {
+  color: #bbdefb;
+}
