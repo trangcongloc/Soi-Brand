@@ -2,7 +2,7 @@
  * VEO Pipeline - Prompt templates for scene generation
  */
 
-import { GeminiRequestBody, VoiceLanguage, AudioSettings, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType } from "./types";
+import { GeminiRequestBody, GeminiPart, VoiceLanguage, AudioSettings, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType } from "./types";
 
 // ============================================================================
 // NEGATIVE PROMPT DEFAULTS
@@ -1652,14 +1652,13 @@ export function buildScenePrompt(options: {
 
   // Direct mode: Add time range instruction for video segment analysis
   if (directBatchInfo) {
-    userPrompt += `\n\n=== TIME RANGE INSTRUCTION (CRITICAL) ===`;
-    userPrompt += `\nANALYZE ONLY the video segment from ${directBatchInfo.startTime} to ${directBatchInfo.endTime}.`;
-    userPrompt += `\nBatch ${directBatchInfo.batchNum + 1} of ${directBatchInfo.totalBatches}.`;
+    userPrompt += `\n\n=== VIDEO SEGMENT INFO ===`;
+    userPrompt += `\nThis is batch ${directBatchInfo.batchNum + 1} of ${directBatchInfo.totalBatches} (segment ${directBatchInfo.startTime}–${directBatchInfo.endTime}).`;
     userPrompt += `\nGenerate EXACTLY ${directBatchInfo.sceneCount} scenes for this segment.`;
     if (directBatchInfo.batchNum > 0) {
-      userPrompt += `\nThis is a CONTINUATION - maintain character consistency with previous batches.`;
+      userPrompt += `\n(Continuation — maintain character consistency.)`;
     }
-    userPrompt += `\n=== END TIME RANGE INSTRUCTION ===`;
+    userPrompt += `\n=== END VIDEO SEGMENT INFO ===`;
   }
 
   // Legacy script-based batch info
@@ -1679,16 +1678,25 @@ export function buildScenePrompt(options: {
     userPrompt += `\n=== END GLOBAL NEGATIVE PROMPT ===`;
   }
 
+  // Build video part with optional videoMetadata for server-side clipping
+  const videoPart: GeminiPart = {
+    fileData: {
+      fileUri: videoUrl,
+      mimeType: "video/mp4",
+    },
+    ...(directBatchInfo && {
+      videoMetadata: {
+        startOffset: `${directBatchInfo.startSeconds}s`,
+        endOffset: `${directBatchInfo.endSeconds}s`,
+      },
+    }),
+  };
+
   return {
     contents: [
       {
         parts: [
-          {
-            fileData: {
-              fileUri: videoUrl,
-              mimeType: "video/mp4",
-            },
-          },
+          videoPart,
           {
             text: userPrompt,
           },

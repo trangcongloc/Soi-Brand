@@ -539,6 +539,7 @@ export interface CachedVeoJob {
     retryable: boolean; // Whether the job can be retried
   };
   // Resume data for partial/failed jobs
+  logs?: GeminiLogEntry[]; // Cached log entries for scene request/response display
   resumeData?: {
     completedBatches: number;
     existingScenes: Scene[];
@@ -610,7 +611,10 @@ export interface GeminiContent {
 
 export type GeminiPart =
   | { text: string }
-  | { fileData: { fileUri: string; mimeType: string } };
+  | {
+      fileData: { fileUri: string; mimeType: string };
+      videoMetadata?: { startOffset: string; endOffset: string };
+    };
 
 export interface GeminiResponse {
   candidates: Array<{

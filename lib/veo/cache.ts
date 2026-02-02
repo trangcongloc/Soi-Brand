@@ -9,6 +9,7 @@ import {
   CharacterRegistry,
   VeoJobSummary,
   GeneratedScript,
+  GeminiLogEntry,
   VeoJobStatus,
   VeoErrorType,
   CinematicProfile,
@@ -89,6 +90,7 @@ export function setCachedJob(
     characterRegistry: CharacterRegistry;
     script?: GeneratedScript; // Optional script for regeneration
     colorProfile?: CinematicProfile; // Optional color profile from Phase 0
+    logs?: GeminiLogEntry[]; // Log entries for scene request/response display
     status?: VeoJobStatus;
     error?: {
       message: string;
@@ -114,6 +116,7 @@ export function setCachedJob(
     timestamp,
     script: data.script,
     colorProfile: data.colorProfile,
+    logs: data.logs,
     status: data.status || "completed",
     error: data.error,
     resumeData: data.resumeData,

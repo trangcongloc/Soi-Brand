@@ -261,6 +261,7 @@ export default function VeoPage() {
           scenes,
           characterRegistry,
           script: generatedScript || undefined,
+          logs: logEntries,
           status,
           error: {
             message: errorMessage,
@@ -521,6 +522,7 @@ export default function VeoPage() {
                           characterRegistry: event.data.characterRegistry,
                           script: event.data.script, // Cache script for regeneration
                           colorProfile: event.data.colorProfile, // Cache color profile
+                          logs: logEntries, // Cache log entries for scene request/response
                           status: "completed",
                         });
                         // Update history state to reflect new job
@@ -598,6 +600,7 @@ export default function VeoPage() {
         scenes,
         characterRegistry,
         script: generatedScript || undefined,
+        logs: logEntries,
         status,
         error: {
           message: lang.veo.history.jobCancelled,
@@ -704,6 +707,7 @@ export default function VeoPage() {
       setJobId(viewJobId);
       setGeneratedScript(cached.script ?? null);
       setColorProfile(cached.colorProfile ?? null);
+      setLogEntries(cached.logs ?? []);
       setState("complete");
     }
   }, []);
