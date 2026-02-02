@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { VeoMode, VoiceLanguage, AudioSettings, VeoWorkflow, MediaType } from "@/lib/veo";
+import { VeoMode, VoiceLanguage, AudioSettings, VeoWorkflow, MediaType, SceneCountMode } from "@/lib/veo";
 import { useLang } from "@/lib/lang";
 import styles from "./VeoForm.module.css";
 
 interface SettingsState {
   mode: VeoMode;
-  autoSceneCount: boolean;
+  sceneCountMode: SceneCountMode;
   sceneCount: number;
   batchSize: number;
   audio: AudioSettings;
@@ -158,8 +158,17 @@ export function VeoSettingsPanel({
                   <div className={styles.autoToggle}>
                     <button
                       type="button"
-                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${settings.autoSceneCount ? styles.active : ""}`}
-                      onClick={() => onSettingsChange({ autoSceneCount: true })}
+                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${settings.sceneCountMode === "gemini" ? styles.active : ""}`}
+                      onClick={() => onSettingsChange({ sceneCountMode: "gemini" })}
+                      disabled={isLoading}
+                      data-tooltip={lang.veo.settings.geminiDesc}
+                    >
+                      {lang.veo.settings.gemini}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${settings.sceneCountMode === "auto" ? styles.active : ""}`}
+                      onClick={() => onSettingsChange({ sceneCountMode: "auto" })}
                       disabled={isLoading}
                       data-tooltip={lang.veo.settings.sceneCountAutoDesc}
                     >
@@ -167,8 +176,8 @@ export function VeoSettingsPanel({
                     </button>
                     <button
                       type="button"
-                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${!settings.autoSceneCount ? styles.active : ""}`}
-                      onClick={() => onSettingsChange({ autoSceneCount: false })}
+                      className={`${styles.autoToggleBtn} ${styles.tooltip} ${settings.sceneCountMode === "manual" ? styles.active : ""}`}
+                      onClick={() => onSettingsChange({ sceneCountMode: "manual" })}
                       disabled={isLoading}
                       data-tooltip={lang.veo.settings.sceneCountDesc}
                     >
@@ -177,7 +186,7 @@ export function VeoSettingsPanel({
                   </div>
                 )}
 
-                {(!isUrlWorkflow || !settings.autoSceneCount) && (
+                {(!isUrlWorkflow || settings.sceneCountMode === "manual") && (
                   <input
                     type="number"
                     min={1}

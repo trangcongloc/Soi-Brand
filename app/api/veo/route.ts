@@ -131,7 +131,7 @@ const VeoRequestSchema = z.object({
   scriptText: z.string().optional(),
   mode: z.enum(["direct", "hybrid"]).default("hybrid"),
   sceneCount: z.number().int().min(1).max(VEO_CONFIG.MAX_AUTO_SCENES).default(40),
-  autoSceneCount: z.boolean().default(true), // Auto-calculate scene count from duration
+  sceneCountMode: z.enum(["auto", "manual", "gemini"]).default("auto"),
   batchSize: z.number().int().min(1).max(60).default(VEO_CONFIG.DEFAULT_BATCH_SIZE),
   voice: z
     .enum([
@@ -845,7 +845,7 @@ async function runUrlToScenesDirect(
       endSeconds: batchEndSeconds,
       startTime: formatTime(batchStartSeconds),
       endTime: formatTime(batchEndSeconds),
-      sceneCount: batchSceneCount,
+      estimatedSceneCount: batchSceneCount,
     };
 
     sendEvent({
@@ -868,6 +868,7 @@ async function runUrlToScenesDirect(
       const requestBody = buildScenePrompt({
         videoUrl: request.videoUrl!,
         sceneCount: batchSceneCount,
+        sceneCountMode: request.sceneCountMode as "auto" | "manual" | "gemini",
         voiceLang: request.voice as VoiceLanguage,
         audio: request.audio as AudioSettings | undefined,
         continuityContext,
@@ -1271,7 +1272,7 @@ export async function POST(request: NextRequest) {
           // DIRECT MODE: Video → Scenes (no script generation)
           if (veoRequest.mode === "direct") {
             // Calculate scene count from YouTube duration
-            if (veoRequest.autoSceneCount && youtubeDurationSeconds > 0) {
+            if (veoRequest.sceneCountMode !== "manual" && youtubeDurationSeconds > 0) {
               const calculatedCount = Math.ceil(youtubeDurationSeconds / DEFAULT_SECONDS_PER_SCENE);
               effectiveSceneCount = Math.max(VEO_CONFIG.MIN_AUTO_SCENES, Math.min(calculatedCount, VEO_CONFIG.MAX_AUTO_SCENES));
 
@@ -1413,7 +1414,7 @@ export async function POST(request: NextRequest) {
 
             // Calculate scene count from duration if auto mode is enabled
             // Priority: YouTube API duration > Gemini script duration > default
-            if (veoRequest.autoSceneCount) {
+            if (veoRequest.sceneCountMode !== "manual") {
               let durationSeconds = youtubeDurationSeconds;
               let durationSource = "YouTube API";
 

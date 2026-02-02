@@ -166,7 +166,7 @@ async function testUrlToScenesDirect() {
     workflow: "url-to-scenes",
     videoUrl: TEST_URL,
     mode: "direct",
-    autoSceneCount: true,
+    sceneCountMode: "auto",
     batchSize: 30,
     voice: "no-voice",
   };
@@ -231,7 +231,7 @@ async function testUrlToScenesHybrid() {
     workflow: "url-to-scenes",
     videoUrl: TEST_URL,
     mode: "hybrid",
-    autoSceneCount: true,
+    sceneCountMode: "auto",
     batchSize: 30,
     voice: "no-voice",
   };

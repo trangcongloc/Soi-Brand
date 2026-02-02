@@ -18,6 +18,7 @@ import {
   VeoErrorType,
   CinematicProfile,
   MediaType,
+  SceneCountMode,
   GeminiLogEntry,
   setCachedJob,
   getCachedJob,
@@ -122,7 +123,7 @@ export default function VeoPage() {
     negativePrompt?: string;
     extractColorProfile: boolean;
     mediaType: MediaType;
-    autoSceneCount: boolean;
+    sceneCountMode: SceneCountMode;
     startTime?: string;
     endTime?: string;
     selfieMode?: boolean;
@@ -286,7 +287,7 @@ export default function VeoPage() {
                 negativePrompt: currentForm.negativePrompt,
             extractColorProfile: currentForm.extractColorProfile,
             mediaType: currentForm.mediaType,
-            autoSceneCount: currentForm.autoSceneCount,
+            sceneCountMode: currentForm.sceneCountMode,
             startTime: currentForm.startTime,
             endTime: currentForm.endTime,
             selfieMode: currentForm.selfieMode,
@@ -308,7 +309,7 @@ export default function VeoPage() {
       endTime?: string;
       scriptText?: string;
       mode: VeoMode;
-      autoSceneCount: boolean;
+      sceneCountMode: SceneCountMode;
       sceneCount: number;
       batchSize: number;
       audio: AudioSettings;
@@ -367,7 +368,7 @@ export default function VeoPage() {
             negativePrompt: options.negativePrompt,
         extractColorProfile: options.extractColorProfile,
         mediaType: options.mediaType,
-        autoSceneCount: options.autoSceneCount,
+        sceneCountMode: options.sceneCountMode,
         startTime: options.startTime,
         endTime: options.endTime,
         selfieMode: options.selfieMode,
@@ -625,7 +626,7 @@ export default function VeoPage() {
             negativePrompt: currentForm.negativePrompt,
           extractColorProfile: currentForm.extractColorProfile,
           mediaType: currentForm.mediaType,
-          autoSceneCount: currentForm.autoSceneCount,
+          sceneCountMode: currentForm.sceneCountMode,
           startTime: currentForm.startTime,
           endTime: currentForm.endTime,
           selfieMode: currentForm.selfieMode,
@@ -663,7 +664,7 @@ export default function VeoPage() {
       workflow: "script-to-scenes",
       scriptText: resumeData.scriptText,
       mode: resumeData.mode,
-      autoSceneCount: false,
+      sceneCountMode: "manual",
       sceneCount: resumeData.sceneCount,
       batchSize: resumeData.batchSize,
       audio: {
@@ -750,7 +751,7 @@ export default function VeoPage() {
         ? cached.script?.rawText
         : undefined,
       mode: rd.mode,
-      autoSceneCount: rd.autoSceneCount ?? false,
+      sceneCountMode: rd.sceneCountMode ?? "auto",
       sceneCount: rd.sceneCount,
       batchSize: rd.batchSize,
       audio: {

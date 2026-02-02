@@ -2,7 +2,7 @@
  * VEO Pipeline - Prompt templates for scene generation
  */
 
-import { GeminiRequestBody, GeminiPart, VoiceLanguage, AudioSettings, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType } from "./types";
+import { GeminiRequestBody, GeminiPart, VoiceLanguage, AudioSettings, GeneratedScript, DirectBatchInfo, CharacterSkeleton, CharacterExtractionResult, CinematicProfile, ColorProfileExtractionResult, StyleObject, MediaType, SceneCountMode } from "./types";
 
 // ============================================================================
 // NEGATIVE PROMPT DEFAULTS
@@ -782,11 +782,16 @@ export function cinematicProfileToStyleFields(profile: CinematicProfile): Partia
 /**
  * System instruction for scene analysis
  */
-const SYSTEM_INSTRUCTION = `ROLE: Expert film director and visual analyst optimized for VEO 3 video generation.
+/**
+ * Content-aware system instruction for gemini mode.
+ * No hard scene count — Gemini decides based on natural transitions.
+ */
+const SYSTEM_INSTRUCTION_CONTENT_AWARE = `ROLE: Expert film director and visual analyst optimized for VEO 3 video generation.
 
-SCENE COUNT: EXACTLY {SceneNumber} scenes. ~8s/scene. Under-generating = failure.
+SCENE COUNT: Generate scenes by splitting on natural visual transitions. Target ~8s per scene.
 - Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.
 - Do NOT fabricate content; only split where visually justified.
+- Do NOT merge distinct visual moments into one scene to reduce count.
 
 OUTPUT: JSON ARRAY per schema. Every field required.
 - description: 2-4 sentences, present tense, third person.
@@ -865,6 +870,17 @@ NEGATIVE PROMPT: Include global negatives + scene-specific exclusions.
 - Never contradict positive description
 - Format: [global], [scene-specific]
 - Physics: dropped items stay dropped, exited characters don't teleport back, maintain spatial consistency`;
+
+/**
+ * Exact-count system instruction for auto/manual modes.
+ * Same as content-aware but enforces an exact scene count via {SceneNumber} placeholder.
+ */
+const SYSTEM_INSTRUCTION_EXACT_COUNT =
+  SYSTEM_INSTRUCTION_CONTENT_AWARE
+    .replace(
+      "SCENE COUNT: Generate scenes by splitting on natural visual transitions. Target ~8s per scene.\n- Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.\n- Do NOT fabricate content; only split where visually justified.\n- Do NOT merge distinct visual moments into one scene to reduce count.",
+      "SCENE COUNT: EXACTLY {SceneNumber} scenes. ~8s/scene. Under-generating = failure.\n- Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.\n- Do NOT fabricate content; only split where visually justified."
+    );
 
 // CHARACTER_ANALYSIS_PROMPT removed - character rules consolidated into SYSTEM_INSTRUCTION (single source of truth)
 
@@ -1572,6 +1588,7 @@ function buildPreExtractedCharactersContext(
 export function buildScenePrompt(options: {
   videoUrl: string;
   sceneCount: number;
+  sceneCountMode?: SceneCountMode;
   voiceLang?: VoiceLanguage;
   audio?: AudioSettings;
   continuityContext?: string;
@@ -1598,6 +1615,7 @@ export function buildScenePrompt(options: {
   const {
     videoUrl,
     sceneCount,
+    sceneCountMode = "auto",
     voiceLang = "no-voice",
     audio,
     continuityContext = "",
@@ -1611,12 +1629,13 @@ export function buildScenePrompt(options: {
     selfieMode,
   } = options;
 
-  // Build system instruction with scene count
-  const effectiveSceneCount = directBatchInfo?.sceneCount ?? sceneCount;
-  const systemText = SYSTEM_INSTRUCTION.replace(
-    /{SceneNumber}/g,
-    String(effectiveSceneCount)
-  );
+  // Build system instruction based on scene count mode
+  // gemini: content-aware splitting (no hard count)
+  // auto/manual: enforce exact scene count
+  const effectiveSceneCount = directBatchInfo?.estimatedSceneCount ?? sceneCount;
+  const systemText = sceneCountMode === "gemini"
+    ? SYSTEM_INSTRUCTION_CONTENT_AWARE
+    : SYSTEM_INSTRUCTION_EXACT_COUNT.replace(/{SceneNumber}/g, String(effectiveSceneCount));
 
   // Build user prompt
   let userPrompt = BASE_USER_PROMPT;
@@ -1654,7 +1673,11 @@ export function buildScenePrompt(options: {
   if (directBatchInfo) {
     userPrompt += `\n\n=== VIDEO SEGMENT INFO ===`;
     userPrompt += `\nThis is batch ${directBatchInfo.batchNum + 1} of ${directBatchInfo.totalBatches} (segment ${directBatchInfo.startTime}–${directBatchInfo.endTime}).`;
-    userPrompt += `\nGenerate EXACTLY ${directBatchInfo.sceneCount} scenes for this segment.`;
+    if (sceneCountMode === "gemini") {
+      userPrompt += `\nAnalyze this segment and generate scenes for every natural visual transition (~8s each).`;
+    } else {
+      userPrompt += `\nGenerate EXACTLY ${effectiveSceneCount} scenes for this segment.`;
+    }
     if (directBatchInfo.batchNum > 0) {
       userPrompt += `\n(Continuation — maintain character consistency.)`;
     }

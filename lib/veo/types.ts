@@ -204,12 +204,14 @@ export interface DirectBatchInfo {
   endSeconds: number;       // End time in seconds
   startTime: string;        // Formatted start time (MM:SS)
   endTime: string;          // Formatted end time (MM:SS)
-  sceneCount: number;       // Target scenes for this batch
+  estimatedSceneCount: number;  // Estimate for progress display, not a hard target
 }
 
 // ============================================================================
 // VEO Generation Modes
 // ============================================================================
+
+export type SceneCountMode = "auto" | "manual" | "gemini";
 
 export type VeoMode = "direct" | "hybrid";
 
@@ -558,7 +560,7 @@ export interface CachedVeoJob {
     negativePrompt?: string;
     extractColorProfile?: boolean;
     mediaType?: MediaType;
-    autoSceneCount?: boolean;
+    sceneCountMode?: SceneCountMode;
     startTime?: string;
     endTime?: string;
     selfieMode?: boolean;
@@ -1467,7 +1469,7 @@ export interface PromptTemplate {
 export interface VeoFormSettings {
   // Core
   mode: VeoMode;
-  autoSceneCount: boolean;
+  sceneCountMode: SceneCountMode;
   sceneCount: number;
   batchSize: number;
   audio: AudioSettings;

@@ -18,7 +18,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
 export function getDefaultVeoFormSettings(): VeoFormSettings {
   return {
     mode: "hybrid",
-    autoSceneCount: true,
+    sceneCountMode: "auto",
     sceneCount: 40,
     batchSize: 30,
     audio: { ...DEFAULT_AUDIO_SETTINGS },
@@ -46,7 +46,13 @@ export function loadVeoFormSettings(): VeoFormSettings {
       environmentalAudio: true,
     };
     delete saved.voice;
-    // Persist the migrated data
+    setStorageItem(VEO_FORM_SETTINGS_KEY, saved);
+  }
+
+  // Migration: convert old `autoSceneCount` boolean to `sceneCountMode`
+  if ("autoSceneCount" in saved && !("sceneCountMode" in saved)) {
+    saved.sceneCountMode = (saved.autoSceneCount as boolean) ? "auto" : "manual";
+    delete saved.autoSceneCount;
     setStorageItem(VEO_FORM_SETTINGS_KEY, saved);
   }
 

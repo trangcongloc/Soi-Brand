@@ -522,6 +522,8 @@ export const en = {
             sceneCountDesc: "Target number of scenes to generate",
             sceneCountAutoDesc:
                 "Auto-calculated based on video duration (~8s/scene)",
+            gemini: "AI",
+            geminiDesc: "Let Gemini analyze content and decide scene count based on visual transitions",
             auto: "Auto",
             manual: "Manual",
             batchSize: "Batch Size",

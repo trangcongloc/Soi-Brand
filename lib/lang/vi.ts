@@ -515,6 +515,8 @@ export const vi = {
             sceneCountDesc: "Số scene mục tiêu cần tạo",
             sceneCountAutoDesc:
                 "Tự động tính dựa trên thời lượng video (~8s/scene)",
+            gemini: "AI",
+            geminiDesc: "Gemini tự phân tích nội dung và quyết định số scene dựa trên chuyển cảnh tự nhiên",
             auto: "Tự động",
             manual: "Thủ công",
             batchSize: "Kích thước batch",

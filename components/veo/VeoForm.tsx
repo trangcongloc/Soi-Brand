@@ -9,6 +9,7 @@ import {
   AudioSettings,
   VeoWorkflow,
   MediaType,
+  SceneCountMode,
 } from "@/lib/veo";
 import { loadVeoFormSettings, saveVeoFormSettings } from "@/lib/veo/settings";
 import { VeoWorkflowSelector } from "./VeoWorkflowSelector";
@@ -25,7 +26,7 @@ interface VeoFormProps {
     endTime?: string;
     scriptText?: string;
     mode: VeoMode;
-    autoSceneCount: boolean;
+    sceneCountMode: SceneCountMode;
     sceneCount: number;
     batchSize: number;
     audio: AudioSettings;
@@ -66,7 +67,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
 
   // Settings — initialized from persisted values
   const [mode, setMode] = useState<VeoMode>(savedSettings.mode);
-  const [autoSceneCount, setAutoSceneCount] = useState(savedSettings.autoSceneCount);
+  const [sceneCountMode, setSceneCountMode] = useState<SceneCountMode>(savedSettings.sceneCountMode);
   const [sceneCount, setSceneCount] = useState(savedSettings.sceneCount);
   const [batchSize, setBatchSize] = useState(savedSettings.batchSize);
   const [audio, setAudio] = useState<AudioSettings>(savedSettings.audio);
@@ -85,13 +86,13 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   // Persist settings to localStorage whenever they change
   useEffect(() => {
     saveVeoFormSettings({
-      mode, autoSceneCount, sceneCount, batchSize, audio,
+      mode, sceneCountMode, sceneCount, batchSize, audio,
       useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions,
       extractColorProfile, mediaType,
       negativePrompt, selfieMode,
     });
   }, [
-    mode, autoSceneCount, sceneCount, batchSize, audio,
+    mode, sceneCountMode, sceneCount, batchSize, audio,
     useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions,
     extractColorProfile, mediaType,
     negativePrompt, selfieMode,
@@ -161,7 +162,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           startTime: durationMode === "custom" && startTime.trim() ? startTime.trim() : undefined,
           endTime: durationMode === "custom" && endTime.trim() ? endTime.trim() : undefined,
           mode,
-          autoSceneCount: workflow === "url-to-scenes" ? autoSceneCount : false,
+          sceneCountMode: workflow === "url-to-scenes" ? sceneCountMode : "manual",
           sceneCount,
           batchSize,
           audio,
@@ -183,7 +184,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
           workflow: "script-to-scenes",
           scriptText,
           mode,
-          autoSceneCount: false,
+          sceneCountMode: "manual",
           sceneCount,
           batchSize,
           audio,
@@ -198,7 +199,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
         });
       }
     },
-    [workflow, url, durationMode, startTime, endTime, scriptText, mode, autoSceneCount, sceneCount, batchSize, audio, useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, sceneCountMode, sceneCount, batchSize, audio, useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
   );
 
   const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
@@ -208,7 +209,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   // Settings state object
   const settingsState = {
     mode,
-    autoSceneCount,
+    sceneCountMode,
     sceneCount,
     batchSize,
     audio,
@@ -225,7 +226,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
   // Settings change handler
   const handleSettingsChange = useCallback((updates: Partial<typeof settingsState>) => {
     if (updates.mode !== undefined) setMode(updates.mode);
-    if (updates.autoSceneCount !== undefined) setAutoSceneCount(updates.autoSceneCount);
+    if (updates.sceneCountMode !== undefined) setSceneCountMode(updates.sceneCountMode);
     if (updates.sceneCount !== undefined) setSceneCount(updates.sceneCount);
     if (updates.batchSize !== undefined) setBatchSize(updates.batchSize);
     if (updates.audio !== undefined) setAudio(updates.audio);
