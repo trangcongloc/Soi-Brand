@@ -766,6 +766,7 @@ async function runUrlToScenesDirect(
           });
         },
         onLog: (entry) => sendEvent({ event: "log", data: entry }),
+        onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
       });
 
       preExtractedCharacters = characterData.characters;
@@ -1324,7 +1325,7 @@ export async function POST(request: NextRequest) {
             // ============================================================================
             // PHASE 0: Extract cinematic color profile FIRST (before character extraction)
             // ============================================================================
-            if (veoRequest.extractColorProfile && !extractedColorProfile) {
+            if (veoRequest.extractColorProfile === true && !extractedColorProfile) {
               try {
                 sendEvent({
                   event: "progress",
@@ -1341,6 +1342,7 @@ export async function POST(request: NextRequest) {
                     });
                   },
                   onLog: (entry) => sendEvent({ event: "log", data: entry }),
+                  onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
                 });
 
                 extractedColorProfile = colorResult.profile;
@@ -1490,7 +1492,7 @@ export async function POST(request: NextRequest) {
             // ============================================================================
             // PHASE 0: Extract cinematic color profile FIRST (before character extraction)
             // ============================================================================
-            if (veoRequest.extractColorProfile && !extractedColorProfile) {
+            if (veoRequest.extractColorProfile === true && !extractedColorProfile) {
               try {
                 sendEvent({
                   event: "progress",
@@ -1507,6 +1509,7 @@ export async function POST(request: NextRequest) {
                     });
                   },
                   onLog: (entry) => sendEvent({ event: "log", data: entry }),
+                  onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
                 });
 
                 extractedColorProfile = colorResult.profile;
@@ -1580,6 +1583,7 @@ export async function POST(request: NextRequest) {
                   });
                 },
                 onLog: (entry) => sendEvent({ event: "log", data: entry }),
+                onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
               });
 
               hybridPreExtractedCharacters = characterData.characters;

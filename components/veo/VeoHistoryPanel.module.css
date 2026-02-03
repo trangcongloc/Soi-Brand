@@ -1,21 +1,24 @@
 .container {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 .header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: 1rem;
-  gap: 1rem;
+  flex-shrink: 0;
 }
 
 .titleSection {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .title {
@@ -23,6 +26,10 @@
   font-weight: 600;
   color: var(--text-main);
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .jobStats {
@@ -30,16 +37,26 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
-.jobStats span {
+.jobStats button {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
   font-size: var(--fs-xs);
   font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.jobStats button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .statCompleted {
@@ -48,10 +65,32 @@
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
+.statCompleted:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.statCompleted.statActive {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
 .statPartial {
   background: rgba(245, 158, 11, 0.1);
   color: #f59e0b;
   border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.statPartial:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.statPartial.statActive {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
 }
 
 .statFailed {
@@ -60,9 +99,19 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.statFailed:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.statFailed.statActive {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
 .cloudBadge {
   padding: 0.15rem 0.5rem;
-  margin-left: 0.5rem;
   background: var(--bg-hover);
   border-radius: var(--radius-sm);
   font-size: var(--fs-xs);
@@ -73,7 +122,6 @@
 
 .localBadge {
   padding: 0.15rem 0.5rem;
-  margin-left: 0.5rem;
   background: var(--bg-hover);
   border-radius: var(--radius-sm);
   font-size: var(--fs-xs);
@@ -102,60 +150,13 @@
   text-transform: capitalize;
 }
 
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.sortSelect {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  color: var(--text-main);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-  min-width: 120px;
-}
-
-.sortSelect:hover {
-  border-color: var(--primary);
-  background: var(--bg-secondary);
-}
-
-.sortSelect:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.1);
-}
-
-.clearAllButton {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.clearAllButton:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.05);
-}
 
 .searchRow {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .searchInputWrapper {
@@ -222,66 +223,16 @@
   font-weight: 500;
 }
 
-.confirmBanner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-md);
-  margin-bottom: 1rem;
-  overflow: hidden;
-}
-
-.confirmBanner span {
-  font-size: var(--fs-sm);
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.confirmActions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.confirmButton {
-  padding: 0.35rem 0.75rem;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: #ef4444;
-  color: white;
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.confirmButton:hover {
-  background: #dc2626;
-}
-
-.cancelButton {
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.cancelButton:hover {
-  border-color: var(--text-secondary);
-}
 
 .list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-right: 0.25rem;
 }
 
 .showMoreBtn {
@@ -311,6 +262,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   transition: var(--transition);
+  cursor: pointer;
+  position: relative;
 }
 
 .jobCard:hover {
@@ -321,6 +274,7 @@
 .jobCard.active {
   border-color: var(--primary);
   background: rgba(229, 57, 53, 0.04);
+  cursor: default;
 }
 
 .jobInfo {
@@ -426,126 +380,87 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   padding-top: 0.5rem;
+  padding-right: 8rem; /* Reserve space for time badges */
   border-top: 1px solid var(--border);
 }
 
-.viewButton {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--primary);
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--primary);
-  font-size: var(--fs-xs);
-  font-weight: 500;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition);
-  min-height: 32px;
+  flex-shrink: 0;
 }
 
-.viewButton:hover:not(:disabled) {
-  background: var(--primary);
-  color: white;
+.actionButton:hover:not(:disabled) {
+  border-color: var(--text-main);
+  color: var(--text-main);
+  background: var(--bg-hover);
 }
 
-.viewButton:disabled {
+.actionButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.regenerateButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.regenerateButton:hover {
-  border-color: #22c55e;
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.05);
-}
-
-.retryButton {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid #f59e0b;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: #f59e0b;
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-  min-height: 32px;
-}
-
-.retryButton:hover {
-  background: #f59e0b;
-  color: white;
-}
-
-.retryButton svg {
+.actionButton svg {
   flex-shrink: 0;
 }
 
-.syncButton {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: var(--radius-md);
-  background: rgba(59, 130, 246, 0.05);
-  color: #3b82f6;
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
+/* Retry button - orange */
+.actionButton[data-action="retry"] {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
-.syncButton:hover:not(:disabled) {
+.actionButton[data-action="retry"]:hover:not(:disabled) {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Regenerate button - green */
+.actionButton[data-action="regenerate"] {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.actionButton[data-action="regenerate"]:hover:not(:disabled) {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+/* Sync button - blue */
+.actionButton[data-action="sync"] {
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.actionButton[data-action="sync"]:hover:not(:disabled) {
   border-color: #3b82f6;
+  color: #3b82f6;
   background: rgba(59, 130, 246, 0.1);
 }
 
-.syncButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+/* Delete button - red */
+.actionButton[data-action="delete"] {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
-.syncButton svg {
-  flex-shrink: 0;
-}
-
-.deleteButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.deleteButton:hover {
+.actionButton[data-action="delete"]:hover:not(:disabled) {
   border-color: #ef4444;
   color: #ef4444;
-  background: rgba(239, 68, 68, 0.05);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .confirmInline {
@@ -553,91 +468,102 @@
   gap: 0.35rem;
 }
 
-.confirmDeleteDialog {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  min-width: 200px;
-}
-
-.confirmDeleteTitle {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 0.25rem;
-}
-
-.confirmDeleteOptions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.checkboxLabel {
+/* Delete button - expands on click */
+.deleteButton {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  background: transparent;
   cursor: pointer;
+  transition: all 0.2s ease-out;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.checkboxLabel input[type="checkbox"] {
-  cursor: pointer;
+.deleteButton:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.05);
 }
 
-.checkboxLabel input[type="checkbox"]:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+.deleteButtonExpanded {
+  width: auto;
+  padding: 0 0.75rem;
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
-.confirmDeleteButtons {
+.deleteIcon {
   display: flex;
-  gap: 0.35rem;
-  margin-top: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
 }
 
-.confirmDeleteButton {
-  padding: 0.35rem 0.6rem;
+.deleteIcon svg {
+  flex-shrink: 0;
+}
+
+.deleteConfirmText {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef4444;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.deleteConfirmIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border: none;
   border-radius: var(--radius-sm);
-  background: #ef4444;
-  color: white;
-  font-size: var(--fs-xs);
-  font-weight: 500;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
   cursor: pointer;
-  transition: var(--transition);
-  min-height: 32px;
+  transition: all 0.15s;
+  flex-shrink: 0;
 }
 
-.confirmDeleteButton:hover:not(:disabled) {
-  background: #dc2626;
+.deleteConfirmIcon:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: scale(1.1);
 }
 
-.confirmDeleteButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.cancelDeleteButton {
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--border);
+.deleteCancelIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
-  font-size: var(--fs-xs);
-  font-weight: 500;
   cursor: pointer;
-  transition: var(--transition);
-  min-height: 32px;
+  transition: all 0.15s;
+  flex-shrink: 0;
 }
 
-.cancelDeleteButton:hover {
-  border-color: var(--text-secondary);
+.deleteCancelIcon:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  transform: scale(1.1);
 }
 
 .empty {
@@ -661,38 +587,8 @@
 }
 
 @media (max-width: 640px) {
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  .titleSection {
-    flex: none;
-  }
-
-  .headerActions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .sortSelect {
-    flex: 1;
-    min-width: 0;
-  }
-
   .jobActions {
     justify-content: flex-start;
-  }
-
-  .confirmBanner {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .confirmActions {
-    width: 100%;
-    justify-content: flex-end;
   }
 
   .searchRow {
@@ -712,32 +608,6 @@
   cursor: not-allowed;
 }
 
-.countdown {
-  margin-top: 0.5rem;
-  font-size: var(--fs-xs);
-  color: var(--orange-600);
-  font-weight: 500;
-}
-
-.countdownText {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.expired {
-  margin-top: 0.5rem;
-  font-size: var(--fs-xs);
-  color: var(--red-600);
-  font-weight: 600;
-}
-
-.expiredText {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
 .disabledButton {
   opacity: 0.5;
   cursor: not-allowed;
@@ -746,11 +616,68 @@
   color: var(--text-tertiary);
 }
 
+/* ===== TIME BADGES (Bottom-Right) ===== */
+
+.timebadges {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.retryTimeBadge {
+  padding: 0.25rem 0.5rem;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  color: #f59e0b;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.cacheTimeBadge {
+  padding: 0.25rem 0.5rem;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 4px;
+  color: #22c55e;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.expiredBadge {
+  padding: 0.25rem 0.5rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  color: #ef4444;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
 /* Loading spinner */
 .spinner {
   width: 40px;
   height: 40px;
   border: 4px solid var(--bg-secondary);
+  border-top-color: var(--text-main);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinnerSmall {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
   border-top-color: var(--text-main);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

@@ -37,7 +37,7 @@ import {
   clearPhaseCache,
   createPhaseCacheSettings,
 } from "@/lib/veo/phase-cache";
-import { VeoForm, VeoLoadingState, VeoSceneDisplay, VeoHistoryPanel, VeoLogPanel } from "@/components/veo";
+import { VeoForm, VeoSceneDisplay, VeoHistoryPanel, VeoLogPanel } from "@/components/veo";
 import { getCachedJobList } from "@/lib/veo";
 import styles from "./page.module.css";
 
@@ -103,8 +103,6 @@ export default function VeoPage() {
 
   // Logging state
   const [logEntries, setLogEntries] = useState<GeminiLogEntry[]>([]);
-  const [showLogs, setShowLogs] = useState(false);
-  const logAutoShownRef = useRef(false);
 
   // Current form data (for retry/resume)
   const [currentFormData, setCurrentFormData] = useState<{
@@ -191,13 +189,6 @@ export default function VeoPage() {
     }
   }, []);
 
-  // Auto-show log panel when first log entry arrives
-  useEffect(() => {
-    if (logEntries.length > 0 && !logAutoShownRef.current && state === "loading") {
-      setShowLogs(true);
-      logAutoShownRef.current = true;
-    }
-  }, [logEntries.length, state]);
 
   // Auto dismiss error after 5 seconds (only for toast notifications, not error state)
   useEffect(() => {
@@ -324,15 +315,17 @@ export default function VeoPage() {
       useVideoCaptions: boolean;
         negativePrompt?: string;
       extractColorProfile: boolean;
+      existingColorProfile?: any; // CinematicProfile for resume
       mediaType: "image" | "video";
       selfieMode: boolean;
       // Resume parameters
       resumeFromBatch?: number;
       existingScenes?: Scene[];
       existingCharacters?: CharacterRegistry;
+      retryJobId?: string; // Reuse existing job ID when retrying
     }) => {
-      // Generate a job ID upfront so we can save failed jobs to history
-      const newJobId = `veo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      // Use existing job ID if retrying, otherwise generate new one
+      const newJobId = options.retryJobId || `veo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       jobIdRef.current = newJobId; // Update ref immediately for callbacks
       setJobId(newJobId);
 
@@ -351,10 +344,15 @@ export default function VeoPage() {
       setGeneratedScript(null);
       setScenes(options.existingScenes || []);
       setCharacterRegistry(options.existingCharacters || {});
-      setColorProfile(null);
-      setColorProfileConfidence(0);
+      // Set or reset color profile based on existingColorProfile
+      if (options.existingColorProfile) {
+        setColorProfile(options.existingColorProfile);
+        setColorProfileConfidence(0.8); // Default for cached profiles
+      } else {
+        setColorProfile(null);
+        setColorProfileConfidence(0);
+      }
       setLogEntries([]);
-      logAutoShownRef.current = false;
 
       // Save current form data for retry/error handling
       const formData = {
@@ -752,6 +750,11 @@ export default function VeoPage() {
     if (cached.script) {
       setGeneratedScript(cached.script);
     }
+    // Restore color profile if it exists
+    if (cached.colorProfile) {
+      setColorProfile(cached.colorProfile);
+      setColorProfileConfidence(0.8); // Default confidence for cached profiles
+    }
 
     // Retry from the failed batch — restore all original settings
     // Convert legacy voice to AudioSettings for backward compat
@@ -776,7 +779,8 @@ export default function VeoPage() {
       useVideoChapters: rd.useVideoChapters ?? true,
       useVideoCaptions: rd.useVideoCaptions ?? true,
       negativePrompt: rd.negativePrompt,
-      extractColorProfile: rd.extractColorProfile ?? !!cached.colorProfile,
+      extractColorProfile: cached.colorProfile ? false : true, // Explicitly skip Phase 0 if we have it
+      existingColorProfile: cached.colorProfile ?? undefined, // Pass existing color profile
       mediaType: rd.mediaType ?? "video",
       startTime: rd.startTime,
       endTime: rd.endTime,
@@ -785,6 +789,7 @@ export default function VeoPage() {
       resumeFromBatch: rd.completedBatches,
       existingScenes: rd.existingScenes,
       existingCharacters: rd.existingCharacters,
+      retryJobId: retryJobId, // Reuse the same job ID
     });
   }, [handleSubmit]);
 
@@ -801,7 +806,6 @@ export default function VeoPage() {
     setColorProfile(null);
     setColorProfileConfidence(0);
     setLogEntries([]);
-    setShowLogs(false);
   }, []);
 
   const handleDownloadScript = useCallback(() => {
@@ -913,7 +917,7 @@ export default function VeoPage() {
           {state === "loading" && (
             <motion.div
               key="loading"
-              className={logEntries.length > 0 ? styles.containerWide : styles.container}
+              className={styles.containerWide}
               aria-live="polite"
               aria-busy="true"
               initial={{ opacity: 0 }}
@@ -921,26 +925,15 @@ export default function VeoPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <VeoLoadingState
+              <VeoLogPanel
+                entries={logEntries}
                 batch={batch}
                 totalBatches={totalBatches}
                 scenesGenerated={scenesGenerated}
                 message={loadingMessage}
                 characters={characters}
-                generatedScript={generatedScript}
                 onCancel={handleCancel}
               />
-              {logEntries.length > 0 && (
-                <div className={styles.logToggleWrapper}>
-                  <button
-                    className={styles.logToggleButton}
-                    onClick={() => setShowLogs(!showLogs)}
-                  >
-                    {showLogs ? "Hide Logs" : `Show Logs (${logEntries.length})`}
-                  </button>
-                  {showLogs && <VeoLogPanel entries={logEntries} />}
-                </div>
-              )}
             </motion.div>
           )}
 

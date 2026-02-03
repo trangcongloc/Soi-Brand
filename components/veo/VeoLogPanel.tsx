@@ -9,6 +9,13 @@ type LogMode = "compact" | "verbose";
 
 interface VeoLogPanelProps {
   entries: GeminiLogEntry[];
+  // Progress props
+  batch?: number;
+  totalBatches?: number;
+  scenesGenerated?: number;
+  message?: string;
+  characters?: string[];
+  onCancel?: () => void;
 }
 
 /**
@@ -396,9 +403,27 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
   );
 }
 
-export default function VeoLogPanel({ entries }: VeoLogPanelProps) {
+export default function VeoLogPanel({
+  entries,
+  batch,
+  totalBatches,
+  scenesGenerated,
+  message,
+  characters,
+  onCancel,
+}: VeoLogPanelProps) {
   const [mode, setMode] = useState<LogMode>("compact");
   const terminalRef = useRef<HTMLDivElement>(null);
+  const [spinnerIndex, setSpinnerIndex] = useState(0);
+
+  // Spinner animation
+  const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSpinnerIndex((prev) => (prev + 1) % spinnerFrames.length);
+    }, 80);
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
@@ -418,18 +443,54 @@ export default function VeoLogPanel({ entries }: VeoLogPanelProps) {
     return { totalTokens, totalDuration, count: entries.length };
   }, [entries]);
 
-  if (entries.length === 0) {
-    return (
-      <div className={styles.panel}>
-        <div className={styles.terminal}>
-          <div className={styles.empty}>No log entries yet</div>
-        </div>
-      </div>
-    );
-  }
+  // Compute progress percentage
+  const progressPercent = totalBatches && totalBatches > 0 ? (batch ?? 0) / totalBatches * 100 : 0;
 
   return (
     <div className={styles.panel}>
+      {/* Progress Header */}
+      {(batch !== undefined || message) && (
+        <div className={styles.progressHeader}>
+          {/* Status line with spinner and message */}
+          <div className={styles.statusLine}>
+            <span className={styles.spinner}>{spinnerFrames[spinnerIndex]}</span>
+            <span className={styles.statusMessage}>{message || "Processing..."}</span>
+          </div>
+
+          {/* Progress bar */}
+          {totalBatches && totalBatches > 0 && (
+            <div className={styles.progressBar}>
+              <div
+                className={styles.progressFill}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          )}
+
+          {/* Meta info row */}
+          <div className={styles.metaInfo}>
+            {batch !== undefined && totalBatches && (
+              <span>Batch {batch}/{totalBatches}</span>
+            )}
+            {scenesGenerated !== undefined && (
+              <span>{scenesGenerated} scenes</span>
+            )}
+            {characters && characters.length > 0 && (
+              <span>Characters: {characters.join(", ")}</span>
+            )}
+            {onCancel && (
+              <button
+                className={styles.cancelButton}
+                onClick={onCancel}
+                title="Cancel generation"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={styles.modeTabs}>
         <button
           className={`${styles.modeTab} ${mode === "compact" ? styles.modeTabActive : ""}`}
@@ -446,7 +507,9 @@ export default function VeoLogPanel({ entries }: VeoLogPanelProps) {
       </div>
 
       <div className={styles.terminal} ref={terminalRef}>
-        {mode === "compact" ? (
+        {entries.length === 0 ? (
+          <div className={styles.empty}>{message || "Initializing..."}</div>
+        ) : mode === "compact" ? (
           <>
             {entries.map((entry) => (
               <CompactEntry key={entry.id} entry={entry} />

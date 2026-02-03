@@ -8,6 +8,78 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* ===== PROGRESS HEADER ===== */
+
+.progressHeader {
+  background: #1a1a1a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 1rem 1.25rem;
+}
+
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.spinner {
+  font-size: 14px;
+  animation: spinnerRotate 0.8s linear infinite;
+}
+
+@keyframes spinnerRotate {
+  0% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.statusMessage {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.progressBar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressFill {
+  height: 100%;
+  background: #4fc3f7;
+  transition: width 0.3s ease;
+}
+
+.metaInfo {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cancelButton {
+  margin-left: auto;
+  padding: 0.25rem 0.75rem;
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  border-radius: 4px;
+  color: #ef5350;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cancelButton:hover {
+  background: rgba(239, 83, 80, 0.25);
+  border-color: rgba(239, 83, 80, 0.5);
+}
+
 /* Mode toggle tabs */
 .modeTabs {
   display: flex;
@@ -45,7 +117,7 @@
 .terminal {
   background: #1e1e1e;
   padding: 1rem;
-  max-height: 500px;
+  max-height: 600px;
   overflow-y: auto;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   font-size: 12px;

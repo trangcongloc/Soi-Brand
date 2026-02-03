@@ -474,9 +474,10 @@ export async function extractCharactersFromVideo(
     endTime?: string;
     onProgress?: (message: string) => void;
     onLog?: (entry: GeminiLogEntry) => void;
+    onLogUpdate?: (entry: GeminiLogEntry) => void;
   }
 ): Promise<CharacterExtractionResult> {
-  const { apiKey, model, startTime, endTime, onProgress, onLog } = options;
+  const { apiKey, model, startTime, endTime, onProgress, onLog, onLogUpdate } = options;
 
   onProgress?.("Phase 1: Extracting characters from video...");
 
@@ -485,6 +486,33 @@ export async function extractCharactersFromVideo(
     startTime,
     endTime,
   });
+
+  // Create log ID for tracking
+  const logId = `log_phase1_${Date.now()}`;
+
+  // Emit pending log entry BEFORE API call
+  if (onLog) {
+    const pendingEntry: GeminiLogEntry = {
+      id: logId,
+      timestamp: new Date().toISOString(),
+      phase: "phase-1",
+      status: "pending",
+      request: {
+        model: model || "gemini-2.0-flash-exp",
+        body: JSON.stringify(requestBody),
+        promptLength: JSON.stringify(requestBody).length,
+        videoUrl,
+      },
+      response: {
+        success: false,
+        body: "",
+        responseLength: 0,
+        parsedSummary: "Sending request...",
+      },
+      timing: { durationMs: 0, retries: 0 },
+    };
+    onLog(pendingEntry);
+  }
 
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
@@ -498,12 +526,13 @@ export async function extractCharactersFromVideo(
 
   const result = parseCharacterExtractionResponse(response);
 
-  // Emit log entry
-  if (onLog) {
-    const logEntry: GeminiLogEntry = {
-      id: `log_phase1_${Date.now()}`,
+  // Emit completed log entry AFTER API call
+  if (onLogUpdate) {
+    const completedEntry: GeminiLogEntry = {
+      id: logId,
       timestamp: new Date().toISOString(),
       phase: "phase-1",
+      status: "completed",
       request: {
         model: meta.model,
         body: JSON.stringify(requestBody),
@@ -521,7 +550,7 @@ export async function extractCharactersFromVideo(
       timing: { durationMs: meta.durationMs, retries: meta.retries },
       tokens: meta.tokens,
     };
-    onLog(logEntry);
+    onLogUpdate(completedEntry);
   }
 
   onProgress?.(
@@ -569,9 +598,10 @@ export async function extractColorProfileFromVideo(
     endTime?: string;
     onProgress?: (message: string) => void;
     onLog?: (entry: GeminiLogEntry) => void;
+    onLogUpdate?: (entry: GeminiLogEntry) => void;
   }
 ): Promise<ColorProfileExtractionResult> {
-  const { apiKey, model, startTime, endTime, onProgress, onLog } = options;
+  const { apiKey, model, startTime, endTime, onProgress, onLog, onLogUpdate } = options;
 
   onProgress?.("Phase 0: Extracting cinematic color profile from video...");
 
@@ -580,6 +610,33 @@ export async function extractColorProfileFromVideo(
     startTime,
     endTime,
   });
+
+  // Create log ID for tracking
+  const logId = `log_phase0_${Date.now()}`;
+
+  // Emit pending log entry BEFORE API call
+  if (onLog) {
+    const pendingEntry: GeminiLogEntry = {
+      id: logId,
+      timestamp: new Date().toISOString(),
+      phase: "phase-0",
+      status: "pending",
+      request: {
+        model: model || "gemini-2.0-flash-exp",
+        body: JSON.stringify(requestBody),
+        promptLength: JSON.stringify(requestBody).length,
+        videoUrl,
+      },
+      response: {
+        success: false,
+        body: "",
+        responseLength: 0,
+        parsedSummary: "Sending request...",
+      },
+      timing: { durationMs: 0, retries: 0 },
+    };
+    onLog(pendingEntry);
+  }
 
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
     apiKey,
@@ -593,12 +650,13 @@ export async function extractColorProfileFromVideo(
 
   const result = parseColorProfileResponse(response);
 
-  // Emit log entry
-  if (onLog) {
-    const logEntry: GeminiLogEntry = {
-      id: `log_phase0_${Date.now()}`,
+  // Emit completed log entry AFTER API call
+  if (onLogUpdate) {
+    const completedEntry: GeminiLogEntry = {
+      id: logId,
       timestamp: new Date().toISOString(),
       phase: "phase-0",
+      status: "completed",
       request: {
         model: meta.model,
         body: JSON.stringify(requestBody),
@@ -616,7 +674,7 @@ export async function extractColorProfileFromVideo(
       timing: { durationMs: meta.durationMs, retries: meta.retries },
       tokens: meta.tokens,
     };
-    onLog(logEntry);
+    onLogUpdate(completedEntry);
   }
 
   onProgress?.(

@@ -3,7 +3,7 @@
 import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo, isUsingCloudStorage, syncJobToCloud, deleteJobFromLocal, deleteJobFromCloud } from "@/lib/veo";
+import { getCachedJobList, deleteCachedJob, CachedVeoJobInfo, isUsingCloudStorage, syncJobToCloud } from "@/lib/veo";
 import { listenToJobUpdates } from "@/lib/veo/storage-utils";
 import styles from "./VeoHistoryPanel.module.css";
 
@@ -14,8 +14,6 @@ interface VeoHistoryPanelProps {
   currentJobId?: string;
   onJobsChange?: () => void;
 }
-
-type SortOption = "date-desc" | "date-asc" | "status" | "scenes-desc" | "scenes-asc";
 
 const VISIBLE_COUNT = 5;
 
@@ -46,14 +44,11 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const [jobs, setJobs] = useState<CachedVeoJobInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [deleteFromLocalChecked, setDeleteFromLocalChecked] = useState(true);
-  const [deleteFromCloudChecked, setDeleteFromCloudChecked] = useState(true);
-  const [confirmClearAll, setConfirmClearAll] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [storageType, setStorageType] = useState<'cloud' | 'local'>('local');
   const [syncingJobs, setSyncingJobs] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const refreshJobs = useCallback(async () => {
     setLoading(true);
@@ -117,37 +112,15 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const handleDelete = useCallback(async (jobId: string) => {
     setLoading(true);
     try {
-      // Delete based on user's selection
-      if (deleteFromLocalChecked && deleteFromCloudChecked) {
-        // Delete from both
-        await deleteCachedJob(jobId);
-      } else if (deleteFromLocalChecked) {
-        // Delete from local only
-        await deleteJobFromLocal(jobId);
-      } else if (deleteFromCloudChecked) {
-        // Delete from cloud only
-        await deleteJobFromCloud(jobId);
-      }
-
+      // Delete from both local and cloud
+      await deleteCachedJob(jobId);
       setConfirmDeleteId(null);
-      setDeleteFromLocalChecked(true); // Reset to defaults
-      setDeleteFromCloudChecked(true);
-      await refreshJobs();
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshJobs, deleteFromLocalChecked, deleteFromCloudChecked]);
-
-  const handleClearAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      await clearAllJobs();
-      setConfirmClearAll(false);
       await refreshJobs();
     } finally {
       setLoading(false);
     }
   }, [refreshJobs]);
+
 
   const handleSyncJob = useCallback(async (jobId: string) => {
     setSyncingJobs(prev => new Set(prev).add(jobId));
@@ -258,52 +231,33 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     return { completed, partial, failed, total: jobs.length };
   }, [jobs]);
 
-  // Filter jobs by search query (videoId or jobId)
+  // Filter jobs by search query and status
   const filteredJobs = useMemo(() => {
-    if (!searchQuery.trim()) return jobs;
-    const query = searchQuery.toLowerCase().trim();
-    return jobs.filter((job) => {
-      const videoIdMatch = job.videoId?.toLowerCase().includes(query);
-      const jobIdMatch = job.jobId.toLowerCase().includes(query);
-      const videoUrlMatch = job.videoUrl?.toLowerCase().includes(query);
-      return videoIdMatch || jobIdMatch || videoUrlMatch;
-    });
-  }, [jobs, searchQuery]);
+    let filtered = jobs;
+
+    // Filter by status if selected
+    if (statusFilter) {
+      filtered = filtered.filter(job => job.status === statusFilter);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((job) => {
+        const videoIdMatch = job.videoId?.toLowerCase().includes(query);
+        const jobIdMatch = job.jobId.toLowerCase().includes(query);
+        const videoUrlMatch = job.videoUrl?.toLowerCase().includes(query);
+        return videoIdMatch || jobIdMatch || videoUrlMatch;
+      });
+    }
+
+    return filtered;
+  }, [jobs, searchQuery, statusFilter]);
 
   const sortedJobs = useMemo(() => {
-    const jobsCopy = [...filteredJobs];
-
-    switch (sortBy) {
-      case "date-desc":
-        return jobsCopy.sort((a, b) => b.timestamp - a.timestamp);
-      case "date-asc":
-        return jobsCopy.sort((a, b) => a.timestamp - b.timestamp);
-      case "status":
-        // Sort by: completed > partial > failed
-        const statusOrder = { completed: 0, partial: 1, failed: 2 };
-        return jobsCopy.sort((a, b) => {
-          const orderA = statusOrder[a.status] ?? 3;
-          const orderB = statusOrder[b.status] ?? 3;
-          if (orderA !== orderB) return orderA - orderB;
-          // Secondary sort by date (newest first)
-          return b.timestamp - a.timestamp;
-        });
-      case "scenes-desc":
-        return jobsCopy.sort((a, b) => {
-          if (b.sceneCount !== a.sceneCount) return b.sceneCount - a.sceneCount;
-          // Secondary sort by date
-          return b.timestamp - a.timestamp;
-        });
-      case "scenes-asc":
-        return jobsCopy.sort((a, b) => {
-          if (a.sceneCount !== b.sceneCount) return a.sceneCount - b.sceneCount;
-          // Secondary sort by date
-          return b.timestamp - a.timestamp;
-        });
-      default:
-        return jobsCopy.sort((a, b) => b.timestamp - a.timestamp);
-    }
-  }, [filteredJobs, sortBy]);
+    // Always sort by date (newest first)
+    return [...filteredJobs].sort((a, b) => b.timestamp - a.timestamp);
+  }, [filteredJobs]);
 
   // Filter jobs for display
   const visibleJobs = showAll ? sortedJobs : sortedJobs.slice(0, VISIBLE_COUNT);
@@ -348,50 +302,35 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
               {storageType === 'cloud' ? lang.veo.history.cloudStorage : lang.veo.history.localStorage}
             </span>
           </h3>
-          {jobs.length > 0 && (
-            <div className={styles.jobStats}>
-              {jobStats.completed > 0 && (
-                <span className={styles.statCompleted} title={lang.veo.history.statusCompleted}>
-                  ✓ {jobStats.completed}
-                </span>
-              )}
-              {jobStats.partial > 0 && (
-                <span className={styles.statPartial} title={lang.veo.history.statusPartial}>
-                  ⚠ {jobStats.partial}
-                </span>
-              )}
-              {jobStats.failed > 0 && (
-                <span className={styles.statFailed} title={lang.veo.history.statusFailed}>
-                  ✗ {jobStats.failed}
-                </span>
-              )}
-            </div>
-          )}
         </div>
-        <div className={styles.headerActions}>
-          {jobs.length > 0 && (
-            <>
-              <select
-                className={styles.sortSelect}
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                aria-label={lang.veo.history.sortJobs}
-              >
-                <option value="date-desc">{lang.veo.history.sortNewest}</option>
-                <option value="date-asc">{lang.veo.history.sortOldest}</option>
-                <option value="status">{lang.veo.history.sortStatus}</option>
-                <option value="scenes-desc">{lang.veo.history.sortMostScenes}</option>
-                <option value="scenes-asc">{lang.veo.history.sortLeastScenes}</option>
-              </select>
-              <button
-                className={styles.clearAllButton}
-                onClick={() => setConfirmClearAll(true)}
-              >
-                {lang.veo.history.clearAll}
-              </button>
-            </>
-          )}
-        </div>
+        {jobs.length > 0 && (
+          <div className={styles.jobStats}>
+            <button
+              className={`${styles.statCompleted} ${statusFilter === 'completed' ? styles.statActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')}
+              title={lang.veo.history.statusCompleted}
+              disabled={jobStats.completed === 0}
+            >
+              ✓ {jobStats.completed}
+            </button>
+            <button
+              className={`${styles.statPartial} ${statusFilter === 'partial' ? styles.statActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'partial' ? null : 'partial')}
+              title={lang.veo.history.statusPartial}
+              disabled={jobStats.partial === 0}
+            >
+              ⚠ {jobStats.partial}
+            </button>
+            <button
+              className={`${styles.statFailed} ${statusFilter === 'failed' ? styles.statActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'failed' ? null : 'failed')}
+              title={lang.veo.history.statusFailed}
+              disabled={jobStats.failed === 0}
+            >
+              ✗ {jobStats.failed}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -438,39 +377,14 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
         </div>
       )}
 
-      {/* Clear All Confirmation */}
-      <AnimatePresence>
-        {confirmClearAll && (
-          <motion.div
-            className={styles.confirmBanner}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-          >
-            <span>{lang.veo.history.confirmDelete}?</span>
-            <div className={styles.confirmActions}>
-              <button
-                className={styles.confirmButton}
-                onClick={handleClearAll}
-              >
-                {lang.veo.history.clearAll}
-              </button>
-              <button
-                className={styles.cancelButton}
-                onClick={() => setConfirmClearAll(false)}
-              >
-                {lang.veo.history.cancelAction}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className={styles.list}>
+<div className={styles.list}>
         <AnimatePresence>
           {visibleJobs.map((job, index) => {
             const isExpired = job.expiresAt ? Date.now() > job.expiresAt : false;
-            const showCountdown = job.expiresAt && (job.status === 'failed' || job.status === 'partial');
+            const showRetryCountdown = job.expiresAt && (job.status === 'failed' || job.status === 'partial');
+            // Cache deletion time: 7 days from timestamp
+            const cacheExpiresAt = job.timestamp + (7 * 24 * 60 * 60 * 1000);
+            const showCacheCountdown = job.status === 'completed' && cacheExpiresAt > Date.now();
 
             return (
             <motion.div
@@ -480,6 +394,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.2, delay: index * 0.05 }}
+              onClick={() => job.sceneCount > 0 && currentJobId !== job.jobId && onViewJob(job.jobId)}
+              style={{ cursor: job.sceneCount > 0 && currentJobId !== job.jobId ? 'pointer' : 'default' }}
             >
               <div className={styles.jobInfo}>
                 <div className={styles.jobHeader}>
@@ -529,85 +445,41 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                     )}
                   </div>
                 )}
+              </div>
 
-                {/* Countdown timer for failed/partial jobs */}
-                {showCountdown && !isExpired && (
-                  <div className={styles.countdown}>
-                    <span className={styles.countdownText}>
-                      {formatTimeRemaining(job.expiresAt!)} {lang.veo.leftToRetry}
-                    </span>
+              {/* Bottom-right time badges */}
+              <div className={styles.timebadges}>
+                {/* Retry countdown for failed/partial jobs (red/orange) */}
+                {showRetryCountdown && !isExpired && (
+                  <div className={styles.retryTimeBadge}>
+                    {formatTimeRemaining(job.expiresAt!)}
                   </div>
                 )}
 
+                {/* Cache expiration for completed jobs (green) */}
+                {showCacheCountdown && (
+                  <div className={styles.cacheTimeBadge}>
+                    {formatTimeRemaining(cacheExpiresAt)}
+                  </div>
+                )}
+
+                {/* Expired indicator */}
                 {isExpired && (
-                  <div className={styles.expired}>
-                    <span className={styles.expiredText}>{lang.veo.expired}</span>
+                  <div className={styles.expiredBadge}>
+                    {lang.veo.expired}
                   </div>
                 )}
               </div>
 
               <div className={styles.jobActions}>
-                {confirmDeleteId === job.jobId ? (
-                  <div className={styles.confirmDeleteDialog}>
-                    <div className={styles.confirmDeleteTitle}>
-                      {lang.veo.history.deleteFrom}
-                    </div>
-                    <div className={styles.confirmDeleteOptions}>
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={deleteFromLocalChecked}
-                          onChange={(e) => setDeleteFromLocalChecked(e.target.checked)}
-                        />
-                        <span>{lang.veo.history.deleteFromLocal}</span>
-                      </label>
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={deleteFromCloudChecked}
-                          onChange={(e) => setDeleteFromCloudChecked(e.target.checked)}
-                          disabled={storageType === 'local'}
-                        />
-                        <span>{lang.veo.history.deleteFromCloud}</span>
-                      </label>
-                    </div>
-                    <div className={styles.confirmDeleteButtons}>
-                      <button
-                        className={styles.confirmDeleteButton}
-                        onClick={() => handleDelete(job.jobId)}
-                        disabled={!deleteFromLocalChecked && !deleteFromCloudChecked}
-                      >
-                        {lang.veo.history.deleteButton}
-                      </button>
-                      <button
-                        className={styles.cancelDeleteButton}
-                        onClick={() => {
-                          setConfirmDeleteId(null);
-                          setDeleteFromLocalChecked(true);
-                          setDeleteFromCloudChecked(true);
-                        }}
-                      >
-                        {lang.veo.history.cancelAction}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+                {confirmDeleteId !== job.jobId && (
                   <>
-                    {/* View button - show for completed or partial jobs */}
-                    {job.sceneCount > 0 && (
-                      <button
-                        className={styles.viewButton}
-                        onClick={() => onViewJob(job.jobId)}
-                        disabled={currentJobId === job.jobId}
-                      >
-                        {lang.veo.history.viewResult}
-                      </button>
-                    )}
                     {/* Retry button - show for failed jobs */}
                     {job.error && job.error.retryable && onRetryJob && (
                       <button
-                        className={isExpired ? styles.disabledButton : styles.retryButton}
-                        onClick={() => !isExpired && onRetryJob(job.jobId)}
+                        className={isExpired ? styles.disabledButton : styles.actionButton}
+                        data-action="retry"
+                        onClick={(e) => { e.stopPropagation(); !isExpired && onRetryJob(job.jobId); }}
                         disabled={isExpired}
                         title={isExpired ? lang.veo.jobExpiredCannotRetry : lang.veo.history.retryFromBatch}
                       >
@@ -622,14 +494,17 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                           <path d="M1 4v6h6M23 20v-6h-6"/>
                           <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 73.51 15"/>
                         </svg>
-                        <span>{lang.veo.history.retryable}</span>
+                        
                       </button>
                     )}
                     {/* Regenerate button - show for completed jobs with script */}
                     {job.hasScript && !job.error && onRegenerateJob && (
                       <button
-                        className={styles.regenerateButton}
-                        onClick={() => onRegenerateJob(job.jobId)}
+                        data-action="regenerate"
+                        className={styles.actionButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRegenerateJob(job.jobId); }}
                         title={lang.veo.history.regenerate}
                       >
                         <svg
@@ -645,17 +520,18 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                         </svg>
                       </button>
                     )}
-                    {job.storageSource === 'local' && storageType === 'cloud' && (
+                    {job.storageSource === 'local' && storageType === 'cloud' && job.status === 'completed' && (
                       <button
-                        className={styles.syncButton}
-                        onClick={() => handleSyncJob(job.jobId)}
+                        data-action="sync"
+                        className={styles.actionButton}
+                        onClick={(e) => { e.stopPropagation(); handleSyncJob(job.jobId); }}
                         disabled={syncingJobs.has(job.jobId)}
                         title={lang.veo.history.syncToCloud}
                       >
                         {syncingJobs.has(job.jobId) ? (
                           <>
                             <span className={styles.spinnerSmall} />
-                            {lang.veo.history.syncing}
+                            
                           </>
                         ) : (
                           <>
@@ -669,13 +545,46 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                             >
                               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                             </svg>
-                            {lang.veo.history.syncToCloud}
+                            
                           </>
                         )}
                       </button>
                     )}
+                  </>
+                )}
+
+                {/* Delete button - expands when clicked */}
+                <div
+                  className={`${styles.deleteButton} ${confirmDeleteId === job.jobId ? styles.deleteButtonExpanded : ''}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {confirmDeleteId === job.jobId ? (
+                    <>
+                      <span className={styles.deleteConfirmText}>Delete?</span>
+                      <button
+                        className={styles.deleteConfirmIcon}
+                        onClick={() => handleDelete(job.jobId)}
+                        title={lang.veo.history.deleteButton}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </button>
+                      <button
+                        className={styles.deleteCancelIcon}
+                        onClick={() => setConfirmDeleteId(null)}
+                        title={lang.veo.history.cancelAction}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      className={styles.deleteButton}
+                      data-action="delete"
+                      className={styles.deleteIcon}
                       onClick={() => setConfirmDeleteId(job.jobId)}
                       aria-label={lang.veo.history.deleteJob}
                     >
@@ -690,8 +599,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                         <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                       </svg>
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
             </motion.div>
             );

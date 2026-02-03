@@ -282,19 +282,20 @@
 
 .retryButton {
   padding: 0.5rem 1rem;
-  background: var(--accent-color, #3b82f6);
-  color: white;
-  border: none;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: var(--fs-sm);
   font-weight: 500;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .retryButton:hover {
-  opacity: 0.9;
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
   transform: translateY(-1px);
 }
 
