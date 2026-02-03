@@ -774,6 +774,11 @@ export const en = {
             // Storage indicator
             cloudStorage: "Cloud",
             localStorage: "Local",
+            both: "Both",
+            syncToCloud: "Sync",
+            syncing: "Syncing...",
+            syncSuccess: "Synced to cloud",
+            syncFailed: "Sync failed",
         },
 
         leftToRetry: "left to retry",

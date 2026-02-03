@@ -3,7 +3,7 @@
 import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo, isUsingCloudStorage } from "@/lib/veo";
+import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo, isUsingCloudStorage, syncJobToCloud } from "@/lib/veo";
 import { listenToJobUpdates } from "@/lib/veo/storage-utils";
 import styles from "./VeoHistoryPanel.module.css";
 
@@ -51,6 +51,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [storageType, setStorageType] = useState<'cloud' | 'local'>('local');
+  const [syncingJobs, setSyncingJobs] = useState<Set<string>>(new Set());
 
   const refreshJobs = useCallback(async () => {
     setLoading(true);
@@ -132,6 +133,28 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
       setLoading(false);
     }
   }, [refreshJobs]);
+
+  const handleSyncJob = useCallback(async (jobId: string) => {
+    setSyncingJobs(prev => new Set(prev).add(jobId));
+    try {
+      const success = await syncJobToCloud(jobId);
+      if (success) {
+        // Refresh to show updated storage source
+        await refreshJobs();
+      } else {
+        alert(lang.veo.history.syncFailed);
+      }
+    } catch (error) {
+      console.error("[VeoHistory] Failed to sync job:", error);
+      alert(lang.veo.history.syncFailed);
+    } finally {
+      setSyncingJobs(prev => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
+    }
+  }, [refreshJobs, lang]);
 
   const formatDate = useCallback((timestamp: number) => {
     const date = new Date(timestamp);
@@ -448,6 +471,17 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                   {getStatusIcon(job.status)}
                   <span className={styles.jobVideoId}>{truncateUrl(job.videoUrl)}</span>
                   <span className={styles.jobMode}>{job.mode}</span>
+                  {job.storageSource && (
+                    <span className={
+                      job.storageSource === 'cloud' ? styles.cloudBadgeSmall :
+                      job.storageSource === 'local' ? styles.localBadgeSmall :
+                      styles.bothBadgeSmall
+                    }>
+                      {job.storageSource === 'cloud' ? `☁️ ${lang.veo.history.cloudStorage}` :
+                       job.storageSource === 'local' ? `💾 ${lang.veo.history.localStorage}` :
+                       `☁️💾 ${lang.veo.history.both}`}
+                    </span>
+                  )}
                   {job.hasScript && !job.error && (
                     <span className={styles.scriptBadge} title={lang.veo.history.scriptCached}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -567,6 +601,35 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                           <path d="M1 4v6h6M23 20v-6h-6"/>
                           <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
                         </svg>
+                      </button>
+                    )}
+                    {job.storageSource === 'local' && storageType === 'cloud' && (
+                      <button
+                        className={styles.syncButton}
+                        onClick={() => handleSyncJob(job.jobId)}
+                        disabled={syncingJobs.has(job.jobId)}
+                        title={lang.veo.history.syncToCloud}
+                      >
+                        {syncingJobs.has(job.jobId) ? (
+                          <>
+                            <span className={styles.spinnerSmall} />
+                            {lang.veo.history.syncing}
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                            </svg>
+                            {lang.veo.history.syncToCloud}
+                          </>
+                        )}
                       </button>
                     )}
                     <button

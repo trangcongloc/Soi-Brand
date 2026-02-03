@@ -61,32 +61,61 @@ export async function isUsingCloudStorage(): Promise<boolean> {
 }
 
 /**
- * Get all cached jobs (D1 with localStorage fallback)
+ * Get all cached jobs (merged from D1 and localStorage)
  */
 export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
   const databaseKey = getDatabaseKey();
 
-  // If no key, use localStorage directly
+  // Always fetch from localStorage
+  const localJobs = localCache.getCachedJobListLocal();
+
+  // If no key, return only local jobs
   if (!databaseKey) {
-    return localCache.getCachedJobListLocal();
+    return localJobs.map(job => ({ ...job, storageSource: 'local' as const }));
   }
 
+  // Try to fetch from cloud
+  let cloudJobs: CachedVeoJobInfo[] = [];
   try {
     const response = await fetchWithTimeout("/api/veo/jobs");
 
-    // 401 = Invalid key, use localStorage
+    // 401 = Invalid key, use only localStorage
     if (response.status === 401) {
-      console.warn("[Cache] Invalid database key, using localStorage");
-      return localCache.getCachedJobListLocal();
+      console.warn("[Cache] Invalid database key, using localStorage only");
+      return localJobs.map(job => ({ ...job, storageSource: 'local' as const }));
     }
 
-    if (!response.ok) throw new Error("D1 request failed");
-    const data = await response.json();
-    return data.jobs || [];
+    if (response.ok) {
+      const data = await response.json();
+      cloudJobs = data.jobs || [];
+    }
   } catch (error) {
-    console.warn("[Cache] D1 failed, using localStorage fallback:", error);
-    return localCache.getCachedJobListLocal();
+    console.warn("[Cache] D1 failed, using localStorage only:", error);
+    return localJobs.map(job => ({ ...job, storageSource: 'local' as const }));
   }
+
+  // Merge cloud and local jobs
+  const jobMap = new Map<string, CachedVeoJobInfo>();
+
+  // Add cloud jobs first
+  for (const job of cloudJobs) {
+    jobMap.set(job.jobId, { ...job, storageSource: 'cloud' as const });
+  }
+
+  // Add or merge local jobs
+  for (const job of localJobs) {
+    const existing = jobMap.get(job.jobId);
+    if (existing) {
+      // Job exists in both cloud and local
+      jobMap.set(job.jobId, { ...existing, storageSource: 'both' as const });
+    } else {
+      // Job only in local
+      jobMap.set(job.jobId, { ...job, storageSource: 'local' as const });
+    }
+  }
+
+  // Convert to array and sort by timestamp (newest first)
+  return Array.from(jobMap.values()).sort((a, b) => b.timestamp - a.timestamp);
 }
 
 /**
@@ -187,6 +216,48 @@ export async function clearAllJobs(): Promise<void> {
     await fetchWithTimeout("/api/veo/jobs", { method: "DELETE" });
   } catch (error) {
     console.warn("[Cache] D1 clear failed, localStorage cleared:", error);
+  }
+}
+
+/**
+ * Sync a local job to cloud (upload to D1)
+ */
+export async function syncJobToCloud(jobId: string): Promise<boolean> {
+  const databaseKey = getDatabaseKey();
+  if (!databaseKey) {
+    console.warn("[Cache] No database key, cannot sync to cloud");
+    return false;
+  }
+
+  try {
+    // Get job from localStorage
+    const job = localCache.getCachedJobLocal(jobId);
+    if (!job) {
+      console.warn("[Cache] Job not found in localStorage:", jobId);
+      return false;
+    }
+
+    // Upload to D1
+    const response = await fetchWithTimeout(`/api/veo/jobs/${jobId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(job),
+    });
+
+    if (response.status === 401) {
+      console.warn("[Cache] Invalid database key, cannot sync");
+      return false;
+    }
+
+    if (!response.ok) {
+      throw new Error("Failed to sync job to cloud");
+    }
+
+    console.log("[Cache] Job synced to cloud:", jobId);
+    return true;
+  } catch (error) {
+    console.error("[Cache] Failed to sync job to cloud:", error);
+    return false;
   }
 }
 
