@@ -3,7 +3,7 @@
 import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo } from "@/lib/veo";
+import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo, isUsingCloudStorage } from "@/lib/veo";
 import { listenToJobUpdates } from "@/lib/veo/storage-utils";
 import styles from "./VeoHistoryPanel.module.css";
 
@@ -50,6 +50,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [storageType, setStorageType] = useState<'cloud' | 'local'>('local');
 
   const refreshJobs = useCallback(async () => {
     setLoading(true);
@@ -92,6 +93,13 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     }, 60000); // Update every 60 seconds
 
     return () => clearInterval(interval);
+  }, [jobs]);
+
+  // Check storage type on mount and when jobs change
+  useEffect(() => {
+    isUsingCloudStorage().then((isCloud: boolean) => {
+      setStorageType(isCloud ? 'cloud' : 'local');
+    });
   }, [jobs]);
 
   const handleDelete = useCallback(async (jobId: string) => {
@@ -287,7 +295,12 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <h3 className={styles.title}>{lang.veo.history.title}</h3>
+          <h3 className={styles.title}>
+            {lang.veo.history.title}
+            <span className={storageType === 'cloud' ? styles.cloudBadge : styles.localBadge}>
+              {storageType === 'cloud' ? `☁️ ${lang.veo.history.cloudStorage}` : `💾 ${lang.veo.history.localStorage}`}
+            </span>
+          </h3>
           {jobs.length > 0 && (
             <div className={styles.jobStats}>
               {jobStats.completed > 0 && (

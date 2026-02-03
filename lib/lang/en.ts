@@ -364,6 +364,12 @@ export const en = {
         configured: "configured",
         free: "free",
         paid: "paid",
+        // Database key
+        databaseKey: "Database Key",
+        databaseKeyPlaceholder: "Enter your database key...",
+        databaseKeyHint: "Enter key for cloud sync, or leave empty for local-only",
+        cloudStorage: "Cloud Storage",
+        localStorage: "Local Storage",
     },
 
     loadingState: {
@@ -765,6 +771,9 @@ export const en = {
             // Show more/less
             showMore: "Show more",
             showLess: "Show less",
+            // Storage indicator
+            cloudStorage: "Cloud",
+            localStorage: "Local",
         },
 
         leftToRetry: "left to retry",
