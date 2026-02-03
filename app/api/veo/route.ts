@@ -244,7 +244,7 @@ async function runUrlToScript(
     data: {
       id: scriptLogId,
       timestamp: new Date().toISOString(),
-      phase: "phase-0",
+      phase: "phase-script",
       status: "pending",
       request: {
         model: request.geminiModel || "default",
@@ -274,7 +274,7 @@ async function runUrlToScript(
     data: {
       id: scriptLogId,
       timestamp: new Date().toISOString(),
-      phase: "phase-0",
+      phase: "phase-script",
       status: "completed",
       request: {
         model: meta.model,
@@ -751,6 +751,9 @@ async function runUrlToScenesDirect(
 
   // Only run Phase 1 if not resuming (resuming already has characters)
   if (startBatch === 0 && Object.keys(characterRegistry).length === 0) {
+    // BUG-006 FIX: Track pending log ID to update on timeout
+    let pendingPhase1LogId: string | null = null;
+
     try {
       sendEvent({
         event: "progress",
@@ -772,7 +775,10 @@ async function runUrlToScenesDirect(
             data: { batch: 0, total: totalBatches, scenes: 0, message: msg },
           });
         },
-        onLog: (entry) => sendEvent({ event: "log", data: entry }),
+        onLog: (entry) => {
+          pendingPhase1LogId = entry.id; // Track log ID for timeout handling
+          sendEvent({ event: "log", data: entry });
+        },
         onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
       });
 
@@ -820,6 +826,33 @@ async function runUrlToScenesDirect(
         error: error.message,
         status: error.status,
       });
+
+      // BUG-006 FIX: Update pending log entry to show error status
+      if (pendingPhase1LogId) {
+        sendEvent({
+          event: "logUpdate",
+          data: {
+            id: pendingPhase1LogId,
+            timestamp: new Date().toISOString(),
+            phase: "phase-1",
+            status: "completed",
+            error: { type: "TIMEOUT", message: error.message },
+            request: {
+              model: request.geminiModel || "gemini-2.0-flash-exp",
+              body: "",
+              promptLength: 0,
+              videoUrl: request.videoUrl,
+            },
+            response: {
+              success: false,
+              body: "",
+              responseLength: 0,
+              parsedSummary: `Error: ${error.message}`,
+            },
+            timing: { durationMs: PHASE1_TIMEOUT_MS, retries: 0 },
+          },
+        });
+      }
 
       sendEvent({
         event: "progress",
@@ -883,6 +916,9 @@ async function runUrlToScenesDirect(
     const continuityContext =
       allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
 
+    // Define log ID outside try block so catch can access it
+    const directBatchLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
+
     try {
       // Build prompt for direct video analysis
       // Build prompt for Phase 2 scene generation with pre-extracted characters and color profile
@@ -904,9 +940,6 @@ async function runUrlToScenesDirect(
         preExtractedBackground: preExtractedBackground || undefined,
         selfieMode: request.selfieMode,
       });
-
-      // Send pending log before API call
-      const directBatchLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
       sendEvent({
         event: "log",
         data: {
@@ -1030,6 +1063,32 @@ async function runUrlToScenesDirect(
       // Update progress with error
       const failedProgress = markProgressFailed(serverProgress.get(jobId)!, errorMessage);
       serverProgress.set(jobId, failedProgress);
+
+      // Update the pending log to show error status (fixes "stuck at SENDING" bug)
+      sendEvent({
+        event: "logUpdate",
+        data: {
+          id: directBatchLogId,
+          timestamp: new Date().toISOString(),
+          phase: "phase-2",
+          batchNumber: batchNum,
+          status: "completed",
+          error: { type: errorResult.type, message: errorMessage },
+          request: {
+            model: request.geminiModel || "unknown",
+            body: "",
+            promptLength: 0,
+            videoUrl: request.videoUrl,
+          },
+          response: {
+            success: false,
+            body: "",
+            responseLength: 0,
+            parsedSummary: `Error: ${errorMessage}`,
+          },
+          timing: { durationMs: 0, retries: 0 },
+        },
+      });
 
       sendEvent({
         event: "error",
@@ -1273,11 +1332,16 @@ export async function POST(request: NextRequest) {
         try {
           controller.enqueue(sse.encode(event));
         } catch (err) {
-          logger.error("VEO sendEvent failed", {
-            event: event.event,
-            error: err instanceof Error ? err.message : String(err),
-            jobId,
-          });
+          // BUG FIX: Mark stream as closed when enqueue fails
+          // This prevents further processing and API quota waste
+          if (!streamClosed) {
+            streamClosed = true;
+            logger.error("VEO sendEvent failed - marking stream as closed", {
+              event: event.event,
+              error: err instanceof Error ? err.message : String(err),
+              jobId,
+            });
+          }
         }
       };
 
@@ -1660,6 +1724,9 @@ export async function POST(request: NextRequest) {
             let hybridPreExtractedCharacters: CharacterSkeleton[] = [];
             let hybridPreExtractedBackground = "";
 
+            // BUG-006 FIX: Track pending log ID to update on timeout
+            let pendingHybridPhase1LogId: string | null = null;
+
             try {
               sendEvent({
                 event: "progress",
@@ -1676,7 +1743,10 @@ export async function POST(request: NextRequest) {
                     data: { batch: 0, total: 0, scenes: 0, message: msg },
                   });
                 },
-                onLog: (entry) => sendEvent({ event: "log", data: entry }),
+                onLog: (entry) => {
+                  pendingHybridPhase1LogId = entry.id; // Track log ID for timeout handling
+                  sendEvent({ event: "log", data: entry });
+                },
                 onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
               });
 
@@ -1721,6 +1791,33 @@ export async function POST(request: NextRequest) {
                 error: error.message,
                 status: error.status,
               });
+
+              // BUG-006 FIX: Update pending log entry to show error status
+              if (pendingHybridPhase1LogId) {
+                sendEvent({
+                  event: "logUpdate",
+                  data: {
+                    id: pendingHybridPhase1LogId,
+                    timestamp: new Date().toISOString(),
+                    phase: "phase-1",
+                    status: "completed",
+                    error: { type: "TIMEOUT", message: error.message },
+                    request: {
+                      model: veoRequest.geminiModel || "gemini-2.0-flash-exp",
+                      body: "",
+                      promptLength: 0,
+                      videoUrl: veoRequest.videoUrl,
+                    },
+                    response: {
+                      success: false,
+                      body: "",
+                      responseLength: 0,
+                      parsedSummary: `Error: ${error.message}`,
+                    },
+                    timing: { durationMs: PHASE1_TIMEOUT_MS, retries: 0 },
+                  },
+                });
+              }
 
               sendEvent({
                 event: "progress",

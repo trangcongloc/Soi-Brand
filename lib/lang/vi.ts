@@ -784,6 +784,7 @@ export const vi = {
         leftToRetry: "còn lại để thử lại",
         expired: "Hết hạn",
         jobExpiredCannotRetry: "Công việc này đã hết hạn và không thể thử lại.",
+        cacheExpired: "Bộ nhớ cache của công việc đã hết hạn. Không thể tiếp tục.",
 
         resume: {
             title: "Có job chưa hoàn thành",

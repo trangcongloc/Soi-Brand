@@ -91,12 +91,16 @@ export function processSceneBatch(
     stringCharacters[n] = getCharacterDescription(c);
   }
 
-  const updatedProgress = updateProgressAfterBatch(
-    serverProgress.get(jobId)!,
-    batchScenes,
-    stringCharacters
-  );
-  serverProgress.set(jobId, updatedProgress);
+  // BUG-002 FIX: Add null check to prevent crash if progress was evicted
+  const currentProgress = serverProgress.get(jobId);
+  if (currentProgress) {
+    const updatedProgress = updateProgressAfterBatch(
+      currentProgress,
+      batchScenes,
+      stringCharacters
+    );
+    serverProgress.set(jobId, updatedProgress);
+  }
 
   // Build progress message
   let progressMessage = `Batch ${batchNum + 1} complete: ${batchScenes.length} scenes`;

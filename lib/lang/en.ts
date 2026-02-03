@@ -792,6 +792,7 @@ export const en = {
         leftToRetry: "left to retry",
         expired: "Expired",
         jobExpiredCannotRetry: "This job has expired and cannot be retried.",
+        cacheExpired: "Job cache has expired. Cannot resume.",
 
         resume: {
             title: "Incomplete Job Found",

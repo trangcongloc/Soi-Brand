@@ -55,28 +55,6 @@ export function removeStorageItem(key: string): void {
   }
 }
 
-/**
- * Gets all localStorage keys, optionally filtered by prefix
- * @param prefix Optional prefix to filter keys
- * @returns Array of matching keys
- */
-export function getAllStorageKeys(prefix?: string): string[] {
-  if (!isBrowser()) return [];
-
-  const keys: string[] = [];
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (!prefix || key.startsWith(prefix))) {
-        keys.push(key);
-      }
-    }
-  } catch (error) {
-    console.error("Failed to get storage keys:", error);
-  }
-  return keys;
-}
-
 // Create BroadcastChannel for cross-tab updates
 const jobUpdateChannel =
   typeof BroadcastChannel !== "undefined"

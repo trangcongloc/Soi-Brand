@@ -355,7 +355,7 @@ export interface VeoErrorEvent {
 export interface GeminiLogEntry {
   id: string;
   timestamp: string;
-  phase: "phase-0" | "phase-1" | "phase-2";
+  phase: "phase-script" | "phase-0" | "phase-1" | "phase-2";
   batchNumber?: number;
   status?: "pending" | "completed"; // "pending" = request sent, "completed" = response received
   request: {

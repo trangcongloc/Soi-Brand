@@ -99,6 +99,9 @@ export const SSE_KEEPALIVE_INTERVAL_MS = 15000; // 15 seconds
 export const BATCH_DELAY_MS = 2000; // 2 seconds between batches
 export const FALLBACK_VIDEO_DURATION_SECONDS = 300; // 5 minutes
 
+// Phase timeouts
+export const PHASE1_TIMEOUT_MS = 60000; // 60 seconds for Phase 1
+
 // ============================================================================
 // STRINGS & FORMATTING
 // ============================================================================

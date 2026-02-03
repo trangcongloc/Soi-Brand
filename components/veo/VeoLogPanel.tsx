@@ -23,6 +23,8 @@ interface VeoLogPanelProps {
  */
 function getPhaseLabel(entry: GeminiLogEntry): string {
   switch (entry.phase) {
+    case "phase-script":
+      return "Script Extraction";
     case "phase-0":
       return "Color Profile Extraction";
     case "phase-1":
@@ -39,6 +41,8 @@ function getPhaseLabel(entry: GeminiLogEntry): string {
  */
 function getPhaseLabelClass(phase: GeminiLogEntry["phase"]): string {
   switch (phase) {
+    case "phase-script":
+      return styles.phaseLabelScript;
     case "phase-0":
       return styles.phaseLabel0;
     case "phase-1":
@@ -227,6 +231,7 @@ function VerboseEntry({ entry }: { entry: GeminiLogEntry }) {
 }
 
 interface PhaseGroups {
+  phaseScript: GeminiLogEntry[];
   phase0: GeminiLogEntry[];
   phase1: GeminiLogEntry[];
   phase2Batches: Map<number, GeminiLogEntry[]>;
@@ -234,6 +239,7 @@ interface PhaseGroups {
 
 function groupByPhase(entries: GeminiLogEntry[]): PhaseGroups {
   const result: PhaseGroups = {
+    phaseScript: [],
     phase0: [],
     phase1: [],
     phase2Batches: new Map(),
@@ -241,6 +247,9 @@ function groupByPhase(entries: GeminiLogEntry[]): PhaseGroups {
 
   for (const entry of entries) {
     switch (entry.phase) {
+      case "phase-script":
+        result.phaseScript.push(entry);
+        break;
       case "phase-0":
         result.phase0.push(entry);
         break;
@@ -298,6 +307,7 @@ function PhaseGroupHeader({
 function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
   const groups = useMemo(() => groupByPhase(entries), [entries]);
   const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({
+    phaseScript: false,
     phase0: false,
     phase1: false,
     phase2: false,
@@ -324,6 +334,23 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
 
   return (
     <>
+      {/* Phase Script: Script Extraction */}
+      {groups.phaseScript.length > 0 && (
+        <div className={`${styles.phaseGroup} ${styles.phaseGroupScript}`}>
+          <PhaseGroupHeader
+            label="Script Extraction"
+            count={groups.phaseScript.length}
+            phaseClass={styles.phaseHeaderScript}
+            isOpen={openPhases.phaseScript ?? false}
+            onToggle={() => togglePhase("phaseScript")}
+          />
+          {(openPhases.phaseScript ?? false) &&
+            groups.phaseScript.map((entry) => (
+              <VerboseEntry key={entry.id} entry={entry} />
+            ))}
+        </div>
+      )}
+
       {/* Phase 0: Color Profile Extraction */}
       {groups.phase0.length > 0 && (
         <div className={`${styles.phaseGroup} ${styles.phaseGroup0}`}>

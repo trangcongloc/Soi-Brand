@@ -480,10 +480,11 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
               transition={{ duration: 0.2, delay: index * 0.05 }}
               onClick={() => {
                 if (currentJobId === job.jobId) return;
-                if (job.status === 'in_progress' && onRetryJob) {
-                  onRetryJob(job.jobId); // Resume in_progress job
-                } else if (job.sceneCount > 0) {
+                // If job has scenes, view it (even if marked as in_progress)
+                if (job.sceneCount > 0) {
                   onViewJob(job.jobId);
+                } else if (job.status === 'in_progress' && onRetryJob) {
+                  onRetryJob(job.jobId); // Resume in_progress job without scenes
                 }
               }}
               style={{ cursor: (job.status === 'in_progress' || job.sceneCount > 0) && currentJobId !== job.jobId ? 'pointer' : 'default' }}

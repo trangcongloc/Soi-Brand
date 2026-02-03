@@ -204,6 +204,14 @@ export async function deleteJobFromCloud(jobId: string): Promise<void> {
 }
 
 /**
+ * Fix orphaned jobs that are marked as "in_progress" but have scenes
+ * Returns the number of jobs fixed
+ */
+export function fixOrphanedJobs(): number {
+  return localCache.fixOrphanedJobsLocal();
+}
+
+/**
  * Delete job (D1 with localStorage fallback)
  */
 export async function deleteCachedJob(jobId: string): Promise<void> {

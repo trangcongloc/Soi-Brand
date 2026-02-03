@@ -190,6 +190,49 @@ export function deleteCachedJobLocal(jobId: string): void {
 }
 
 /**
+ * Fix orphaned jobs that are marked as "in_progress" but actually have scenes
+ * This can happen when SSE stream disconnects before final status update
+ */
+export function fixOrphanedJobsLocal(): number {
+  if (!isBrowser()) return 0;
+
+  const allItems = jobCache.getAll();
+  let fixedCount = 0;
+
+  for (const item of allItems) {
+    const job = item.data;
+
+    // Check if job is "in_progress" but has scenes (meaning it actually completed)
+    if (job.status === "in_progress" && job.scenes && job.scenes.length > 0) {
+      // Fix the status to "completed"
+      job.status = "completed";
+
+      // Also fix any "pending" log entries (displayed as "SENDING") that never got a response
+      if (job.logs) {
+        for (const log of job.logs) {
+          if (log.status === "pending") {
+            // If this is a phase-2 batch and the job has scenes, mark as complete
+            log.status = "completed";
+          }
+        }
+      }
+
+      // Update the cache
+      jobCache.set(job.jobId, job, item.timestamp);
+      fixedCount++;
+
+      console.log(`[Cache] Fixed orphaned job ${job.jobId}: ${job.scenes.length} scenes, status now "completed"`);
+    }
+  }
+
+  if (fixedCount > 0) {
+    dispatchJobUpdateEvent(null); // Notify all listeners
+  }
+
+  return fixedCount;
+}
+
+/**
  * Get list of all cached VEO jobs (for history feature)
  */
 export function getCachedJobListLocal(): CachedVeoJobInfo[] {

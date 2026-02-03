@@ -108,6 +108,7 @@ export {
   syncJobToCloud,
   deleteJobFromLocal,
   deleteJobFromCloud,
+  fixOrphanedJobs,
 } from "./cache";
 
 // Form settings persistence

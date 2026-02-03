@@ -29,6 +29,7 @@ import {
   canResumeProgress,
   VeoProgress,
   extractVideoId,
+  fixOrphanedJobs,
 } from "@/lib/veo";
 import {
   cachePhase0,
@@ -142,6 +143,12 @@ export default function VeoPage() {
   // BUG #8 FIX: Use mounted flag to prevent state updates after unmount
   useEffect(() => {
     let mounted = true;
+
+    // Fix any orphaned jobs (in_progress but have scenes) on mount
+    const fixedCount = fixOrphanedJobs();
+    if (fixedCount > 0) {
+      console.log(`[VEO] Fixed ${fixedCount} orphaned job(s) on mount`);
+    }
 
     getCachedJobList().then(jobs => {
       if (mounted) setHasHistory(jobs.length > 0);
@@ -523,6 +530,9 @@ export default function VeoPage() {
       });
       setHasHistory(true);
 
+      // BUG FIX: Declare stream timeout ID outside try block for catch block access
+      let streamTimeoutId: NodeJS.Timeout | null = null;
+
       try {
         // Include Gemini settings from Soi-brand settings
         // Also send `voice` for API backward compat (derived from audio.voiceLanguage)
@@ -561,6 +571,34 @@ export default function VeoPage() {
 
         const decoder = new TextDecoder();
         let buffer = "";
+
+        // BUG FIX: Add stream timeout detection (5 minutes for video analysis)
+        const STREAM_INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
+        let lastActivityTime = Date.now();
+
+        const resetStreamTimeout = () => {
+          lastActivityTime = Date.now();
+          if (streamTimeoutId) clearTimeout(streamTimeoutId);
+          streamTimeoutId = setTimeout(() => {
+            const inactiveMs = Date.now() - lastActivityTime;
+            if (inactiveMs >= STREAM_INACTIVITY_TIMEOUT_MS) {
+              console.error('[VEO] Stream timeout: No data received for 5 minutes');
+              reader.cancel();
+              handleError(
+                "TIMEOUT",
+                "Stream timed out after 5 minutes of inactivity. The server may still be processing - please check job history.",
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                true // retryable
+              );
+            }
+          }, STREAM_INACTIVITY_TIMEOUT_MS);
+        };
+
+        // Initialize timeout
+        resetStreamTimeout();
 
         // Helper to process SSE lines from buffer
         const processSSELines = (linesToProcess: string[]) => {
@@ -848,6 +886,10 @@ export default function VeoPage() {
           }
         };
 
+        // BUG-003 FIX: Track consecutive empty reads to prevent infinite loop
+        let consecutiveEmptyReads = 0;
+        const MAX_CONSECUTIVE_EMPTY_READS = 10;
+
         while (true) {
           // BUG #5 FIX: Check abort signal before reading to prevent cancelled jobs
           // from continuing to process events and causing state corruption
@@ -858,7 +900,24 @@ export default function VeoPage() {
 
           const { done, value } = await reader.read();
 
+          // BUG-003 FIX: Protect against infinite loop from empty reads
+          if (!done && (!value || value.length === 0)) {
+            consecutiveEmptyReads++;
+            if (consecutiveEmptyReads >= MAX_CONSECUTIVE_EMPTY_READS) {
+              console.error('[VEO] Too many consecutive empty reads, aborting stream');
+              if (streamTimeoutId) clearTimeout(streamTimeoutId);
+              reader.cancel();
+              handleError("NETWORK_ERROR", "Stream returned too many empty responses", undefined, undefined, undefined, undefined, true);
+              break;
+            }
+            continue;
+          }
+          consecutiveEmptyReads = 0; // Reset on successful read
+
           if (done) {
+            // Clean up timeout
+            if (streamTimeoutId) clearTimeout(streamTimeoutId);
+
             // BUG #9 FIX: Process any remaining data in buffer when stream ends
             // The complete event might be partially buffered and would be lost without this
             if (buffer.trim()) {
@@ -870,6 +929,9 @@ export default function VeoPage() {
             break;
           }
 
+          // Reset timeout on data received
+          resetStreamTimeout();
+
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n\n");
           buffer = lines.pop() || "";
@@ -877,6 +939,9 @@ export default function VeoPage() {
           processSSELines(lines);
         }
       } catch (err) {
+        // Clean up timeout
+        if (streamTimeoutId) clearTimeout(streamTimeoutId);
+
         if (err instanceof Error && err.name === "AbortError") {
           setState("idle");
           return;
@@ -938,7 +1003,7 @@ export default function VeoPage() {
           retryable: true,
         },
         resumeData: {
-          completedBatches: batch - 1,
+          completedBatches: Math.max(0, batch - 1), // BUG-001 FIX: Prevent negative value
           existingScenes: currentScenes,
           existingCharacters: currentCharacters,
           workflow: currentForm.workflow,
@@ -1058,6 +1123,16 @@ export default function VeoPage() {
     const cached = await getCachedJob(retryJobId);
     if (!cached || !cached.resumeData) {
       console.error("Cannot retry job: missing cache or resume data");
+
+      // If job has valid scenes, it's actually completed - just view it
+      if (cached && cached.scenes && cached.scenes.length > 0) {
+        console.log("Job has scenes but missing resume data - treating as completed");
+        handleViewJob(retryJobId);
+        return;
+      }
+
+      // Otherwise, show error to user
+      setError(lang.veo.cacheExpired || "Job cache expired. Cannot resume.");
       return;
     }
 
@@ -1154,7 +1229,10 @@ export default function VeoPage() {
   }, [generatedScript]);
 
   const handleJobsChange = useCallback(() => {
-    getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+    // BUG-007 FIX: Add catch handler for promise rejection
+    getCachedJobList()
+      .then(jobs => setHasHistory(jobs.length > 0))
+      .catch(err => console.warn('[VEO] Failed to refresh job list:', err));
   }, []);
 
   return (
