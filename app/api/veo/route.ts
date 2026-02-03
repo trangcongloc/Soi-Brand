@@ -66,7 +66,11 @@ import {
   FALLBACK_VIDEO_DURATION_SECONDS,
   DEFAULT_SECONDS_PER_SCENE,
   BATCH_OVERLAP_SECONDS,
+  PHASE1_TIMEOUT_MS,
 } from "@/lib/veo/constants";
+
+// Maximum SSE stream duration: 30 minutes to prevent connection exhaustion
+const MAX_STREAM_DURATION_MS = 30 * 60 * 1000;
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -172,7 +176,9 @@ const VeoRequestSchema = z.object({
   geminiApiKey: z.string().optional(),
   geminiModel: z.string().optional(),
   apiKeyTier: z.enum(["free", "paid"]).optional(),
-  // Resume parameters
+  // Resume parameters with validation (BUG FIX #7)
+  // Using z.any() with runtime type checking to avoid overly strict schema
+  // that would break backwards compatibility with existing cached data
   resumeFromBatch: z.number().int().min(0).optional(),
   existingScenes: z.array(z.any()).optional(),
   existingCharacters: z.record(z.string(), z.any()).optional(),
@@ -435,7 +441,7 @@ async function runScriptToScenesHybrid(
     jobId,
     mode: "hybrid",
     youtubeUrl: request.videoUrl ?? "",
-    videoId: request.videoUrl ? extractVideoId(request.videoUrl) : "",
+    videoId: request.videoUrl ? (extractVideoId(request.videoUrl) ?? "") : "",
     sceneCount: request.sceneCount,
     batchSize: request.batchSize,
     voiceLang: request.voice as VoiceLanguage,
@@ -701,7 +707,7 @@ async function runUrlToScenesDirect(
     jobId,
     mode: "direct",
     youtubeUrl: request.videoUrl ?? "",
-    videoId: request.videoUrl ? extractVideoId(request.videoUrl) : "",
+    videoId: request.videoUrl ? (extractVideoId(request.videoUrl) ?? "") : "",
     sceneCount: request.sceneCount,
     batchSize: request.batchSize,
     voiceLang: request.voice as VoiceLanguage,
@@ -756,7 +762,8 @@ async function runUrlToScenesDirect(
         },
       });
 
-      const characterData = await extractCharactersFromVideo(request.videoUrl!, {
+      // BUG FIX #9: Add timeout wrapper around Phase 1 to prevent indefinite hangs
+      const characterDataPromise = extractCharactersFromVideo(request.videoUrl!, {
         apiKey,
         model: request.geminiModel,
         onProgress: (msg) => {
@@ -768,6 +775,12 @@ async function runUrlToScenesDirect(
         onLog: (entry) => sendEvent({ event: "log", data: entry }),
         onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
       });
+
+      const phase1Timeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Phase 1 character extraction timed out")), PHASE1_TIMEOUT_MS);
+      });
+
+      const characterData = await Promise.race([characterDataPromise, phase1Timeout]);
 
       preExtractedCharacters = characterData.characters;
       preExtractedBackground = characterData.background;
@@ -1166,13 +1179,59 @@ export async function POST(request: NextRequest) {
 
   // Create SSE stream
   const sse = createSSEEncoder();
-  const jobId = veoRequest.resumeJobId || generateJobId();
-  const videoId = veoRequest.videoUrl ? extractVideoId(veoRequest.videoUrl) : "";
+
+  // BUG FIX #5 & #6: Validate resumeJobId if provided
+  let jobId: string;
+  if (veoRequest.resumeJobId) {
+    // Validate that the resume job ID is not currently in use
+    const existingProgress = serverProgress.get(veoRequest.resumeJobId);
+    if (existingProgress && existingProgress.status === "in_progress") {
+      return new Response(
+        JSON.stringify({
+          event: "error",
+          data: {
+            type: "UNKNOWN_ERROR",
+            message: "Cannot resume job - another request is already processing this job ID",
+            retryable: false,
+          },
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    jobId = veoRequest.resumeJobId;
+  } else {
+    jobId = generateJobId();
+  }
+
+  // BUG FIX #26: extractVideoId now returns null for invalid URLs
+  const videoId = veoRequest.videoUrl ? (extractVideoId(veoRequest.videoUrl) ?? "") : "";
 
   const stream = new ReadableStream({
     async start(controller) {
+      // BUG FIX #2: Use mutex flag to prevent concurrent close operations
+      // when timeout fires exactly as last batch completes
+      let streamTimedOut = false;
+      let streamClosed = false;
+
+      // Safe close helper - prevents double-close race condition
+      const safeCloseStream = () => {
+        if (streamClosed) return;
+        streamClosed = true;
+        clearInterval(keepAliveInterval);
+        clearTimeout(streamTimeout);
+        try {
+          controller.close();
+        } catch {
+          // Controller may already be closed
+        }
+      };
+
       // Keep-alive interval
       const keepAliveInterval = setInterval(() => {
+        if (streamClosed || streamTimedOut) {
+          clearInterval(keepAliveInterval);
+          return;
+        }
         try {
           controller.enqueue(sse.encodeKeepAlive());
         } catch {
@@ -1180,11 +1239,45 @@ export async function POST(request: NextRequest) {
         }
       }, SSE_KEEPALIVE_INTERVAL_MS);
 
+      // Maximum stream duration timeout to prevent connection exhaustion
+      const streamTimeout = setTimeout(() => {
+        if (streamClosed) return; // Already closed by normal completion
+        streamTimedOut = true;
+        logger.warn("VEO SSE stream timeout", { jobId, duration: MAX_STREAM_DURATION_MS / 1000 });
+        try {
+          controller.enqueue(sse.encode({
+            event: "error",
+            data: {
+              type: "TIMEOUT",
+              message: `Stream timed out after ${MAX_STREAM_DURATION_MS / 60000} minutes. Please resume the job to continue.`,
+              retryable: true,
+            },
+          }));
+        } catch {
+          // Stream may be closed
+        }
+        safeCloseStream();
+      }, MAX_STREAM_DURATION_MS);
+
       const sendEvent = (event: VeoSSEEvent) => {
+        // Don't send events if stream has timed out or closed
+        if (streamTimedOut || streamClosed) {
+          logger.warn("VEO sendEvent skipped - stream not available", {
+            event: event.event,
+            streamTimedOut,
+            streamClosed,
+            jobId,
+          });
+          return;
+        }
         try {
           controller.enqueue(sse.encode(event));
-        } catch {
-          // Stream closed
+        } catch (err) {
+          logger.error("VEO sendEvent failed", {
+            event: event.event,
+            error: err instanceof Error ? err.message : String(err),
+            jobId,
+          });
         }
       };
 
@@ -1573,7 +1666,8 @@ export async function POST(request: NextRequest) {
                 data: { batch: 0, total: 0, scenes: 0, message: "Phase 1: Identifying characters in video..." },
               });
 
-              const characterData = await extractCharactersFromVideo(veoRequest.videoUrl!, {
+              // BUG FIX #9: Add timeout wrapper around Phase 1 to prevent indefinite hangs
+              const characterDataPromise = extractCharactersFromVideo(veoRequest.videoUrl!, {
                 apiKey,
                 model: veoRequest.geminiModel,
                 onProgress: (msg) => {
@@ -1585,6 +1679,12 @@ export async function POST(request: NextRequest) {
                 onLog: (entry) => sendEvent({ event: "log", data: entry }),
                 onLogUpdate: (entry) => sendEvent({ event: "logUpdate", data: entry }),
               });
+
+              const phase1TimeoutHybrid = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error("Phase 1 character extraction timed out")), PHASE1_TIMEOUT_MS);
+              });
+
+              const characterData = await Promise.race([characterDataPromise, phase1TimeoutHybrid]);
 
               hybridPreExtractedCharacters = characterData.characters;
               hybridPreExtractedBackground = characterData.background;
@@ -1661,10 +1761,10 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // If there was a failure, don't send complete event
+          // BUG FIX #10: If there was a failure, ensure we still close properly
+          // The error event was already sent in the workflow function
+          // Just return - the finally block will handle cleanup via safeCloseStream
           if (result.failedBatch) {
-            clearInterval(keepAliveInterval);
-            controller.close();
             return;
           }
 
@@ -1692,6 +1792,14 @@ export async function POST(request: NextRequest) {
           };
 
           // Send complete event (include script only for hybrid mode)
+          logger.info("VEO Sending complete event", {
+            jobId,
+            scenesCount: result.scenes.length,
+            mode: veoRequest.mode,
+            workflow: veoRequest.workflow,
+            streamClosed: streamClosed,
+            streamTimedOut: streamTimedOut,
+          });
           sendEvent({
             event: "complete",
             data: {
@@ -1703,6 +1811,7 @@ export async function POST(request: NextRequest) {
               ...(result.colorProfile && { colorProfile: result.colorProfile }), // Include color profile (Phase 0)
             },
           });
+          logger.info("VEO Complete event sent", { jobId });
 
           // Clean up server progress
           serverProgress.delete(jobId);
@@ -1731,10 +1840,10 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          // If there was a failure, don't send complete event
+          // BUG FIX #10: If there was a failure, ensure we still close properly
+          // The error event was already sent in the workflow function
+          // Just return - the finally block will handle cleanup via safeCloseStream
           if (result.failedBatch) {
-            clearInterval(keepAliveInterval);
-            controller.close();
             return;
           }
 
@@ -1804,8 +1913,11 @@ export async function POST(request: NextRequest) {
           },
         });
       } finally {
-        clearInterval(keepAliveInterval);
-        controller.close();
+        // BUG FIX #2: Use safeCloseStream helper for consistent cleanup
+        // BUG FIX #27: Add small delay before closing stream to ensure complete event is flushed
+        // The complete event may be buffered and not yet sent to client when close() is called
+        await new Promise(resolve => setTimeout(resolve, 100));
+        safeCloseStream();
       }
     },
   });

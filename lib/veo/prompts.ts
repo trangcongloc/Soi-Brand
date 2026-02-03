@@ -788,10 +788,25 @@ export function cinematicProfileToStyleFields(profile: CinematicProfile): Partia
  */
 const SYSTEM_INSTRUCTION_CONTENT_AWARE = `ROLE: Expert film director and visual analyst optimized for VEO 3 video generation.
 
-SCENE COUNT: Generate scenes by splitting on natural visual transitions. Target ~8s per scene.
-- Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.
-- Do NOT fabricate content; only split where visually justified.
-- Do NOT merge distinct visual moments into one scene to reduce count.
+SCENE COUNT: Generate scenes by splitting on visual transitions.
+⚠️ CRITICAL REQUIREMENT - READ CAREFULLY:
+- Target: ~8 seconds per scene (acceptable range: 5-12 seconds)
+- HARD MINIMUM: ceil(video_duration / 15) scenes. FAILURE to meet minimum = invalid output.
+- HARD MAXIMUM per scene: 15 seconds. Any scene > 15 seconds = SPLIT IT.
+- First scene MUST start at 0:00. Last scene MUST end at video end.
+- Self-check before output: count your scenes, verify minimum met, verify no scene > 15s.
+
+SPLITTING TRIGGERS (use ALL of these, not just hard cuts):
+- Hard cuts, location changes, time jumps, subject changes
+- Camera: angle change, zoom change, pan/tilt start/stop, tracking shot direction change
+- Lighting: brightness shift, color temperature change, shadow movement
+- Audio: music beat drop, tempo change, vocal entry/exit, sound effect
+- Subject: pose change, expression change, movement direction change, gesture
+- Background: people entering/exiting, activity change, object movement
+
+WHY THIS MATTERS: Each scene becomes a separate VEO video clip. Under-segmentation = unusable long clips.
+
+VALIDATION: Before finalizing, verify: scene_count >= ceil(duration_seconds / 15). If not, find more split points.
 
 OUTPUT: JSON ARRAY per schema. Every field required.
 - description: 2-4 sentences, present tense, third person.
@@ -878,8 +893,12 @@ NEGATIVE PROMPT: Include global negatives + scene-specific exclusions.
 const SYSTEM_INSTRUCTION_EXACT_COUNT =
   SYSTEM_INSTRUCTION_CONTENT_AWARE
     .replace(
-      "SCENE COUNT: Generate scenes by splitting on natural visual transitions. Target ~8s per scene.\n- Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.\n- Do NOT fabricate content; only split where visually justified.\n- Do NOT merge distinct visual moments into one scene to reduce count.",
-      "SCENE COUNT: EXACTLY {SceneNumber} scenes. ~8s/scene. Under-generating = failure.\n- Split on: cuts, location/time/subject/camera changes, speaker changes, action beats, reaction shots, transitions.\n- Do NOT fabricate content; only split where visually justified."
+      /SCENE COUNT: Generate scenes by splitting on visual transitions\.\n⚠️ CRITICAL REQUIREMENT - READ CAREFULLY:\n- Target:[^\n]*\n- HARD MINIMUM:[^\n]*\n- HARD MAXIMUM per scene:[^\n]*\n- First scene MUST start[^\n]*\n- Self-check before output:[^\n]*\n\nSPLITTING TRIGGERS[^\n]*\n(?:- [^\n]*\n)+\nWHY THIS MATTERS:[^\n]*\n\nVALIDATION:[^\n]*/,
+      `SCENE COUNT: EXACTLY {SceneNumber} scenes. ~8s/scene. Under-generating = FAILURE.
+⚠️ CRITICAL: You MUST generate EXACTLY {SceneNumber} scenes. Not fewer. Not more.
+- First scene MUST start at 0:00. Last scene MUST end at video end.
+- Split on: cuts, camera changes, lighting shifts, audio beats, subject motion, pose changes.
+- If you cannot find {SceneNumber} natural splits, create finer splits (every pose change, every beat).`
     );
 
 // CHARACTER_ANALYSIS_PROMPT removed - character rules consolidated into SYSTEM_INSTRUCTION (single source of truth)
@@ -1685,7 +1704,17 @@ export function buildScenePrompt(options: {
     }
 
     if (sceneCountMode === "gemini") {
-      userPrompt += `\nAnalyze this segment and generate scenes for every natural visual transition (~8s each).`;
+      const segmentDuration = directBatchInfo.endSeconds - directBatchInfo.startSeconds;
+      const minScenes = Math.ceil(segmentDuration / 15); // At least 1 scene per 15 seconds
+      const targetScenes = Math.round(segmentDuration / 8); // Target ~8s per scene
+
+      userPrompt += `\n\n⚠️ SCENE COUNT REQUIREMENT (${segmentDuration} seconds):`;
+      userPrompt += `\n• HARD MINIMUM: ${minScenes} scenes (${segmentDuration}s ÷ 15s max = ${minScenes})`;
+      userPrompt += `\n• TARGET: ~${targetScenes} scenes (${segmentDuration}s ÷ 8s target = ${targetScenes})`;
+      userPrompt += `\n• FAILURE: < ${minScenes} scenes = INVALID OUTPUT. Find more split points.`;
+      userPrompt += `\n• Coverage: ${directBatchInfo.startTime} to ${directBatchInfo.endTime} (every second must be in exactly one scene)`;
+      userPrompt += `\n\nSPLIT ON: camera moves, zoom changes, lighting shifts, beat drops, pose changes, subject motion, background activity changes.`;
+      userPrompt += `\nBefore finalizing: COUNT your scenes. Is it >= ${minScenes}? If NO, split more scenes.`;
     } else {
       userPrompt += `\nGenerate EXACTLY ${effectiveSceneCount} scenes for this segment (${directBatchInfo.startTime} to ${directBatchInfo.endTime} only).`;
     }

@@ -446,7 +446,7 @@ export default function VeoPage() {
       const formData = {
         workflow: options.workflow,
         videoUrl: options.videoUrl,
-        videoId: options.videoUrl ? extractVideoId(options.videoUrl) : undefined,
+        videoId: options.videoUrl ? (extractVideoId(options.videoUrl) ?? undefined) : undefined,
         mode: options.mode,
         sceneCount: options.sceneCount,
         batchSize: options.batchSize,
@@ -526,9 +526,12 @@ export default function VeoPage() {
       try {
         // Include Gemini settings from Soi-brand settings
         // Also send `voice` for API backward compat (derived from audio.voiceLanguage)
+        // BUG FIX #28: Always send resumeJobId to ensure client and server use the same job ID
+        // Without this, the server generates a different ID and the complete event gets discarded
         const requestBody = {
           ...options,
           voice: options.audio.voiceLanguage,
+          resumeJobId: jobIdRef.current, // Ensure server uses client's job ID
           ...(geminiApiKey && { geminiApiKey }),
           ...(geminiModel && { geminiModel }),
         };
@@ -660,15 +663,41 @@ export default function VeoPage() {
                 const currentScenes = scenesRef.current;
                 const currentCharacters = characterRegistryRef.current;
 
-                // BUG #4 FIX: Deep merge characters instead of shallow spread
+                // BUG #8 FIX: Deep merge characters instead of shallow spread
                 // Shallow merge overwrites character details; deep merge combines them
                 // CharacterRegistry values can be string | CharacterSkeleton
                 const mergedCharacters: CharacterRegistry = { ...currentCharacters };
                 for (const [name, details] of Object.entries(event.data.characters)) {
                   const existing = mergedCharacters[name];
                   if (existing && typeof existing === 'object' && typeof details === 'object') {
-                    // Both are CharacterSkeleton objects - merge them
-                    mergedCharacters[name] = { ...existing, ...details };
+                    // Both are CharacterSkeleton objects - deep merge them
+                    // This handles nested properties like outfit.accessory, features, etc.
+                    const deepMerge = (target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> => {
+                      const result = { ...target };
+                      for (const key of Object.keys(source)) {
+                        const targetVal = target[key];
+                        const sourceVal = source[key];
+                        if (
+                          targetVal && sourceVal &&
+                          typeof targetVal === 'object' && !Array.isArray(targetVal) &&
+                          typeof sourceVal === 'object' && !Array.isArray(sourceVal)
+                        ) {
+                          // Recursively merge nested objects
+                          result[key] = deepMerge(
+                            targetVal as Record<string, unknown>,
+                            sourceVal as Record<string, unknown>
+                          );
+                        } else if (sourceVal !== undefined) {
+                          // Use source value (arrays and primitives overwrite)
+                          result[key] = sourceVal;
+                        }
+                      }
+                      return result;
+                    };
+                    mergedCharacters[name] = deepMerge(
+                      existing as unknown as Record<string, unknown>,
+                      details as unknown as Record<string, unknown>
+                    ) as unknown as typeof existing;
                   } else {
                     // Either is string or doesn't exist - use new value
                     mergedCharacters[name] = details;
