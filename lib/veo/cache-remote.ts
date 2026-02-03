@@ -102,16 +102,13 @@ export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
     jobMap.set(job.jobId, { ...job, storageSource: 'cloud' as const });
   }
 
-  // Add or merge local jobs
+  // Add local jobs (only if not already in cloud)
   for (const job of localJobs) {
-    const existing = jobMap.get(job.jobId);
-    if (existing) {
-      // Job exists in both cloud and local
-      jobMap.set(job.jobId, { ...existing, storageSource: 'both' as const });
-    } else {
-      // Job only in local
+    if (!jobMap.has(job.jobId)) {
+      // Job only in local, not in cloud
       jobMap.set(job.jobId, { ...job, storageSource: 'local' as const });
     }
+    // If job exists in cloud, ignore local copy (cloud is source of truth)
   }
 
   // Convert to array and sort by timestamp (newest first)
@@ -220,7 +217,7 @@ export async function clearAllJobs(): Promise<void> {
 }
 
 /**
- * Sync a local job to cloud (upload to D1)
+ * Sync a local job to cloud (upload to D1 and delete from localStorage)
  */
 export async function syncJobToCloud(jobId: string): Promise<boolean> {
   const databaseKey = getDatabaseKey();
@@ -253,7 +250,9 @@ export async function syncJobToCloud(jobId: string): Promise<boolean> {
       throw new Error("Failed to sync job to cloud");
     }
 
-    console.log("[Cache] Job synced to cloud:", jobId);
+    // Delete from localStorage after successful sync
+    localCache.deleteCachedJobLocal(jobId);
+    console.log("[Cache] Job synced to cloud and removed from localStorage:", jobId);
     return true;
   } catch (error) {
     console.error("[Cache] Failed to sync job to cloud:", error);

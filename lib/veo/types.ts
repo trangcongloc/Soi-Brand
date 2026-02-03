@@ -589,7 +589,7 @@ export interface CachedVeoJobInfo {
     totalBatches?: number;
     retryable: boolean;
   };
-  storageSource?: "cloud" | "local" | "both"; // Where job is stored
+  storageSource?: "cloud" | "local"; // Where job is stored
 }
 
 // ============================================================================
