@@ -138,9 +138,16 @@ export default function VeoPage() {
   // Sidebar collapse state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Check for history on mount
+  // Check for history on mount and when database key changes
   useEffect(() => {
     getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+
+    // Listen for database key changes (user enters key in settings)
+    const handleDatabaseKeyChange = () => {
+      getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+    };
+    window.addEventListener('database-key-changed', handleDatabaseKeyChange);
+    return () => window.removeEventListener('database-key-changed', handleDatabaseKeyChange);
   }, []);
 
   // Abort controller ref
@@ -160,8 +167,11 @@ export default function VeoPage() {
       setGeminiModel(settings.geminiModel);
       setSettingsLoaded(true);
 
-      // Notify history panel if database key is available (triggers cloud sync)
+      // If database key is available, refresh hasHistory (cloud jobs may exist)
+      // This runs AFTER the initial mount check, so we need to re-check
       if (settings.databaseKey) {
+        const jobs = await getCachedJobList();
+        setHasHistory(jobs.length > 0);
         window.dispatchEvent(new CustomEvent('database-key-changed'));
       }
 
@@ -351,10 +361,10 @@ export default function VeoPage() {
       resumeFromBatch?: number;
       existingScenes?: Scene[];
       existingCharacters?: CharacterRegistry;
-      retryJobId?: string; // Reuse existing job ID when retrying
+      resumeJobId?: string; // Reuse existing job ID when retrying (must match server schema)
     }) => {
       // Use existing job ID if retrying, otherwise generate new one
-      const newJobId = options.retryJobId || `veo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const newJobId = options.resumeJobId || `veo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       jobIdRef.current = newJobId; // Update ref immediately for callbacks
       setJobId(newJobId);
 
@@ -917,7 +927,7 @@ export default function VeoPage() {
       resumeFromBatch: rd.completedBatches,
       existingScenes: rd.existingScenes,
       existingCharacters: rd.existingCharacters,
-      retryJobId: retryJobId, // Reuse the same job ID
+      resumeJobId: retryJobId, // Reuse the same job ID (matches server schema)
     });
   }, [handleSubmit]);
 

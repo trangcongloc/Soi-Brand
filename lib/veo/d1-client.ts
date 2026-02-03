@@ -4,7 +4,7 @@
  */
 
 import { gzipSync, gunzipSync } from "zlib";
-import { CachedVeoJob, CachedVeoJobInfo } from "./types";
+import { CachedVeoJob, CachedVeoJobInfo, VeoJobStatus } from "./types";
 
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4";
 
@@ -93,7 +93,7 @@ export async function listJobs(): Promise<CachedVeoJobInfo[]> {
     charactersFound: row.characters_found,
     mode: row.mode as "direct" | "hybrid",
     voice: row.voice,
-    status: row.status as "completed" | "failed" | "partial",
+    status: row.status as VeoJobStatus,
     hasScript: row.has_script === 1,
     createdAt: row.created_at,
     timestamp: row.updated_at,
