@@ -370,6 +370,8 @@ export const en = {
         databaseKeyHint: "Enter key for cloud sync, or leave empty for local-only",
         cloudStorage: "Cloud Storage",
         localStorage: "Local Storage",
+        synced: "Synced",
+        error: "ERROR",
     },
 
     loadingState: {

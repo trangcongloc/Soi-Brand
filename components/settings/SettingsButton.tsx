@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLanguage, useLang } from "@/lib/lang";
 import { getUserSettingsAsync, saveUserSettingsAsync } from "@/lib/userSettings";
 import { getQuotaUsage, updateGeminiQuotaLimits } from "@/lib/apiQuota";
+import { isUsingCloudStorage } from "@/lib/veo";
 import { DEFAULT_MODEL, DEFAULT_IMAGE_MODEL } from "@/lib/geminiModels";
 import { GeminiModel, GeminiImageModel } from "@/lib/types";
 import { useSettingsValidation } from "./useSettingsValidation";
@@ -18,6 +19,7 @@ export default function SettingsButton() {
     const [geminiKey, setGeminiKey] = useState("");
     const [youtubeKey, setYoutubeKey] = useState("");
     const [databaseKey, setDatabaseKey] = useState("");
+    const [databaseKeyStatus, setDatabaseKeyStatus] = useState<"not-configured" | "synced" | "error">("not-configured");
     const [selectedModel, setSelectedModel] =
         useState<GeminiModel>(DEFAULT_MODEL);
     const [selectedImageModel, setSelectedImageModel] =
@@ -54,6 +56,14 @@ export default function SettingsButton() {
             setDatabaseKey(settings.databaseKey || "");
             setSelectedModel(settings.geminiModel || DEFAULT_MODEL);
             setSelectedImageModel(settings.geminiImageModel || DEFAULT_IMAGE_MODEL);
+
+            // Validate database key on load
+            if (settings.databaseKey) {
+                const isValid = await isUsingCloudStorage();
+                setDatabaseKeyStatus(isValid ? "synced" : "error");
+            } else {
+                setDatabaseKeyStatus("not-configured");
+            }
         };
 
         loadSettings();
@@ -156,6 +166,15 @@ export default function SettingsButton() {
             ...settings,
             databaseKey: value || undefined,
         });
+
+        // Validate the key
+        if (!value) {
+            setDatabaseKeyStatus("not-configured");
+        } else {
+            // Check if key has permissions (is valid)
+            const isValid = await isUsingCloudStorage();
+            setDatabaseKeyStatus(isValid ? "synced" : "error");
+        }
 
         // Trigger a custom event to notify VeoHistoryPanel to refresh
         window.dispatchEvent(new CustomEvent('database-key-changed', {
@@ -338,14 +357,19 @@ export default function SettingsButton() {
                             </svg>
                         </span>
                         {lang.settings.databaseKey || "Database Key"}
-                        {!databaseKey && (
+                        {databaseKeyStatus === "not-configured" && (
                             <span className={styles.quotaBadge}>
                                 {lang.settings.notConfigured}
                             </span>
                         )}
-                        {databaseKey && (
+                        {databaseKeyStatus === "synced" && (
                             <span className={`${styles.tierBadge} ${styles.tierBadgeFree}`}>
-                                {lang.settings.configured}
+                                {lang.settings.synced || "Synced"}
+                            </span>
+                        )}
+                        {databaseKeyStatus === "error" && (
+                            <span className={`${styles.tierBadge} ${styles.tierBadgeInvalid}`}>
+                                {lang.settings.error || "ERROR"}
                             </span>
                         )}
                     </label>

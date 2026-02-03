@@ -367,6 +367,8 @@ export const vi = {
         databaseKeyHint: "Nhập key để đồng bộ đám mây, hoặc để trống cho chỉ lưu trữ cục bộ",
         cloudStorage: "Đám mây",
         localStorage: "Cục bộ",
+        synced: "Đã đồng bộ",
+        error: "LỖI",
     },
 
     loadingState: {
