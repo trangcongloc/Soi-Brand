@@ -80,6 +80,7 @@ export default function VeoPage() {
   const [geminiApiKey, setGeminiApiKey] = useState<string | undefined>(undefined);
   const [geminiModel, setGeminiModel] = useState<GeminiModel | undefined>(undefined);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<"unverified" | "verifying" | "valid" | "invalid">("unverified");
 
   // Loading state
   const [batch, setBatch] = useState(0);
@@ -134,6 +135,9 @@ export default function VeoPage() {
   // History state - check if there are cached jobs
   const [hasHistory, setHasHistory] = useState(false);
 
+  // Sidebar collapse state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   // Check for history on mount
   useEffect(() => {
     getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
@@ -155,6 +159,31 @@ export default function VeoPage() {
       setGeminiApiKey(settings.geminiApiKey);
       setGeminiModel(settings.geminiModel);
       setSettingsLoaded(true);
+
+      // Notify history panel if database key is available (triggers cloud sync)
+      if (settings.databaseKey) {
+        window.dispatchEvent(new CustomEvent('database-key-changed'));
+      }
+
+      // Verify API key if present
+      if (settings.geminiApiKey) {
+        setKeyStatus("verifying");
+        try {
+          const response = await fetch("/api/veo/verify-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ apiKey: settings.geminiApiKey }),
+          });
+          const result = await response.json();
+          if (result.valid) {
+            setKeyStatus("valid");
+          } else {
+            setKeyStatus("invalid");
+          }
+        } catch {
+          setKeyStatus("invalid");
+        }
+      }
     }
     loadSettings();
   }, []);
@@ -382,6 +411,56 @@ export default function VeoPage() {
       // Create abort controller
       abortControllerRef.current = new AbortController();
 
+      // Save job as "in_progress" immediately
+      const initialSummary: VeoJobSummary = {
+        mode: options.mode,
+        videoId: formData.videoId || "",
+        youtubeUrl: options.videoUrl || "",
+        targetScenes: options.sceneCount,
+        actualScenes: options.existingScenes?.length || 0,
+        batches: Math.ceil(options.sceneCount / options.batchSize),
+        batchSize: options.batchSize,
+        voice: options.audio.voiceLanguage === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : options.audio.voiceLanguage,
+        charactersFound: Object.keys(options.existingCharacters || {}).length,
+        characters: Object.keys(options.existingCharacters || {}),
+        processingTime: lang.veo.history.inProgress || "In progress...",
+        createdAt: new Date().toISOString(),
+      };
+
+      await setCachedJob(newJobId, {
+        videoId: formData.videoId || "",
+        videoUrl: options.videoUrl || "",
+        summary: initialSummary,
+        scenes: options.existingScenes || [],
+        characterRegistry: options.existingCharacters || {},
+        script: undefined,
+        colorProfile: options.existingColorProfile,
+        logs: [],
+        status: "in_progress",
+        resumeData: {
+          completedBatches: options.resumeFromBatch || 0,
+          existingScenes: options.existingScenes || [],
+          existingCharacters: options.existingCharacters || {},
+          workflow: options.workflow,
+          mode: options.mode,
+          batchSize: options.batchSize,
+          sceneCount: options.sceneCount,
+          voice: options.audio.voiceLanguage,
+          useVideoTitle: options.useVideoTitle,
+          useVideoDescription: options.useVideoDescription,
+          useVideoChapters: options.useVideoChapters,
+          useVideoCaptions: options.useVideoCaptions,
+          negativePrompt: options.negativePrompt,
+          extractColorProfile: options.extractColorProfile,
+          mediaType: options.mediaType,
+          sceneCountMode: options.sceneCountMode,
+          startTime: options.startTime,
+          endTime: options.endTime,
+          selfieMode: options.selfieMode,
+        },
+      });
+      setHasHistory(true);
+
       try {
         // Include Gemini settings from Soi-brand settings
         // Also send `voice` for API backward compat (derived from audio.voiceLanguage)
@@ -497,6 +576,55 @@ export default function VeoPage() {
                         event.data.scenes,
                         event.data.characters
                       );
+
+                      // Update in_progress job with latest batch data
+                      const allScenes = [...(scenes || []), ...event.data.scenes];
+                      const allCharacters = { ...characterRegistry, ...event.data.characters };
+                      setCachedJob(jobIdRef.current, {
+                        videoId: fd.videoId || "",
+                        videoUrl: fd.videoUrl || "",
+                        summary: {
+                          mode: fd.mode,
+                          videoId: fd.videoId || "",
+                          youtubeUrl: fd.videoUrl || "",
+                          targetScenes: fd.sceneCount,
+                          actualScenes: allScenes.length,
+                          batches: Math.ceil(fd.sceneCount / fd.batchSize),
+                          batchSize: fd.batchSize,
+                          voice: fd.audio.voiceLanguage,
+                          charactersFound: Object.keys(allCharacters).length,
+                          characters: Object.keys(allCharacters),
+                          processingTime: `Batch ${event.data.batchNumber}/${Math.ceil(fd.sceneCount / fd.batchSize)}`,
+                          createdAt: new Date().toISOString(),
+                        },
+                        scenes: allScenes,
+                        characterRegistry: allCharacters,
+                        script: generatedScript || undefined,
+                        colorProfile: colorProfile || undefined,
+                        logs: logEntries,
+                        status: "in_progress",
+                        resumeData: {
+                          completedBatches: event.data.batchNumber,
+                          existingScenes: allScenes,
+                          existingCharacters: allCharacters,
+                          workflow: fd.workflow,
+                          mode: fd.mode,
+                          batchSize: fd.batchSize,
+                          sceneCount: fd.sceneCount,
+                          voice: fd.audio.voiceLanguage,
+                          useVideoTitle: fd.useVideoTitle,
+                          useVideoDescription: fd.useVideoDescription,
+                          useVideoChapters: fd.useVideoChapters,
+                          useVideoCaptions: fd.useVideoCaptions,
+                          negativePrompt: fd.negativePrompt,
+                          extractColorProfile: fd.extractColorProfile,
+                          mediaType: fd.mediaType,
+                          sceneCountMode: fd.sceneCountMode,
+                          startTime: fd.startTime,
+                          endTime: fd.endTime,
+                          selfieMode: fd.selfieMode,
+                        },
+                      });
                     }
                     break;
 
@@ -827,10 +955,14 @@ export default function VeoPage() {
     navigator.clipboard.writeText(generatedScript.rawText);
   }, [generatedScript]);
 
+  const handleJobsChange = useCallback(() => {
+    getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+  }, []);
+
   return (
     <ErrorBoundary>
       <main id="main-content" className={styles.main}>
-        <div className={styles.centerScreen} role="main">
+        <div className={`${styles.centerScreen} ${hasHistory && !sidebarCollapsed ? styles.withSidebar : ''}`} role="main">
           <AnimatePresence mode="wait">
           {/* Idle State - Show Form */}
           {state === "idle" && (
@@ -842,7 +974,7 @@ export default function VeoPage() {
               variants={staggerContainer}
               transition={{ duration: 0.12 }}
             >
-              <div className={hasHistory ? styles.containerWithHistory : styles.container}>
+              <div className={styles.container}>
                 {/* Main content area */}
                 <div className={styles.mainContent}>
                   {/* Header */}
@@ -894,21 +1026,10 @@ export default function VeoPage() {
                       isLoading={false}
                       hasApiKey={settingsLoaded ? !!geminiApiKey : true}
                       geminiModel={geminiModel}
+                      keyStatus={keyStatus}
                     />
                   </motion.div>
                 </div>
-
-                {/* History sidebar - only show if there are cached jobs */}
-                {hasHistory && (
-                  <motion.div className={styles.historySidebar} variants={fadeInUp}>
-                    <VeoHistoryPanel
-                      onViewJob={handleViewJob}
-                      onRegenerateJob={handleRegenerateJob}
-                      onRetryJob={handleRetryJob}
-                      onJobsChange={() => getCachedJobList().then(jobs => setHasHistory(jobs.length > 0))}
-                    />
-                  </motion.div>
-                )}
               </div>
             </motion.div>
           )}
@@ -1128,6 +1249,19 @@ export default function VeoPage() {
           </div>
         )}
         </AnimatePresence>
+
+        {/* History Sidebar - always visible when there's history */}
+        {hasHistory && (
+          <VeoHistoryPanel
+            onViewJob={handleViewJob}
+            onRegenerateJob={handleRegenerateJob}
+            onRetryJob={handleRetryJob}
+            currentJobId={jobId}
+            onJobsChange={handleJobsChange}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        )}
       </main>
     </ErrorBoundary>
   );

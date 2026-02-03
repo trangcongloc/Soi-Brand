@@ -43,9 +43,10 @@ interface VeoFormProps {
   isLoading: boolean;
   hasApiKey?: boolean;
   geminiModel?: string;
+  keyStatus?: "unverified" | "verifying" | "valid" | "invalid";
 }
 
-function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }: VeoFormProps) {
+function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, keyStatus = "unverified" }: VeoFormProps) {
   const lang = useLang();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -249,7 +250,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
         isLoading={isLoading}
       />
 
-      {/* API Key Status Notice */}
+      {/* API Key Status */}
       {!hasApiKey && (
         <div className={styles.apiKeyNotice}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -261,11 +262,31 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel }
         </div>
       )}
 
-      {/* Model indicator when API key is set */}
-      {hasApiKey && geminiModel && (
-        <div className={styles.modelIndicator}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      {hasApiKey && keyStatus === "verifying" && (
+        <div className={styles.keyVerifying}>
+          <svg className={styles.spinnerIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+          </svg>
+          <span>{lang.veo.form.verifyingKey || "Verifying API key..."}</span>
+        </div>
+      )}
+
+      {hasApiKey && keyStatus === "invalid" && (
+        <div className={styles.keyInvalid}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          <span>{lang.veo.form.invalidKey || "Invalid API key"}</span>
+        </div>
+      )}
+
+      {hasApiKey && keyStatus === "valid" && geminiModel && (
+        <div className={styles.keyValid}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 6L9 17l-5-5" />
           </svg>
           <span>{lang.veo.form.usingModel}: {geminiModel}</span>
         </div>

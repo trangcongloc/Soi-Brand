@@ -93,6 +93,61 @@
   flex-shrink: 0;
 }
 
+/* Key Verifying */
+.keyVerifying {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--radius-md);
+  color: #3b82f6;
+  font-size: var(--fs-xs);
+}
+
+.keyVerifying svg {
+  flex-shrink: 0;
+}
+
+.spinnerIcon {
+  animation: spin 1s linear infinite;
+}
+
+/* Key Invalid */
+.keyInvalid {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  color: #ef4444;
+  font-size: var(--fs-xs);
+}
+
+.keyInvalid svg {
+  flex-shrink: 0;
+}
+
+/* Key Valid */
+.keyValid {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: var(--radius-md);
+  color: #22c55e;
+  font-size: var(--fs-xs);
+}
+
+.keyValid svg {
+  flex-shrink: 0;
+}
+
 /* Model Indicator */
 .modelIndicator {
   display: flex;
@@ -130,6 +185,96 @@
 
 .inputWrapper input {
   flex: 1;
+}
+
+/* URL Input with Validation */
+.urlInputContainer {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.urlInput {
+  width: 100%;
+  padding-right: 2.5rem !important;
+}
+
+.urlInputValid {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+}
+
+.urlInputInvalid {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
+.urlValidationIcon {
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.urlSpinner {
+  animation: urlSpin 1s linear infinite;
+  color: var(--text-muted);
+}
+
+@keyframes urlSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.urlCheckmark {
+  animation: urlPop 0.2s ease-out;
+}
+
+.urlXmark {
+  animation: urlShake 0.3s ease-out;
+}
+
+@keyframes urlPop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes urlShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Thumbnail Preview */
+.thumbnailPreview {
+  margin-top: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.thumbnailImage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbnailInfo {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.thumbnailVideoId {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-family: monospace;
+  word-break: break-all;
 }
 
 .inputHint {

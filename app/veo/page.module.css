@@ -12,6 +12,11 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  transition: padding-right 0.3s ease;
+}
+
+.centerScreen.withSidebar {
+  padding-right: 336px; /* 320px sidebar + 16px spacing */
 }
 
 .container {
@@ -29,28 +34,8 @@
   padding: 2rem 1rem;
 }
 
-/* Layout with history sidebar */
-.containerWithHistory {
-  width: 100%;
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 2rem;
-  align-items: start;
-}
-
 .mainContent {
   text-align: center;
-}
-
-.historySidebar {
-  position: sticky;
-  top: 2rem;
-  height: calc(100vh - 4rem);
-  display: flex;
-  flex-direction: column;
 }
 
 /* Header - matches Soi-Brand title style */
@@ -363,25 +348,13 @@
 }
 
 @media (max-width: 900px) {
-  .containerWithHistory {
-    grid-template-columns: 1fr;
-    max-width: 32rem;
-  }
-
-  .historySidebar {
-    position: static;
-    max-height: none;
-    order: 2;
-    margin-top: 1rem;
+  .centerScreen.withSidebar {
+    padding-right: 32px; /* Only toggle button visible on mobile */
   }
 }
 
 @media (max-width: 640px) {
   .container {
-    padding: 2rem 1rem;
-  }
-
-  .containerWithHistory {
     padding: 2rem 1rem;
   }
 

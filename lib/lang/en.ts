@@ -455,12 +455,14 @@ export const en = {
             duration: "Video Duration",
             durationAuto: "Entire Video",
             durationCustom: "Custom Range",
-            durationAutoHint: "AI will analyze the entire video automatically",
+            durationAutoHint: "",
             durationCustomHint:
                 "Specify start and end time for a specific segment",
             from: "From",
             to: "To",
             noApiKey: "Configure your Gemini API key in Settings to use VEO",
+            verifyingKey: "Verifying API key...",
+            invalidKey: "Invalid API key",
             usingModel: "Using model",
             errors: {
                 emptyUrl: "Please enter a YouTube video link",
@@ -482,10 +484,8 @@ export const en = {
             urlToScriptDesc: "Extract script from video",
             scriptToScenes: "Script to Scenes",
             scriptToScenesDesc: "Generate scenes from script",
-            urlHint:
-                "Enter a YouTube URL to extract the script/transcript from the video",
-            urlToScenesHint:
-                "Enter a YouTube URL to extract script and generate scenes automatically",
+            urlHint: "",
+            urlToScenesHint: "",
             scriptHint:
                 "Paste your script or upload a text file to generate visual scenes",
         },
@@ -769,6 +769,9 @@ export const en = {
             statusCompleted: "Completed",
             statusPartial: "Partial",
             statusFailed: "Failed",
+            statusInProgress: "In Progress",
+            inProgress: "In progress...",
+            clickToResume: "Click to resume",
             generationFailed: "Generation failed",
             failedAtBatch: "Failed at batch {current}/{total}",
             retryable: "Retryable",

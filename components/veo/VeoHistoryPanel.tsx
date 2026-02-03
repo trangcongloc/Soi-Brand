@@ -10,9 +10,11 @@ import styles from "./VeoHistoryPanel.module.css";
 interface VeoHistoryPanelProps {
   onViewJob: (jobId: string) => void;
   onRegenerateJob?: (jobId: string) => void;
-  onRetryJob?: (jobId: string) => void; // New: retry failed job
+  onRetryJob?: (jobId: string) => void;
   currentJobId?: string;
   onJobsChange?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const VISIBLE_COUNT = 5;
@@ -39,7 +41,7 @@ function formatTimeRemaining(expiresAt: number): string {
   }
 }
 
-function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId, onJobsChange }: VeoHistoryPanelProps) {
+function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId, onJobsChange, collapsed = false, onToggleCollapse }: VeoHistoryPanelProps) {
   const lang = useLang();
   const [jobs, setJobs] = useState<CachedVeoJobInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,6 +176,22 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   }, []);
 
   const getStatusIcon = useCallback((status: string) => {
+    if (status === "in_progress") {
+      return (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#3b82f6"
+          strokeWidth="2"
+          className={`${styles.statusIcon} ${styles.statusIconSpinning}`}
+        >
+          <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+          <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+        </svg>
+      );
+    }
     if (status === "failed") {
       return (
         <svg
@@ -226,9 +244,10 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
 
   const jobStats = useMemo(() => {
     const completed = jobs.filter(j => j.status === "completed").length;
+    const inProgress = jobs.filter(j => j.status === "in_progress").length;
     const partial = jobs.filter(j => j.status === "partial").length;
     const failed = jobs.filter(j => j.status === "failed").length;
-    return { completed, partial, failed, total: jobs.length };
+    return { completed, inProgress, partial, failed, total: jobs.length };
   }, [jobs]);
 
   // Filter jobs by search query and status
@@ -264,47 +283,112 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const hasMore = sortedJobs.length > VISIBLE_COUNT;
   const hiddenCount = sortedJobs.length - VISIBLE_COUNT;
 
+  // Collapsed state - show only toggle button
+  if (collapsed) {
+    return (
+      <div className={`${styles.sidebar} ${styles.sidebarCollapsed}`}>
+        <button
+          className={styles.collapseToggle}
+          onClick={onToggleCollapse}
+          aria-label="Expand history panel"
+          title={lang.veo.history.title}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          {jobs.length > 0 && <span className={styles.collapsedBadge}>{jobs.length}</span>}
+        </button>
+      </div>
+    );
+  }
+
   if (loading && jobs.length === 0) {
     return (
-      <div className={styles.empty}>
-        <div className={styles.spinner} />
-        <p>Loading...</p>
+      <div className={styles.sidebar}>
+        <div className={styles.sidebarContent}>
+          <button
+            className={styles.collapseToggle}
+            onClick={onToggleCollapse}
+            aria-label="Collapse history panel"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+          <div className={styles.empty}>
+            <div className={styles.spinner} />
+            <p>Loading...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (jobs.length === 0) {
     return (
-      <div className={styles.empty}>
-        <svg
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        >
-          <path d="M12 8v4l3 3" />
-          <circle cx="12" cy="12" r="10" />
-        </svg>
-        <p>{lang.veo.history.noJobs}</p>
+      <div className={styles.sidebar}>
+        <div className={styles.sidebarContent}>
+          <button
+            className={styles.collapseToggle}
+            onClick={onToggleCollapse}
+            aria-label="Collapse history panel"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+          <div className={styles.empty}>
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M12 8v4l3 3" />
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+            <p>{lang.veo.history.noJobs}</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.sidebar}>
+      <div className={styles.sidebarContent}>
+        <button
+          className={styles.collapseToggle}
+          onClick={onToggleCollapse}
+          aria-label="Collapse history panel"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h3 className={styles.title}>
             {lang.veo.history.title}
-            <span className={storageType === 'cloud' ? styles.cloudBadge : styles.localBadge}>
-              {storageType === 'cloud' ? lang.veo.history.cloudStorage : lang.veo.history.localStorage}
-            </span>
+            {storageType === 'cloud' && (
+              <span className={styles.cloudBadge}>Synced</span>
+            )}
           </h3>
         </div>
         {jobs.length > 0 && (
           <div className={styles.jobStats}>
+            {jobStats.inProgress > 0 && (
+              <button
+                className={`${styles.statInProgress} ${statusFilter === 'in_progress' ? styles.statActive : ''}`}
+                onClick={() => setStatusFilter(statusFilter === 'in_progress' ? null : 'in_progress')}
+                title={lang.veo.history.statusInProgress || "In Progress"}
+              >
+                ◐ {jobStats.inProgress}
+              </button>
+            )}
             <button
               className={`${styles.statCompleted} ${statusFilter === 'completed' ? styles.statActive : ''}`}
               onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')}
@@ -394,22 +478,23 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.2, delay: index * 0.05 }}
-              onClick={() => job.sceneCount > 0 && currentJobId !== job.jobId && onViewJob(job.jobId)}
-              style={{ cursor: job.sceneCount > 0 && currentJobId !== job.jobId ? 'pointer' : 'default' }}
+              onClick={() => {
+                if (currentJobId === job.jobId) return;
+                if (job.status === 'in_progress' && onRetryJob) {
+                  onRetryJob(job.jobId); // Resume in_progress job
+                } else if (job.sceneCount > 0) {
+                  onViewJob(job.jobId);
+                }
+              }}
+              style={{ cursor: (job.status === 'in_progress' || job.sceneCount > 0) && currentJobId !== job.jobId ? 'pointer' : 'default' }}
             >
               <div className={styles.jobInfo}>
                 <div className={styles.jobHeader}>
                   {getStatusIcon(job.status)}
                   <span className={styles.jobVideoId}>{truncateUrl(job.videoUrl)}</span>
                   <span className={styles.jobMode}>{job.mode}</span>
-                  {job.storageSource && (
-                    <span className={
-                      job.storageSource === 'cloud' ? styles.cloudBadgeSmall : styles.localBadgeSmall
-                    }>
-                      {job.storageSource === 'cloud'
-                        ? lang.veo.history.cloudStorage
-                        : lang.veo.history.localStorage}
-                    </span>
+                  {job.storageSource === 'cloud' && (
+                    <span className={styles.cloudBadgeSmall}>Synced</span>
                   )}
                   {job.hasScript && !job.error && (
                     <span className={styles.scriptBadge} title={lang.veo.history.scriptCached}>
@@ -430,6 +515,13 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                   <span className={styles.separator}>•</span>
                   <span className={styles.jobIdText}>{formatJobId(job.jobId)}</span>
                 </div>
+                {job.status === 'in_progress' && (
+                  <div className={styles.inProgressIndicator}>
+                    <span className={styles.inProgressMessage}>
+                      {lang.veo.history.clickToResume || "Click to resume"}
+                    </span>
+                  </div>
+                )}
                 {job.error && (
                   <div className={styles.errorIndicator}>
                     <span className={styles.errorMessage}>
@@ -618,6 +710,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
               : `${lang.veo.history.showMore} (${hiddenCount})`}
           </button>
         )}
+      </div>
+    </div>
       </div>
     </div>
   );

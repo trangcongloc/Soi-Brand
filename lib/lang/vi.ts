@@ -449,12 +449,14 @@ export const vi = {
             duration: "Thời lượng phân tích",
             durationAuto: "Toàn bộ Video",
             durationCustom: "Tùy chỉnh",
-            durationAutoHint: "AI sẽ tự động phân tích toàn bộ video",
+            durationAutoHint: "",
             durationCustomHint:
                 "Chỉ định thời gian bắt đầu và kết thúc cho đoạn cụ thể",
             from: "Từ",
             to: "Đến",
             noApiKey: "Cấu hình Gemini API key trong Cài đặt để sử dụng VEO",
+            verifyingKey: "Đang xác thực API key...",
+            invalidKey: "API key không hợp lệ",
             usingModel: "Đang sử dụng model",
             errors: {
                 emptyUrl: "Vui lòng nhập link video YouTube",
@@ -476,10 +478,8 @@ export const vi = {
             urlToScriptDesc: "Trích xuất script từ video",
             scriptToScenes: "Script thành Scenes",
             scriptToScenesDesc: "Tạo scenes từ script",
-            urlHint:
-                "Nhập URL YouTube để trích xuất script/transcript từ video",
-            urlToScenesHint:
-                "Nhập URL YouTube để trích xuất script và tạo scenes tự động",
+            urlHint: "",
+            urlToScenesHint: "",
             scriptHint:
                 "Dán script của bạn hoặc tải file text để tạo scenes hình ảnh",
         },
@@ -761,6 +761,9 @@ export const vi = {
             statusCompleted: "Hoàn thành",
             statusPartial: "Một phần",
             statusFailed: "Thất bại",
+            statusInProgress: "Đang xử lý",
+            inProgress: "Đang xử lý...",
+            clickToResume: "Nhấn để tiếp tục",
             generationFailed: "Tạo thất bại",
             failedAtBatch: "Lỗi tại batch {current}/{total}",
             retryable: "Có thể thử lại",

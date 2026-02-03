@@ -1,9 +1,12 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VeoWorkflow } from "@/lib/veo";
 import { useLang } from "@/lib/lang";
 import styles from "./VeoForm.module.css";
+
+type ValidationStatus = "idle" | "loading" | "valid" | "invalid";
 
 interface VeoUrlInputProps {
   url: string;
@@ -16,6 +19,23 @@ interface VeoUrlInputProps {
   onEndTimeChange: (time: string) => void;
   isLoading: boolean;
   workflow: VeoWorkflow;
+}
+
+function extractVideoId(url: string): string | null {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function getThumbnailUrl(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 }
 
 export function VeoUrlInput({
@@ -31,6 +51,41 @@ export function VeoUrlInput({
   workflow,
 }: VeoUrlInputProps) {
   const lang = useLang();
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus>("idle");
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
+
+  const validateUrl = useCallback((inputUrl: string) => {
+    if (!inputUrl.trim()) {
+      setValidationStatus("idle");
+      setThumbnailUrl(null);
+      setVideoId(null);
+      return;
+    }
+
+    setValidationStatus("loading");
+
+    // Debounce validation
+    const timeoutId = setTimeout(() => {
+      const extractedId = extractVideoId(inputUrl);
+      if (extractedId) {
+        setVideoId(extractedId);
+        setThumbnailUrl(getThumbnailUrl(extractedId));
+        setValidationStatus("valid");
+      } else {
+        setVideoId(null);
+        setThumbnailUrl(null);
+        setValidationStatus("invalid");
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    const cleanup = validateUrl(url);
+    return cleanup;
+  }, [url, validateUrl]);
 
   return (
     <motion.div
@@ -45,16 +100,63 @@ export function VeoUrlInput({
         YouTube Video URL
       </label>
       <div className={styles.inputWrapper}>
-        <input
-          id="video-url"
-          type="text"
-          value={url}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={lang.veo.form.placeholder}
-          className="input"
-          disabled={isLoading}
-        />
+        <div className={styles.urlInputContainer}>
+          <input
+            id="video-url"
+            type="text"
+            value={url}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={lang.veo.form.placeholder}
+            className={`input ${styles.urlInput} ${validationStatus === "invalid" ? styles.urlInputInvalid : ""} ${validationStatus === "valid" ? styles.urlInputValid : ""}`}
+            disabled={isLoading}
+          />
+          <div className={styles.urlValidationIcon}>
+            {validationStatus === "loading" && (
+              <svg className={styles.urlSpinner} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+            )}
+            {validationStatus === "valid" && (
+              <svg className={styles.urlCheckmark} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+            {validationStatus === "invalid" && (
+              <svg className={styles.urlXmark} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Thumbnail Preview */}
+      <AnimatePresence>
+        {validationStatus === "valid" && thumbnailUrl && (
+          <motion.div
+            className={styles.thumbnailPreview}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <img
+              src={thumbnailUrl}
+              alt="Video thumbnail"
+              className={styles.thumbnailImage}
+              onError={() => {
+                setThumbnailUrl(null);
+                setValidationStatus("invalid");
+              }}
+            />
+            <div className={styles.thumbnailInfo}>
+              <span className={styles.thumbnailVideoId}>{videoId}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Duration Mode Toggle */}
       <div className={styles.durationSection}>
@@ -116,16 +218,7 @@ export function VeoUrlInput({
           )}
         </AnimatePresence>
 
-        <p className={styles.durationHint}>
-          {durationMode === "auto"
-            ? lang.veo.form.durationAutoHint
-            : lang.veo.form.durationCustomHint}
-        </p>
       </div>
-
-      <p className={styles.inputHint}>
-        {workflow === "url-to-scenes" ? lang.veo.workflow.urlToScenesHint : lang.veo.workflow.urlHint}
-      </p>
 
       {/* Submit Button for url-to-script only */}
       {workflow === "url-to-script" && (

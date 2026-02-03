@@ -521,7 +521,7 @@ export interface VeoResumeData {
 // Cached VEO Job
 // ============================================================================
 
-export type VeoJobStatus = "completed" | "failed" | "partial";
+export type VeoJobStatus = "completed" | "failed" | "partial" | "in_progress";
 
 export interface CachedVeoJob {
   jobId: string;
