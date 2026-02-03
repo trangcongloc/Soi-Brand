@@ -156,6 +156,11 @@ export default function SettingsButton() {
             ...settings,
             databaseKey: value || undefined,
         });
+
+        // Trigger a custom event to notify VeoHistoryPanel to refresh
+        window.dispatchEvent(new CustomEvent('database-key-changed', {
+            detail: { hasKey: !!value }
+        }));
     };
 
     return (

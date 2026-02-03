@@ -75,7 +75,16 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
       refreshJobs();
     });
 
-    return unsubscribe;
+    // Listen for database key changes
+    const handleKeyChange = () => {
+      refreshJobs();
+    };
+    window.addEventListener('database-key-changed', handleKeyChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('database-key-changed', handleKeyChange);
+    };
   }, [refreshJobs]);
 
   // Force re-render every minute to update countdowns
