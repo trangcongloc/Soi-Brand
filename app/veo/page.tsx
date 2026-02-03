@@ -139,25 +139,63 @@ export default function VeoPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Check for history on mount and when database key changes
+  // BUG #8 FIX: Use mounted flag to prevent state updates after unmount
   useEffect(() => {
-    getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+    let mounted = true;
+
+    getCachedJobList().then(jobs => {
+      if (mounted) setHasHistory(jobs.length > 0);
+    });
 
     // Listen for database key changes (user enters key in settings)
     const handleDatabaseKeyChange = () => {
-      getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+      getCachedJobList().then(jobs => {
+        if (mounted) setHasHistory(jobs.length > 0);
+      });
     };
     window.addEventListener('database-key-changed', handleDatabaseKeyChange);
-    return () => window.removeEventListener('database-key-changed', handleDatabaseKeyChange);
+    return () => {
+      mounted = false;
+      window.removeEventListener('database-key-changed', handleDatabaseKeyChange);
+    };
   }, []);
 
   // Abort controller ref
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup: abort any pending SSE requests on component unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   // Ref to track current jobId for use in callbacks (avoids stale closure)
   const jobIdRef = useRef<string>("");
 
   // Ref to track current form data for use in callbacks (avoids stale closure)
   const formDataRef = useRef<typeof currentFormData>(null);
+
+  // Refs to track current state values for use in SSE handlers (avoids stale closures)
+  // BUG #2, #3, #4, #7: These refs ensure handlers always have access to the latest values
+  const scenesRef = useRef<Scene[]>([]);
+  const characterRegistryRef = useRef<CharacterRegistry>({});
+  const generatedScriptRef = useRef<GeneratedScript | null>(null);
+  const colorProfileRef = useRef<CinematicProfile | null>(null);
+  const logEntriesRef = useRef<GeminiLogEntry[]>([]);
+  const summaryRef = useRef<VeoJobSummary | null>(null);
+
+  // Sync state values to refs for use in SSE handlers (avoids stale closures)
+  // BUG #2: scenes and characterRegistry must be synced to refs
+  useEffect(() => { scenesRef.current = scenes; }, [scenes]);
+  useEffect(() => { characterRegistryRef.current = characterRegistry; }, [characterRegistry]);
+  // BUG #3: script and colorProfile must be synced to refs
+  useEffect(() => { generatedScriptRef.current = generatedScript; }, [generatedScript]);
+  useEffect(() => { colorProfileRef.current = colorProfile; }, [colorProfile]);
+  // BUG #1: logEntries must be synced to refs for handleError
+  useEffect(() => { logEntriesRef.current = logEntries; }, [logEntries]);
+  // Sync summary to ref for handleError and handleCancel
+  useEffect(() => { summaryRef.current = summary; }, [summary]);
 
   // Load settings from Soi-brand settings on mount
   useEffect(() => {
@@ -263,41 +301,51 @@ export default function VeoPage() {
       // Use refs to get the current values (avoids stale closure)
       const currentJobId = jobIdRef.current;
       const currentForm = formDataRef.current;
+      // BUG #1 FIX: Get current state values from refs immediately
+      const currentScenes = scenesRef.current;
+      const currentCharacters = characterRegistryRef.current;
+
       if (currentJobId && currentForm) {
+        // Use summaryRef to avoid stale closure
+        const currentSummary = summaryRef.current;
         const totalBatchesCalc = totalBatches
-          || (summary && typeof summary.batches === 'number' ? summary.batches : undefined)
+          || (currentSummary && typeof currentSummary.batches === 'number' ? currentSummary.batches : undefined)
           || Math.ceil(currentForm.sceneCount / currentForm.batchSize);
 
         // Determine status: partial if some scenes were generated, failed if none
-        const status = scenes.length > 0 ? "partial" : "failed";
+        const status = currentScenes.length > 0 ? "partial" : "failed";
 
         // Create minimal summary if not available
-        const effectiveSummary: VeoJobSummary = summary || {
+        const effectiveSummary: VeoJobSummary = currentSummary || {
           mode: currentForm.mode,
           videoId: currentForm.videoId || "",
           youtubeUrl: currentForm.videoUrl || "",
           targetScenes: currentForm.sceneCount,
-          actualScenes: scenes.length,
+          actualScenes: currentScenes.length,
           batches: totalBatchesCalc,
           batchSize: currentForm.batchSize,
           voice: currentForm.audio.voiceLanguage === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.audio.voiceLanguage,
-          charactersFound: Object.keys(characterRegistry).length,
-          characters: Object.keys(characterRegistry),
+          charactersFound: Object.keys(currentCharacters).length,
+          characters: Object.keys(currentCharacters),
           processingTime: lang.common.notAvailable || "N/A",
           createdAt: new Date().toISOString(),
         };
+
+        // BUG #1 FIX: Use refs for current state values (script and logs)
+        const currentScript = generatedScriptRef.current;
+        const currentLogs = logEntriesRef.current;
 
         setCachedJob(currentJobId, {
           videoId: currentForm.videoId || "",
           videoUrl: currentForm.videoUrl || "",
           summary: {
             ...effectiveSummary,
-            actualScenes: scenes.length,
+            actualScenes: currentScenes.length,
           },
-          scenes,
-          characterRegistry,
-          script: generatedScript || undefined,
-          logs: logEntries,
+          scenes: currentScenes,
+          characterRegistry: currentCharacters,
+          script: currentScript || undefined,
+          logs: currentLogs,
           status,
           error: {
             message: errorMessage,
@@ -308,8 +356,8 @@ export default function VeoPage() {
           },
           resumeData: retryable ? {
             completedBatches: failedBatch ? failedBatch - 1 : 0,
-            existingScenes: scenes,
-            existingCharacters: characterRegistry,
+            existingScenes: currentScenes,
+            existingCharacters: currentCharacters,
             workflow: currentForm.workflow,
             mode: currentForm.mode,
             batchSize: currentForm.batchSize,
@@ -333,7 +381,8 @@ export default function VeoPage() {
         setHasHistory(true);
       }
     },
-    [lang, summary, scenes, characterRegistry, generatedScript]
+    // BUG #1 FIX: Removed state dependencies - using refs instead to avoid stale closures
+    [lang]
   );
 
   const handleSubmit = useCallback(
@@ -418,7 +467,10 @@ export default function VeoPage() {
       formDataRef.current = formData; // Update ref immediately for callbacks
       setCurrentFormData(formData);
 
-      // Create abort controller
+      // Abort any existing job before starting new one (prevents race conditions)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       abortControllerRef.current = new AbortController();
 
       // Save job as "in_progress" immediately
@@ -507,197 +559,293 @@ export default function VeoPage() {
         const decoder = new TextDecoder();
         let buffer = "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        // Helper to process SSE lines from buffer
+        const processSSELines = (linesToProcess: string[]) => {
+          for (const line of linesToProcess) {
+            // Abort check inside event loop to stop processing buffered events
+            if (abortControllerRef.current?.signal.aborted) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
                 const event: VeoSSEEvent = JSON.parse(line.slice(6));
 
-                switch (event.event) {
-                  case "progress":
-                    setBatch(event.data.batch);
-                    setTotalBatches(event.data.total);
-                    setScenesGenerated(event.data.scenes);
-                    if (event.data.message) {
-                      setLoadingMessage(event.data.message);
-                    }
-                    break;
-
-                  case "character":
-                    setCharacters((prev) => [...prev, event.data.name]);
-                    break;
-
-                  case "script":
-                    setGeneratedScript(event.data.script);
-                    break;
-
-                  case "colorProfile":
-                    setColorProfile(event.data.profile);
-                    setColorProfileConfidence(event.data.confidence);
-                    // Cache Phase 0 result
-                    if (jobIdRef.current && formDataRef.current) {
-                      const fd = formDataRef.current;
-                      cachePhase0(
-                        jobIdRef.current,
-                        fd.videoUrl || "",
-                        createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
-                        event.data.profile,
-                        event.data.confidence
-                      );
-                    }
-                    break;
-
-                  case "log":
-                    setLogEntries((prev) => [...prev, event.data]);
-                    // Persist log to phase cache
-                    if (jobIdRef.current && formDataRef.current) {
-                      const fd = formDataRef.current;
-                      addPhaseLog(
-                        jobIdRef.current,
-                        fd.videoUrl || "",
-                        createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
-                        event.data
-                      );
-                    }
-                    break;
-
-                  case "logUpdate":
-                    setLogEntries((prev) =>
-                      prev.map((e) => (e.id === event.data.id ? event.data : e))
-                    );
-                    break;
-
-                  case "batchComplete":
-                    // Cache individual Phase 2 batch
-                    if (jobIdRef.current && formDataRef.current) {
-                      const fd = formDataRef.current;
-                      cachePhase2Batch(
-                        jobIdRef.current,
-                        fd.videoUrl || "",
-                        createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
-                        event.data.batchNumber,
-                        event.data.scenes,
-                        event.data.characters
-                      );
-
-                      // Update in_progress job with latest batch data
-                      const allScenes = [...(scenes || []), ...event.data.scenes];
-                      const allCharacters = { ...characterRegistry, ...event.data.characters };
-                      setCachedJob(jobIdRef.current, {
-                        videoId: fd.videoId || "",
-                        videoUrl: fd.videoUrl || "",
-                        summary: {
-                          mode: fd.mode,
-                          videoId: fd.videoId || "",
-                          youtubeUrl: fd.videoUrl || "",
-                          targetScenes: fd.sceneCount,
-                          actualScenes: allScenes.length,
-                          batches: Math.ceil(fd.sceneCount / fd.batchSize),
-                          batchSize: fd.batchSize,
-                          voice: fd.audio.voiceLanguage,
-                          charactersFound: Object.keys(allCharacters).length,
-                          characters: Object.keys(allCharacters),
-                          processingTime: `Batch ${event.data.batchNumber}/${Math.ceil(fd.sceneCount / fd.batchSize)}`,
-                          createdAt: new Date().toISOString(),
-                        },
-                        scenes: allScenes,
-                        characterRegistry: allCharacters,
-                        script: generatedScript || undefined,
-                        colorProfile: colorProfile || undefined,
-                        logs: logEntries,
-                        status: "in_progress",
-                        resumeData: {
-                          completedBatches: event.data.batchNumber,
-                          existingScenes: allScenes,
-                          existingCharacters: allCharacters,
-                          workflow: fd.workflow,
-                          mode: fd.mode,
-                          batchSize: fd.batchSize,
-                          sceneCount: fd.sceneCount,
-                          voice: fd.audio.voiceLanguage,
-                          useVideoTitle: fd.useVideoTitle,
-                          useVideoDescription: fd.useVideoDescription,
-                          useVideoChapters: fd.useVideoChapters,
-                          useVideoCaptions: fd.useVideoCaptions,
-                          negativePrompt: fd.negativePrompt,
-                          extractColorProfile: fd.extractColorProfile,
-                          mediaType: fd.mediaType,
-                          sceneCountMode: fd.sceneCountMode,
-                          startTime: fd.startTime,
-                          endTime: fd.endTime,
-                          selfieMode: fd.selfieMode,
-                        },
-                      });
-                    }
-                    break;
-
-                  case "complete":
-                    if (options.workflow === "url-to-script") {
-                      // Step 1 complete - show script
-                      setState("script-complete");
-                    } else {
-                      // Step 2 or combined complete - show scenes
-                      setScenes(event.data.scenes);
-                      setCharacterRegistry(event.data.characterRegistry);
-                      setSummary(event.data.summary);
-                      setJobId(event.data.jobId);
-                      // Update color profile from complete event if not already set
-                      if (event.data.colorProfile && !colorProfile) {
-                        setColorProfile(event.data.colorProfile);
-                      }
-                      setState("complete");
-
-                      // Cache the result with script and color profile for regeneration
-                      if (event.data.scenes.length > 0) {
-                        setCachedJob(event.data.jobId, {
-                          videoId: event.data.summary.videoId,
-                          videoUrl: event.data.summary.youtubeUrl,
-                          summary: event.data.summary,
-                          scenes: event.data.scenes,
-                          characterRegistry: event.data.characterRegistry,
-                          script: event.data.script, // Cache script for regeneration
-                          colorProfile: event.data.colorProfile, // Cache color profile
-                          logs: logEntries, // Cache log entries for scene request/response
-                          status: "completed",
-                        });
-                        // Update history state to reflect new job
-                        setHasHistory(true);
-                      }
-                    }
-
-                    // Clear phase cache on successful completion
-                    if (event.data.jobId) {
-                      clearPhaseCache(event.data.jobId);
-                    }
-
-                    // Clear any in-progress state
-                    clearProgress();
-                    break;
-
-                  case "error":
-                    handleError(
-                      event.data.type,
-                      event.data.message,
-                      event.data.failedBatch,
-                      event.data.totalBatches,
-                      event.data.scenesCompleted,
-                      event.data.debug,
-                      event.data.retryable
-                    );
-                    break;
+                // CRITICAL: Discard events from stale jobs (prevents race condition
+                // when user starts new job before previous one completes)
+                const eventJobId = (event.data as { jobId?: string })?.jobId;
+                if (eventJobId && eventJobId !== jobIdRef.current) {
+                  console.warn(`[VEO] Discarding stale event from job ${eventJobId}, current job is ${jobIdRef.current}`);
+                  continue;
                 }
+
+                handleSSEEvent(event);
               } catch {
                 // Skip invalid JSON (e.g., keep-alive comments)
               }
             }
           }
+        };
+
+        // Helper to handle individual SSE events
+        const handleSSEEvent = (event: VeoSSEEvent) => {
+          switch (event.event) {
+            case "progress":
+              setBatch(event.data.batch);
+              setTotalBatches(event.data.total);
+              setScenesGenerated(event.data.scenes);
+              if (event.data.message) {
+                setLoadingMessage(event.data.message);
+              }
+              break;
+
+            case "character":
+              setCharacters((prev) => [...prev, event.data.name]);
+              break;
+
+            case "script":
+              setGeneratedScript(event.data.script);
+              break;
+
+            case "colorProfile":
+              setColorProfile(event.data.profile);
+              setColorProfileConfidence(event.data.confidence);
+              // Cache Phase 0 result
+              if (jobIdRef.current && formDataRef.current) {
+                const fd = formDataRef.current;
+                cachePhase0(
+                  jobIdRef.current,
+                  fd.videoUrl || "",
+                  createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
+                  event.data.profile,
+                  event.data.confidence
+                );
+              }
+              break;
+
+            case "log":
+              setLogEntries((prev) => [...prev, event.data]);
+              // Persist log to phase cache
+              if (jobIdRef.current && formDataRef.current) {
+                const fd = formDataRef.current;
+                addPhaseLog(
+                  jobIdRef.current,
+                  fd.videoUrl || "",
+                  createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
+                  event.data
+                );
+              }
+              break;
+
+            case "logUpdate":
+              setLogEntries((prev) =>
+                prev.map((e) => (e.id === event.data.id ? event.data : e))
+              );
+              break;
+
+            case "batchComplete":
+              // Cache individual Phase 2 batch
+              if (jobIdRef.current && formDataRef.current) {
+                const fd = formDataRef.current;
+                cachePhase2Batch(
+                  jobIdRef.current,
+                  fd.videoUrl || "",
+                  createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
+                  event.data.batchNumber,
+                  event.data.scenes,
+                  event.data.characters
+                );
+
+                // BUG #2 FIX: Use refs for current state values to avoid stale closures
+                // Without refs, scenes/characterRegistry are captured at handler creation time
+                // causing batch data loss (e.g., batch 2 loses batch 1 data)
+                const currentScenes = scenesRef.current;
+                const currentCharacters = characterRegistryRef.current;
+
+                // BUG #4 FIX: Deep merge characters instead of shallow spread
+                // Shallow merge overwrites character details; deep merge combines them
+                // CharacterRegistry values can be string | CharacterSkeleton
+                const mergedCharacters: CharacterRegistry = { ...currentCharacters };
+                for (const [name, details] of Object.entries(event.data.characters)) {
+                  const existing = mergedCharacters[name];
+                  if (existing && typeof existing === 'object' && typeof details === 'object') {
+                    // Both are CharacterSkeleton objects - merge them
+                    mergedCharacters[name] = { ...existing, ...details };
+                  } else {
+                    // Either is string or doesn't exist - use new value
+                    mergedCharacters[name] = details;
+                  }
+                }
+
+                // Update in_progress job with latest batch data
+                const allScenes = [...currentScenes, ...event.data.scenes];
+                const allCharacters = mergedCharacters;
+
+                // BUG #3 FIX: Use refs for script and colorProfile
+                const currentScript = generatedScriptRef.current;
+                const currentColorProfile = colorProfileRef.current;
+                const currentLogs = logEntriesRef.current;
+
+                // CRITICAL FIX: Update refs synchronously BEFORE React state
+                // useEffect-based ref sync is async and can cause race conditions
+                // between rapid batch completions
+                scenesRef.current = allScenes;
+                characterRegistryRef.current = allCharacters;
+
+                // Also update React state so UI reflects the new data
+                setScenes(allScenes);
+                setCharacterRegistry(allCharacters);
+
+                // BUG FIX: Calculate total batches and check if this is the last batch
+                // If last batch, don't include resumeData since complete event follows immediately
+                const totalBatches = Math.ceil(fd.sceneCount / fd.batchSize);
+                const isLastBatch = event.data.batchNumber >= totalBatches - 1;
+
+                // FIX: Store completedBatches as NEXT batch to process (batchNumber + 1)
+                // This ensures resume starts from the correct batch, not re-doing the completed one
+                const nextBatchToProcess = event.data.batchNumber + 1;
+
+                setCachedJob(jobIdRef.current, {
+                  videoId: fd.videoId || "",
+                  videoUrl: fd.videoUrl || "",
+                  summary: {
+                    mode: fd.mode,
+                    videoId: fd.videoId || "",
+                    youtubeUrl: fd.videoUrl || "",
+                    targetScenes: fd.sceneCount,
+                    actualScenes: allScenes.length,
+                    batches: totalBatches,
+                    batchSize: fd.batchSize,
+                    voice: fd.audio.voiceLanguage,
+                    charactersFound: Object.keys(allCharacters).length,
+                    characters: Object.keys(allCharacters),
+                    processingTime: `Batch ${event.data.batchNumber + 1}/${totalBatches}`,
+                    createdAt: new Date().toISOString(),
+                  },
+                  scenes: allScenes,
+                  characterRegistry: allCharacters,
+                  script: currentScript || undefined,
+                  colorProfile: currentColorProfile || undefined,
+                  logs: currentLogs,
+                  status: "in_progress",
+                  // Don't include resumeData for last batch - complete event will follow
+                  // This prevents infinite retry loops when clicking completed jobs
+                  resumeData: isLastBatch ? undefined : {
+                    completedBatches: nextBatchToProcess,
+                    existingScenes: allScenes,
+                    existingCharacters: allCharacters,
+                    workflow: fd.workflow,
+                    mode: fd.mode,
+                    batchSize: fd.batchSize,
+                    sceneCount: fd.sceneCount,
+                    voice: fd.audio.voiceLanguage,
+                    useVideoTitle: fd.useVideoTitle,
+                    useVideoDescription: fd.useVideoDescription,
+                    useVideoChapters: fd.useVideoChapters,
+                    useVideoCaptions: fd.useVideoCaptions,
+                    negativePrompt: fd.negativePrompt,
+                    extractColorProfile: fd.extractColorProfile,
+                    mediaType: fd.mediaType,
+                    sceneCountMode: fd.sceneCountMode,
+                    startTime: fd.startTime,
+                    endTime: fd.endTime,
+                    selfieMode: fd.selfieMode,
+                  },
+                });
+              }
+              break;
+
+            case "complete":
+              // BUG #6 FIX: Use formDataRef for workflow instead of captured options
+              // options.workflow is captured at handler creation time and may be stale
+              const currentWorkflow = formDataRef.current?.workflow;
+              if (currentWorkflow === "url-to-script") {
+                // Step 1 complete - show script
+                setState("script-complete");
+              } else {
+                // Step 2 or combined complete - show scenes
+                setScenes(event.data.scenes);
+                setCharacterRegistry(event.data.characterRegistry);
+                setSummary(event.data.summary);
+                setJobId(event.data.jobId);
+                // BUG #7 FIX: Use ref for colorProfile comparison
+                // Update color profile from complete event if not already set
+                if (event.data.colorProfile && !colorProfileRef.current) {
+                  setColorProfile(event.data.colorProfile);
+                }
+                setState("complete");
+
+                // Cache the result with script and color profile for regeneration
+                if (event.data.scenes.length > 0) {
+                  // Use ref for logEntries to get current value
+                  const currentLogs = logEntriesRef.current;
+                  setCachedJob(event.data.jobId, {
+                    videoId: event.data.summary.videoId,
+                    videoUrl: event.data.summary.youtubeUrl,
+                    summary: event.data.summary,
+                    scenes: event.data.scenes,
+                    characterRegistry: event.data.characterRegistry,
+                    script: event.data.script, // Cache script for regeneration
+                    colorProfile: event.data.colorProfile, // Cache color profile
+                    logs: currentLogs, // Cache log entries for scene request/response
+                    status: "completed",
+                    // BUG FIX: Explicitly clear resumeData on completion
+                    // This prevents retry loops if user reloads before complete event was cached
+                    resumeData: undefined,
+                  });
+                  // Update history state to reflect new job
+                  setHasHistory(true);
+                }
+              }
+
+              // Clear phase cache on successful completion
+              if (event.data.jobId) {
+                clearPhaseCache(event.data.jobId);
+              }
+
+              // Clear any in-progress state
+              clearProgress();
+              break;
+
+            case "error":
+              handleError(
+                event.data.type,
+                event.data.message,
+                event.data.failedBatch,
+                event.data.totalBatches,
+                event.data.scenesCompleted,
+                event.data.debug,
+                event.data.retryable
+              );
+              break;
+          }
+        };
+
+        while (true) {
+          // BUG #5 FIX: Check abort signal before reading to prevent cancelled jobs
+          // from continuing to process events and causing state corruption
+          if (abortControllerRef.current?.signal.aborted) {
+            reader.cancel();
+            break;
+          }
+
+          const { done, value } = await reader.read();
+
+          if (done) {
+            // BUG #9 FIX: Process any remaining data in buffer when stream ends
+            // The complete event might be partially buffered and would be lost without this
+            if (buffer.trim()) {
+              // Flush the decoder and add any remaining bytes
+              buffer += decoder.decode();
+              const finalLines = buffer.split("\n\n").filter(line => line.trim());
+              processSSELines(finalLines);
+            }
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          processSSELines(lines);
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -707,7 +855,8 @@ export default function VeoPage() {
         handleError("NETWORK_ERROR");
       }
     },
-    [handleError, lang, geminiApiKey, geminiModel, colorProfile]
+    // Removed colorProfile from deps - using colorProfileRef instead to avoid stale closures
+    [handleError, lang, geminiApiKey, geminiModel]
   );
 
   const handleCancel = useCallback(() => {
@@ -716,33 +865,41 @@ export default function VeoPage() {
     // Save cancelled job to history using refs to avoid stale closure
     const currentJobId = jobIdRef.current;
     const currentForm = formDataRef.current;
+    // Use refs for current state values to avoid stale closures
+    const currentScenes = scenesRef.current;
+    const currentCharacters = characterRegistryRef.current;
+    const currentScript = generatedScriptRef.current;
+    const currentLogs = logEntriesRef.current;
+
     if (currentJobId && currentForm) {
-      const cancelledSummary: VeoJobSummary = summary || {
+      // Use summaryRef to avoid stale closure
+      const currentSummary = summaryRef.current;
+      const cancelledSummary: VeoJobSummary = currentSummary || {
         mode: currentForm.mode,
         youtubeUrl: currentForm.videoUrl || "",
         videoId: currentForm.videoId || "",
         targetScenes: currentForm.sceneCount,
-        actualScenes: scenes.length,
+        actualScenes: currentScenes.length,
         batches: Math.ceil(currentForm.sceneCount / currentForm.batchSize),
         batchSize: currentForm.batchSize,
         voice: currentForm.audio.voiceLanguage === "no-voice" ? lang.veo.settings.voiceOptions["no-voice"] : currentForm.audio.voiceLanguage,
-        charactersFound: Object.keys(characterRegistry).length,
-        characters: Object.keys(characterRegistry),
+        charactersFound: Object.keys(currentCharacters).length,
+        characters: Object.keys(currentCharacters),
         processingTime: lang.veo.history.cancelled,
         createdAt: new Date().toISOString(),
       };
 
       // Determine status: partial if some scenes were generated, failed if none
-      const status = scenes.length > 0 ? "partial" : "failed";
+      const status = currentScenes.length > 0 ? "partial" : "failed";
 
       setCachedJob(currentJobId, {
         videoId: currentForm.videoId || "",
         videoUrl: currentForm.videoUrl || "",
         summary: cancelledSummary,
-        scenes,
-        characterRegistry,
-        script: generatedScript || undefined,
-        logs: logEntries,
+        scenes: currentScenes,
+        characterRegistry: currentCharacters,
+        script: currentScript || undefined,
+        logs: currentLogs,
         status,
         error: {
           message: lang.veo.history.jobCancelled,
@@ -753,8 +910,8 @@ export default function VeoPage() {
         },
         resumeData: {
           completedBatches: batch - 1,
-          existingScenes: scenes,
-          existingCharacters: characterRegistry,
+          existingScenes: currentScenes,
+          existingCharacters: currentCharacters,
           workflow: currentForm.workflow,
           mode: currentForm.mode,
           batchSize: currentForm.batchSize,
@@ -778,7 +935,9 @@ export default function VeoPage() {
     }
 
     setState("idle");
-  }, [lang, scenes, characterRegistry, summary, generatedScript, batch, totalBatches]);
+  // Removed summary from deps - using summaryRef instead to avoid stale closures
+  // batch and totalBatches are safe since they're only used for error metadata
+  }, [lang, batch, totalBatches]);
 
   const handleResumeYes = useCallback(async () => {
     if (!resumeProgressData) {
