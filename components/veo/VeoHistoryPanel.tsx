@@ -3,7 +3,7 @@
 import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
-import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo, isUsingCloudStorage, syncJobToCloud } from "@/lib/veo";
+import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo, isUsingCloudStorage, syncJobToCloud, deleteJobFromLocal, deleteJobFromCloud } from "@/lib/veo";
 import { listenToJobUpdates } from "@/lib/veo/storage-utils";
 import styles from "./VeoHistoryPanel.module.css";
 
@@ -46,6 +46,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const [jobs, setJobs] = useState<CachedVeoJobInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteFromLocalChecked, setDeleteFromLocalChecked] = useState(true);
+  const [deleteFromCloudChecked, setDeleteFromCloudChecked] = useState(true);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [showAll, setShowAll] = useState(false);
@@ -115,13 +117,26 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const handleDelete = useCallback(async (jobId: string) => {
     setLoading(true);
     try {
-      await deleteCachedJob(jobId);
+      // Delete based on user's selection
+      if (deleteFromLocalChecked && deleteFromCloudChecked) {
+        // Delete from both
+        await deleteCachedJob(jobId);
+      } else if (deleteFromLocalChecked) {
+        // Delete from local only
+        await deleteJobFromLocal(jobId);
+      } else if (deleteFromCloudChecked) {
+        // Delete from cloud only
+        await deleteJobFromCloud(jobId);
+      }
+
       setConfirmDeleteId(null);
+      setDeleteFromLocalChecked(true); // Reset to defaults
+      setDeleteFromCloudChecked(true);
       await refreshJobs();
     } finally {
       setLoading(false);
     }
-  }, [refreshJobs]);
+  }, [refreshJobs, deleteFromLocalChecked, deleteFromCloudChecked]);
 
   const handleClearAll = useCallback(async () => {
     setLoading(true);
@@ -533,19 +548,48 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
 
               <div className={styles.jobActions}>
                 {confirmDeleteId === job.jobId ? (
-                  <div className={styles.confirmInline}>
-                    <button
-                      className={styles.confirmDeleteButton}
-                      onClick={() => handleDelete(job.jobId)}
-                    >
-                      {lang.veo.history.confirmDelete}
-                    </button>
-                    <button
-                      className={styles.cancelDeleteButton}
-                      onClick={() => setConfirmDeleteId(null)}
-                    >
-                      {lang.veo.history.cancelAction}
-                    </button>
+                  <div className={styles.confirmDeleteDialog}>
+                    <div className={styles.confirmDeleteTitle}>
+                      {lang.veo.history.deleteFrom}
+                    </div>
+                    <div className={styles.confirmDeleteOptions}>
+                      <label className={styles.checkboxLabel}>
+                        <input
+                          type="checkbox"
+                          checked={deleteFromLocalChecked}
+                          onChange={(e) => setDeleteFromLocalChecked(e.target.checked)}
+                        />
+                        <span>{lang.veo.history.deleteFromLocal}</span>
+                      </label>
+                      <label className={styles.checkboxLabel}>
+                        <input
+                          type="checkbox"
+                          checked={deleteFromCloudChecked}
+                          onChange={(e) => setDeleteFromCloudChecked(e.target.checked)}
+                          disabled={storageType === 'local'}
+                        />
+                        <span>{lang.veo.history.deleteFromCloud}</span>
+                      </label>
+                    </div>
+                    <div className={styles.confirmDeleteButtons}>
+                      <button
+                        className={styles.confirmDeleteButton}
+                        onClick={() => handleDelete(job.jobId)}
+                        disabled={!deleteFromLocalChecked && !deleteFromCloudChecked}
+                      >
+                        {lang.veo.history.deleteButton}
+                      </button>
+                      <button
+                        className={styles.cancelDeleteButton}
+                        onClick={() => {
+                          setConfirmDeleteId(null);
+                          setDeleteFromLocalChecked(true);
+                          setDeleteFromCloudChecked(true);
+                        }}
+                      >
+                        {lang.veo.history.cancelAction}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>

@@ -179,6 +179,31 @@ export async function setCachedJob(
 }
 
 /**
+ * Delete job from local storage only
+ */
+export async function deleteJobFromLocal(jobId: string): Promise<void> {
+  localCache.deleteCachedJobLocal(jobId);
+}
+
+/**
+ * Delete job from cloud (D1) only
+ */
+export async function deleteJobFromCloud(jobId: string): Promise<void> {
+  const databaseKey = getDatabaseKey();
+  if (!databaseKey) {
+    console.warn("[Cache] No database key, cannot delete from cloud");
+    return;
+  }
+
+  try {
+    await fetchWithTimeout(`/api/veo/jobs/${jobId}`, { method: "DELETE" });
+  } catch (error) {
+    console.warn("[Cache] D1 delete failed:", error);
+    throw error;
+  }
+}
+
+/**
  * Delete job (D1 with localStorage fallback)
  */
 export async function deleteCachedJob(jobId: string): Promise<void> {

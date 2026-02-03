@@ -553,6 +553,54 @@
   gap: 0.35rem;
 }
 
+.confirmDeleteDialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  min-width: 200px;
+}
+
+.confirmDeleteTitle {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.confirmDeleteOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.confirmDeleteButtons {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
 .confirmDeleteButton {
   padding: 0.35rem 0.6rem;
   border: none;
@@ -566,8 +614,13 @@
   min-height: 32px;
 }
 
-.confirmDeleteButton:hover {
+.confirmDeleteButton:hover:not(:disabled) {
   background: #dc2626;
+}
+
+.confirmDeleteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .cancelDeleteButton {

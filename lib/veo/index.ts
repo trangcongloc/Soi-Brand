@@ -106,6 +106,8 @@ export {
   getCachedJobList,
   isUsingCloudStorage,
   syncJobToCloud,
+  deleteJobFromLocal,
+  deleteJobFromCloud,
 } from "./cache";
 
 // Form settings persistence

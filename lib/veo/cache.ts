@@ -9,5 +9,5 @@ export * from "./cache-remote";
 // Export types for convenience
 export type { CachedVeoJob, CachedVeoJobInfo } from "./types";
 
-// Export storage type checker and sync function
-export { isUsingCloudStorage, syncJobToCloud } from "./cache-remote";
+// Export storage type checker, sync function, and granular delete functions
+export { isUsingCloudStorage, syncJobToCloud, deleteJobFromLocal, deleteJobFromCloud } from "./cache-remote";
