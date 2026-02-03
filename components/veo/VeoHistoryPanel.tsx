@@ -4,6 +4,7 @@ import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
 import { getCachedJobList, deleteCachedJob, clearAllJobs, CachedVeoJobInfo } from "@/lib/veo";
+import { listenToJobUpdates } from "@/lib/veo/storage-utils";
 import styles from "./VeoHistoryPanel.module.css";
 
 interface VeoHistoryPanelProps {
@@ -42,42 +43,38 @@ function formatTimeRemaining(expiresAt: number): string {
 
 function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId, onJobsChange }: VeoHistoryPanelProps) {
   const lang = useLang();
-  const [jobs, setJobs] = useState<CachedVeoJobInfo[]>(() => getCachedJobList());
+  const [jobs, setJobs] = useState<CachedVeoJobInfo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const refreshJobs = useCallback(() => {
-    setJobs(getCachedJobList());
+  const refreshJobs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const jobList = await getCachedJobList();
+      setJobs(jobList);
+    } catch (error) {
+      console.error("[VeoHistory] Failed to fetch jobs:", error);
+    } finally {
+      setLoading(false);
+    }
     onJobsChange?.();
   }, [onJobsChange]);
 
-  // Refresh jobs when component mounts or when localStorage changes
+  // Refresh jobs when component mounts or when jobs change
   useEffect(() => {
     // Initial refresh
     refreshJobs();
 
-    // Listen for storage changes (when jobs are added from other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith("veo_job_")) {
-        refreshJobs();
-      }
-    };
-
-    // Listen for custom events (when jobs are added in same tab)
-    const handleJobUpdate = () => {
+    // Listen for job updates (both same-tab and cross-tab via BroadcastChannel)
+    const unsubscribe = listenToJobUpdates(() => {
       refreshJobs();
-    };
+    });
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("veo-job-updated", handleJobUpdate);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("veo-job-updated", handleJobUpdate);
-    };
+    return unsubscribe;
   }, [refreshJobs]);
 
   // Force re-render every minute to update countdowns
@@ -97,16 +94,26 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     return () => clearInterval(interval);
   }, [jobs]);
 
-  const handleDelete = useCallback((jobId: string) => {
-    deleteCachedJob(jobId);
-    setConfirmDeleteId(null);
-    refreshJobs();
+  const handleDelete = useCallback(async (jobId: string) => {
+    setLoading(true);
+    try {
+      await deleteCachedJob(jobId);
+      setConfirmDeleteId(null);
+      await refreshJobs();
+    } finally {
+      setLoading(false);
+    }
   }, [refreshJobs]);
 
-  const handleClearAll = useCallback(() => {
-    clearAllJobs();
-    setConfirmClearAll(false);
-    refreshJobs();
+  const handleClearAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      await clearAllJobs();
+      setConfirmClearAll(false);
+      await refreshJobs();
+    } finally {
+      setLoading(false);
+    }
   }, [refreshJobs]);
 
   const formatDate = useCallback((timestamp: number) => {
@@ -247,6 +254,15 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
   const visibleJobs = showAll ? sortedJobs : sortedJobs.slice(0, VISIBLE_COUNT);
   const hasMore = sortedJobs.length > VISIBLE_COUNT;
   const hiddenCount = sortedJobs.length - VISIBLE_COUNT;
+
+  if (loading && jobs.length === 0) {
+    return (
+      <div className={styles.empty}>
+        <div className={styles.spinner} />
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   if (jobs.length === 0) {
     return (

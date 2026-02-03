@@ -4,15 +4,15 @@
  */
 
 import {
-  getCachedJobsForVideo,
-  getCachedJob,
-  getLatestCachedJob,
-  setCachedJob,
-  clearExpiredJobs,
-  clearAllJobs,
-  deleteCachedJob,
-  getCachedJobList,
-} from "@/lib/veo/cache";
+  getCachedJobsForVideoLocal as getCachedJobsForVideo,
+  getCachedJobLocal as getCachedJob,
+  getLatestCachedJobLocal as getLatestCachedJob,
+  setCachedJobLocal as setCachedJob,
+  clearExpiredJobsLocal as clearExpiredJobs,
+  clearAllJobsLocal as clearAllJobs,
+  deleteCachedJobLocal as deleteCachedJob,
+  getCachedJobListLocal as getCachedJobList,
+} from "@/lib/veo/cache-local";
 
 import type {
   CachedVeoJob,

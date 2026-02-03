@@ -134,7 +134,12 @@ export default function VeoPage() {
   const [resumeProgressData, setResumeProgressData] = useState<VeoProgress | null>(null);
 
   // History state - check if there are cached jobs
-  const [hasHistory, setHasHistory] = useState(() => getCachedJobList().length > 0);
+  const [hasHistory, setHasHistory] = useState(false);
+
+  // Check for history on mount
+  useEffect(() => {
+    getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+  }, []);
 
   // Abort controller ref
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -694,8 +699,8 @@ export default function VeoPage() {
   }, []);
 
   // Handle viewing a job from history
-  const handleViewJob = useCallback((viewJobId: string) => {
-    const cached = getCachedJob(viewJobId);
+  const handleViewJob = useCallback(async (viewJobId: string) => {
+    const cached = await getCachedJob(viewJobId);
     if (cached) {
       setScenes(cached.scenes);
       setCharacterRegistry(cached.characterRegistry);
@@ -714,8 +719,8 @@ export default function VeoPage() {
   }, []);
 
   // Handle regenerating scenes from cached script
-  const handleRegenerateJob = useCallback((viewJobId: string) => {
-    const cached = getCachedJob(viewJobId);
+  const handleRegenerateJob = useCallback(async (viewJobId: string) => {
+    const cached = await getCachedJob(viewJobId);
     if (cached?.script) {
       // Pre-populate the script for regeneration
       setGeneratedScript(cached.script);
@@ -726,7 +731,7 @@ export default function VeoPage() {
 
   // Handle retrying a failed job from the last successful batch
   const handleRetryJob = useCallback(async (retryJobId: string) => {
-    const cached = getCachedJob(retryJobId);
+    const cached = await getCachedJob(retryJobId);
     if (!cached || !cached.resumeData) {
       console.error("Cannot retry job: missing cache or resume data");
       return;
@@ -896,7 +901,7 @@ export default function VeoPage() {
                       onViewJob={handleViewJob}
                       onRegenerateJob={handleRegenerateJob}
                       onRetryJob={handleRetryJob}
-                      onJobsChange={() => setHasHistory(getCachedJobList().length > 0)}
+                      onJobsChange={() => getCachedJobList().then(jobs => setHasHistory(jobs.length > 0))}
                     />
                   </motion.div>
                 )}

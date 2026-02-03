@@ -77,13 +77,54 @@ export function getAllStorageKeys(prefix?: string): string[] {
   return keys;
 }
 
+// Create BroadcastChannel for cross-tab updates
+const jobUpdateChannel =
+  typeof BroadcastChannel !== "undefined"
+    ? new BroadcastChannel("veo-job-updates")
+    : null;
+
 /**
  * Dispatches a custom event to notify components of VEO job updates
+ * Uses both CustomEvent (same tab) and BroadcastChannel (cross-tab)
  * @param jobId ID of the updated job, or null for general update
  */
 export function dispatchJobUpdateEvent(jobId: string | null): void {
   if (!isBrowser()) return;
+
+  // CustomEvent for same-tab updates
   window.dispatchEvent(
     new CustomEvent("veo-job-updated", { detail: { jobId } })
   );
+
+  // BroadcastChannel for cross-tab updates
+  jobUpdateChannel?.postMessage({ jobId, timestamp: Date.now() });
+}
+
+/**
+ * Listen to job updates from both same tab and other tabs
+ * @param callback Function to call when job updates
+ * @returns Cleanup function to remove listeners
+ */
+export function listenToJobUpdates(
+  callback: (jobId: string | null) => void
+): () => void {
+  if (!isBrowser()) return () => {};
+
+  // CustomEvent listener (same tab)
+  const handleCustomEvent = (e: Event) => {
+    callback((e as CustomEvent).detail.jobId);
+  };
+
+  // BroadcastChannel listener (cross-tab)
+  const handleBroadcast = (e: MessageEvent) => {
+    callback(e.data.jobId);
+  };
+
+  window.addEventListener("veo-job-updated", handleCustomEvent);
+  jobUpdateChannel?.addEventListener("message", handleBroadcast);
+
+  return () => {
+    window.removeEventListener("veo-job-updated", handleCustomEvent);
+    jobUpdateChannel?.removeEventListener("message", handleBroadcast);
+  };
 }
