@@ -362,11 +362,11 @@ export const vi = {
         free: "miễn phí",
         paid: "trả phí",
         // Database key
-        databaseKey: "Khóa Cơ Sở Dữ Liệu",
-        databaseKeyPlaceholder: "Nhập khóa cơ sở dữ liệu của bạn...",
-        databaseKeyHint: "Nhập khóa để đồng bộ đám mây, hoặc để trống cho chỉ lưu trữ cục bộ",
-        cloudStorage: "Lưu Trữ Đám Mây",
-        localStorage: "Lưu Trữ Cục Bộ",
+        databaseKey: "Database Key",
+        databaseKeyPlaceholder: "Nhập database key của bạn...",
+        databaseKeyHint: "Nhập key để đồng bộ đám mây, hoặc để trống cho chỉ lưu trữ cục bộ",
+        cloudStorage: "Đám mây",
+        localStorage: "Cục bộ",
     },
 
     loadingState: {
