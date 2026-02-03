@@ -766,8 +766,8 @@ export const vi = {
             showMore: "Xem thêm",
             showLess: "Thu gọn",
             // Storage indicator
-            cloudStorage: "Đám mây",
-            localStorage: "Cục bộ",
+            cloudStorage: "cloud",
+            localStorage: "local",
             syncToCloud: "Đồng bộ",
             syncing: "Đang đồng bộ...",
             syncSuccess: "Đã đồng bộ lên đám mây",

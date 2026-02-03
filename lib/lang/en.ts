@@ -774,8 +774,8 @@ export const en = {
             showMore: "Show more",
             showLess: "Show less",
             // Storage indicator
-            cloudStorage: "Cloud",
-            localStorage: "Local",
+            cloudStorage: "cloud",
+            localStorage: "local",
             syncToCloud: "Sync",
             syncing: "Syncing...",
             syncSuccess: "Synced to cloud",

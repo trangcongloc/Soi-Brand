@@ -330,7 +330,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
           <h3 className={styles.title}>
             {lang.veo.history.title}
             <span className={storageType === 'cloud' ? styles.cloudBadge : styles.localBadge}>
-              {storageType === 'cloud' ? `☁️ ${lang.veo.history.cloudStorage}` : `💾 ${lang.veo.history.localStorage}`}
+              {storageType === 'cloud' ? lang.veo.history.cloudStorage : lang.veo.history.localStorage}
             </span>
           </h3>
           {jobs.length > 0 && (
@@ -476,8 +476,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                       job.storageSource === 'cloud' ? styles.cloudBadgeSmall : styles.localBadgeSmall
                     }>
                       {job.storageSource === 'cloud'
-                        ? `☁️ ${lang.veo.history.cloudStorage}`
-                        : `💾 ${lang.veo.history.localStorage}`}
+                        ? lang.veo.history.cloudStorage
+                        : lang.veo.history.localStorage}
                     </span>
                   )}
                   {job.hasScript && !job.error && (
