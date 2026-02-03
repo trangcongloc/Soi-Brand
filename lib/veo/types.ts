@@ -200,8 +200,9 @@ export interface TimeRange {
 export interface DirectBatchInfo {
   batchNum: number;         // Current batch number (0-indexed)
   totalBatches: number;     // Total number of batches
-  startSeconds: number;     // Start time in seconds
-  endSeconds: number;       // End time in seconds
+  startSeconds: number;     // Scene generation starts here (user-facing boundary)
+  endSeconds: number;       // Scene generation ends here
+  analysisStartSeconds: number; // Video analysis starts here (includes overlap)
   startTime: string;        // Formatted start time (MM:SS)
   endTime: string;          // Formatted end time (MM:SS)
   estimatedSceneCount: number;  // Estimate for progress display, not a hard target

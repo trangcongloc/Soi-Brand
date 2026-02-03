@@ -65,6 +65,7 @@ import {
   BATCH_DELAY_MS,
   FALLBACK_VIDEO_DURATION_SECONDS,
   DEFAULT_SECONDS_PER_SCENE,
+  BATCH_OVERLAP_SECONDS,
 } from "@/lib/veo/constants";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -838,11 +839,17 @@ async function runUrlToScenesDirect(
     const batchEndSeconds = Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds);
     const batchSceneCount = Math.ceil((batchEndSeconds - batchStartSeconds) / secondsPerScene);
 
+    // Compute analysis start with overlap (except first batch)
+    const analysisStartSeconds = batchNum === 0
+      ? batchStartSeconds
+      : Math.max(0, batchStartSeconds - BATCH_OVERLAP_SECONDS);
+
     const directBatchInfo: DirectBatchInfo = {
       batchNum,
       totalBatches,
       startSeconds: batchStartSeconds,
       endSeconds: batchEndSeconds,
+      analysisStartSeconds, // Includes overlap for videoMetadata
       startTime: formatTime(batchStartSeconds),
       endTime: formatTime(batchEndSeconds),
       estimatedSceneCount: batchSceneCount,
@@ -922,6 +929,10 @@ async function runUrlToScenesDirect(
       });
 
       const batchScenes = parseGeminiResponse(response);
+
+      // Note: Scene overlap filtering not needed - scenes don't have timestamp field.
+      // The prompt instruction tells Gemini to only generate scenes for the
+      // non-overlapping portion (startTime to endTime), using overlap for context only.
 
       if (Array.isArray(batchScenes)) {
         // Process batch using unified scene processor

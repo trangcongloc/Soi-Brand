@@ -1671,15 +1671,27 @@ export function buildScenePrompt(options: {
 
   // Direct mode: Add time range instruction for video segment analysis
   if (directBatchInfo) {
+    // Calculate if overlap exists
+    const overlapSeconds = directBatchInfo.startSeconds - directBatchInfo.analysisStartSeconds;
+    const hasOverlap = overlapSeconds > 0;
+
     userPrompt += `\n\n=== VIDEO SEGMENT INFO ===`;
     userPrompt += `\nThis is batch ${directBatchInfo.batchNum + 1} of ${directBatchInfo.totalBatches} (segment ${directBatchInfo.startTime}–${directBatchInfo.endTime}).`;
+
+    // Add overlap context note
+    if (hasOverlap) {
+      userPrompt += `\nVideo includes ${overlapSeconds}s overlap BEFORE ${directBatchInfo.startTime} for visual context.`;
+      userPrompt += `\nDo NOT generate scenes for the overlap period (before ${directBatchInfo.startTime}).`;
+    }
+
     if (sceneCountMode === "gemini") {
       userPrompt += `\nAnalyze this segment and generate scenes for every natural visual transition (~8s each).`;
     } else {
-      userPrompt += `\nGenerate EXACTLY ${effectiveSceneCount} scenes for this segment.`;
+      userPrompt += `\nGenerate EXACTLY ${effectiveSceneCount} scenes for this segment (${directBatchInfo.startTime} to ${directBatchInfo.endTime} only).`;
     }
+
     if (directBatchInfo.batchNum > 0) {
-      userPrompt += `\n(Continuation — maintain character consistency.)`;
+      userPrompt += `\n(Continuation — maintain character consistency from previous scenes.)`;
     }
     userPrompt += `\n=== END VIDEO SEGMENT INFO ===`;
   }
@@ -1709,7 +1721,8 @@ export function buildScenePrompt(options: {
     },
     ...(directBatchInfo && {
       videoMetadata: {
-        startOffset: `${directBatchInfo.startSeconds}s`,
+        // Use analysisStartSeconds (includes overlap) instead of startSeconds
+        startOffset: `${directBatchInfo.analysisStartSeconds}s`,
         endOffset: `${directBatchInfo.endSeconds}s`,
       },
     }),
