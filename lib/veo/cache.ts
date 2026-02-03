@@ -17,7 +17,12 @@ import {
 import { isBrowser } from "./browser-utils";
 import { LocalStorageCache } from "@/lib/cache-manager";
 import { dispatchJobUpdateEvent } from "./storage-utils";
-import { CACHE_TTL_MS, MAX_CACHED_JOBS } from "./constants";
+import {
+  CACHE_TTL_MS,
+  MAX_CACHED_JOBS,
+  FAILED_JOB_CACHE_TTL_MS,
+  COMPLETED_JOB_CACHE_TTL_MS,
+} from "./constants";
 
 const CACHE_PREFIX = "veo_job_";
 
@@ -37,9 +42,16 @@ export function getCachedJobsForVideo(videoId: string): CachedVeoJobInfo[] {
 
   const allItems = jobCache.getAll();
   const jobs: CachedVeoJobInfo[] = [];
+  const now = Date.now(); // For expiration check
 
   for (const item of allItems) {
     if (item.data.videoId === videoId) {
+      // Check and remove expired jobs
+      if (item.data.expiresAt && now > item.data.expiresAt) {
+        jobCache.delete(item.data.jobId);
+        continue; // Skip expired job
+      }
+
       jobs.push({
         jobId: item.data.jobId,
         videoId: item.data.videoId,
@@ -50,6 +62,7 @@ export function getCachedJobsForVideo(videoId: string): CachedVeoJobInfo[] {
         voice: item.data.summary.voice,
         timestamp: item.data.timestamp,
         createdAt: item.data.summary.createdAt,
+        expiresAt: item.data.expiresAt, // Include expiration
         hasScript: !!item.data.script,
         status: item.data.status || "completed",
         error: item.data.error,
@@ -65,7 +78,16 @@ export function getCachedJobsForVideo(videoId: string): CachedVeoJobInfo[] {
  */
 export function getCachedJob(jobId: string): CachedVeoJob | null {
   if (!isBrowser()) return null;
-  return jobCache.get(jobId);
+
+  const job = jobCache.get(jobId);
+
+  // Check if expired using expiresAt field
+  if (job && job.expiresAt && Date.now() > job.expiresAt) {
+    jobCache.delete(jobId);
+    return null;
+  }
+
+  return job;
 }
 
 /**
@@ -105,6 +127,15 @@ export function setCachedJob(
   if (!isBrowser()) return;
 
   const timestamp = Date.now();
+  const status = data.status || "completed";
+
+  // Compute expiration based on status
+  let expiresAt: number;
+  if (status === "failed" || status === "partial") {
+    expiresAt = timestamp + FAILED_JOB_CACHE_TTL_MS; // 48 hours
+  } else {
+    expiresAt = timestamp + COMPLETED_JOB_CACHE_TTL_MS; // 7 days
+  }
 
   const cacheData: CachedVeoJob = {
     jobId,
@@ -114,10 +145,11 @@ export function setCachedJob(
     scenes: data.scenes,
     characterRegistry: data.characterRegistry,
     timestamp,
+    expiresAt, // Include expiration
     script: data.script,
     colorProfile: data.colorProfile,
     logs: data.logs,
-    status: data.status || "completed",
+    status,
     error: data.error,
     resumeData: data.resumeData,
   };
@@ -165,9 +197,16 @@ export function getCachedJobList(): CachedVeoJobInfo[] {
 
   const allItems = jobCache.getAll();
   const jobs: CachedVeoJobInfo[] = [];
+  const now = Date.now(); // For expiration check
 
   for (const item of allItems) {
     if (item.data.jobId) {
+      // Check and remove expired jobs
+      if (item.data.expiresAt && now > item.data.expiresAt) {
+        jobCache.delete(item.data.jobId);
+        continue; // Skip expired job
+      }
+
       jobs.push({
         jobId: item.data.jobId,
         videoId: item.data.videoId,
@@ -178,6 +217,7 @@ export function getCachedJobList(): CachedVeoJobInfo[] {
         voice: item.data.summary?.voice || "no-voice",
         timestamp: item.data.timestamp,
         createdAt: item.data.summary?.createdAt || new Date(item.data.timestamp).toISOString(),
+        expiresAt: item.data.expiresAt, // Include expiration
         hasScript: !!item.data.script,
         status: item.data.status || "completed",
         error: item.data.error,

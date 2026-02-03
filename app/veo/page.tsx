@@ -732,6 +732,12 @@ export default function VeoPage() {
       return;
     }
 
+    // Check if expired
+    if (cached.expiresAt && Date.now() > cached.expiresAt) {
+      alert(lang.veo.jobExpiredCannotRetry);
+      return;
+    }
+
     const rd = cached.resumeData;
 
     // Pre-populate state with existing data

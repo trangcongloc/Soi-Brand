@@ -530,6 +530,7 @@ export interface CachedVeoJob {
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
   timestamp: number;
+  expiresAt?: number; // Unix timestamp (ms) when job expires
   script?: GeneratedScript; // Cached script for regeneration
   colorProfile?: CinematicProfile; // Phase 0: Cached color profile
   status: VeoJobStatus; // Job completion status
@@ -577,6 +578,7 @@ export interface CachedVeoJobInfo {
   voice: string;
   timestamp: number;
   createdAt: string;
+  expiresAt?: number; // Unix timestamp (ms) when job expires
   hasScript: boolean; // Whether script is cached for regeneration
   status: VeoJobStatus; // Job completion status
   error?: {

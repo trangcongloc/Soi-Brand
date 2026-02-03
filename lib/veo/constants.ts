@@ -75,6 +75,12 @@ export const CACHE_TTL_MS = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 export const MAX_CACHED_JOBS = 20;
 export const MIN_JOBS_TO_KEEP_AFTER_CLEANUP = 5;
 
+// Failed job expiration (48 hours)
+export const FAILED_JOB_CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 172,800,000 ms
+
+// Completed job expiration (7 days)
+export const COMPLETED_JOB_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 604,800,000 ms
+
 // ============================================================================
 // API CONFIGURATION
 // ============================================================================

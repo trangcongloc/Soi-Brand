@@ -767,6 +767,10 @@ export const en = {
             showLess: "Show less",
         },
 
+        leftToRetry: "left to retry",
+        expired: "Expired",
+        jobExpiredCannotRetry: "This job has expired and cannot be retried.",
+
         resume: {
             title: "Incomplete Job Found",
             message:

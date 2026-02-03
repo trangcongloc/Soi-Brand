@@ -18,6 +18,28 @@ type SortOption = "date-desc" | "date-asc" | "status" | "scenes-desc" | "scenes-
 
 const VISIBLE_COUNT = 5;
 
+/**
+ * Format time remaining until expiration
+ */
+function formatTimeRemaining(expiresAt: number): string {
+  const now = Date.now();
+  const remainingMs = expiresAt - now;
+
+  if (remainingMs <= 0) return 'expired';
+
+  const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+  const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else {
+    return `${minutes}m`;
+  }
+}
+
 function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId, onJobsChange }: VeoHistoryPanelProps) {
   const lang = useLang();
   const [jobs, setJobs] = useState<CachedVeoJobInfo[]>(() => getCachedJobList());
@@ -57,6 +79,23 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
       window.removeEventListener("veo-job-updated", handleJobUpdate);
     };
   }, [refreshJobs]);
+
+  // Force re-render every minute to update countdowns
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const hasCountdowns = jobs.some(
+      job => job.expiresAt && (job.status === 'failed' || job.status === 'partial')
+    );
+
+    if (!hasCountdowns) return; // Skip interval if no countdowns
+
+    const interval = setInterval(() => {
+      forceUpdate(prev => prev + 1);
+    }, 60000); // Update every 60 seconds
+
+    return () => clearInterval(interval);
+  }, [jobs]);
 
   const handleDelete = useCallback((jobId: string) => {
     deleteCachedJob(jobId);
@@ -353,10 +392,14 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
 
       <div className={styles.list}>
         <AnimatePresence>
-          {visibleJobs.map((job, index) => (
+          {visibleJobs.map((job, index) => {
+            const isExpired = job.expiresAt ? Date.now() > job.expiresAt : false;
+            const showCountdown = job.expiresAt && (job.status === 'failed' || job.status === 'partial');
+
+            return (
             <motion.div
               key={job.jobId}
-              className={`${styles.jobCard} ${currentJobId === job.jobId ? styles.active : ""}`}
+              className={`${styles.jobCard} ${currentJobId === job.jobId ? styles.active : ""} ${isExpired ? styles.expiredJob : ""}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -50 }}
@@ -401,6 +444,21 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                     )}
                   </div>
                 )}
+
+                {/* Countdown timer for failed/partial jobs */}
+                {showCountdown && !isExpired && (
+                  <div className={styles.countdown}>
+                    <span className={styles.countdownText}>
+                      {formatTimeRemaining(job.expiresAt!)} {lang.veo.leftToRetry}
+                    </span>
+                  </div>
+                )}
+
+                {isExpired && (
+                  <div className={styles.expired}>
+                    <span className={styles.expiredText}>{lang.veo.expired}</span>
+                  </div>
+                )}
               </div>
 
               <div className={styles.jobActions}>
@@ -434,9 +492,10 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                     {/* Retry button - show for failed jobs */}
                     {job.error && job.error.retryable && onRetryJob && (
                       <button
-                        className={styles.retryButton}
-                        onClick={() => onRetryJob(job.jobId)}
-                        title={lang.veo.history.retryFromBatch}
+                        className={isExpired ? styles.disabledButton : styles.retryButton}
+                        onClick={() => !isExpired && onRetryJob(job.jobId)}
+                        disabled={isExpired}
+                        title={isExpired ? lang.veo.jobExpiredCannotRetry : lang.veo.history.retryFromBatch}
                       >
                         <svg
                           width="14"
@@ -447,7 +506,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                           strokeWidth="2"
                         >
                           <path d="M1 4v6h6M23 20v-6h-6"/>
-                          <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
+                          <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 73.51 15"/>
                         </svg>
                         <span>{lang.veo.history.retryable}</span>
                       </button>
@@ -492,7 +551,8 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
                 )}
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
 
         {/* Show more/less toggle */}
