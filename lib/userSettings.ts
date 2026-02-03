@@ -11,11 +11,13 @@ export interface UserSettings {
     geminiModel?: GeminiModel;
     geminiImageModel?: GeminiImageModel;
     quotaUsage?: ApiQuotaUsage;
+    databaseKey?: string; // NEW: Cloud database access key
 }
 
 interface StoredSettings {
     youtubeApiKey?: string; // encrypted
     geminiApiKey?: string; // encrypted
+    databaseKey?: string; // encrypted
     geminiModel?: GeminiModel;
     geminiImageModel?: GeminiImageModel;
     quotaUsage?: ApiQuotaUsage;
@@ -82,6 +84,11 @@ export async function getUserSettingsAsync(): Promise<UserSettings> {
             if (parsed.geminiApiKey) {
                 const decrypted = await decrypt(parsed.geminiApiKey);
                 if (decrypted) settings.geminiApiKey = decrypted;
+            }
+
+            if (parsed.databaseKey) {
+                const decrypted = await decrypt(parsed.databaseKey);
+                if (decrypted) settings.databaseKey = decrypted;
             }
 
             cachedSettings = settings;
@@ -173,10 +180,22 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
                     stored.encrypted = false;
                 }
             }
+
+            if (settings.databaseKey) {
+                const encrypted = await encrypt(settings.databaseKey);
+                if (encrypted) {
+                    stored.databaseKey = encrypted;
+                } else {
+                    logger.warn("[UserSettings] Encryption failed for Database key, storing unencrypted");
+                    stored.databaseKey = settings.databaseKey;
+                    stored.encrypted = false;
+                }
+            }
         } else {
             // Fallback: store unencrypted (less secure)
             stored.youtubeApiKey = settings.youtubeApiKey;
             stored.geminiApiKey = settings.geminiApiKey;
+            stored.databaseKey = settings.databaseKey;
             stored.encrypted = false;
         }
 

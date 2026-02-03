@@ -4,16 +4,26 @@
  * DELETE /api/veo/jobs - Clear all jobs
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { listJobs, deleteAllJobs } from "@/lib/veo/d1-client";
+import { isValidDatabaseKey, extractDatabaseKey } from "@/lib/veo/auth";
 
 export const runtime = "nodejs"; // Use Node.js runtime for zlib
 
 /**
  * GET /api/veo/jobs - List all non-expired jobs
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Validate database key
+    const userKey = extractDatabaseKey(request.headers);
+    if (!isValidDatabaseKey(userKey)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid database key" },
+        { status: 401 }
+      );
+    }
+
     const jobs = await listJobs();
     return NextResponse.json({ jobs });
   } catch (error) {
@@ -28,8 +38,17 @@ export async function GET() {
 /**
  * DELETE /api/veo/jobs - Clear all jobs
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
+    // Validate database key
+    const userKey = extractDatabaseKey(request.headers);
+    if (!isValidDatabaseKey(userKey)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid database key" },
+        { status: 401 }
+      );
+    }
+
     await deleteAllJobs();
     return NextResponse.json({ success: true });
   } catch (error) {

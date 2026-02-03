@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getJob, upsertJob, deleteJob } from "@/lib/veo/d1-client";
 import { CachedVeoJob } from "@/lib/veo/types";
+import { isValidDatabaseKey, extractDatabaseKey } from "@/lib/veo/auth";
 
 export const runtime = "nodejs"; // Use Node.js runtime for zlib
 
@@ -15,10 +16,19 @@ export const runtime = "nodejs"; // Use Node.js runtime for zlib
  * GET /api/veo/jobs/[jobId] - Get job by ID
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { jobId: string } }
 ) {
   try {
+    // Validate database key
+    const userKey = extractDatabaseKey(request.headers);
+    if (!isValidDatabaseKey(userKey)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid database key" },
+        { status: 401 }
+      );
+    }
+
     const job = await getJob(params.jobId);
     if (!job) {
       return NextResponse.json(
@@ -44,6 +54,15 @@ export async function PUT(
   { params }: { params: { jobId: string } }
 ) {
   try {
+    // Validate database key
+    const userKey = extractDatabaseKey(request.headers);
+    if (!isValidDatabaseKey(userKey)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid database key" },
+        { status: 401 }
+      );
+    }
+
     const job: CachedVeoJob = await request.json();
     await upsertJob(params.jobId, job);
     return NextResponse.json({ success: true });
@@ -60,10 +79,19 @@ export async function PUT(
  * DELETE /api/veo/jobs/[jobId] - Delete job
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { jobId: string } }
 ) {
   try {
+    // Validate database key
+    const userKey = extractDatabaseKey(request.headers);
+    if (!isValidDatabaseKey(userKey)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid database key" },
+        { status: 401 }
+      );
+    }
+
     await deleteJob(params.jobId);
     return NextResponse.json({ success: true });
   } catch (error) {

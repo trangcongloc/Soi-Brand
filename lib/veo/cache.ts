@@ -8,3 +8,6 @@ export * from "./cache-remote";
 
 // Export types for convenience
 export type { CachedVeoJob, CachedVeoJobInfo } from "./types";
+
+// Export storage type checker
+export { isUsingCloudStorage } from "./cache-remote";
