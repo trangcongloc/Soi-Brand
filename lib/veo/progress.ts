@@ -246,12 +246,14 @@ export function updateProgressWithScript(
 
 /**
  * Get resume data from progress
+ * Direct mode jobs don't have scriptText, so it's optional
  */
 export function getResumeData(progress: VeoProgress): VeoResumeData | null {
+  // Can resume if job is incomplete and has some progress
   if (
     progress.status === "completed" ||
-    !progress.scriptText ||
-    progress.completedBatches === 0
+    progress.completedBatches === 0 ||
+    progress.completedBatches >= progress.totalBatches
   ) {
     return null;
   }
@@ -259,7 +261,7 @@ export function getResumeData(progress: VeoProgress): VeoResumeData | null {
   return {
     jobId: progress.jobId,
     videoUrl: progress.youtubeUrl,
-    scriptText: progress.scriptText,
+    scriptText: progress.scriptText, // Optional for Direct mode
     mode: progress.mode,
     sceneCount: progress.sceneCount,
     batchSize: progress.batchSize,
@@ -273,14 +275,15 @@ export function getResumeData(progress: VeoProgress): VeoResumeData | null {
 
 /**
  * Check if progress can be resumed
+ * Direct mode jobs don't have scriptText, so we don't require it
  */
 export function canResumeProgress(progress: VeoProgress | null): boolean {
   if (!progress) return false;
   return (
     progress.status === "in_progress" &&
     progress.completedBatches > 0 &&
-    progress.completedBatches < progress.totalBatches &&
-    !!progress.scriptText
+    progress.completedBatches < progress.totalBatches
+    // scriptText is optional for Direct mode (url-to-scenes workflow)
   );
 }
 

@@ -506,7 +506,7 @@ export interface VeoProgress {
 export interface VeoResumeData {
   jobId: string;
   videoUrl: string;
-  scriptText: string;
+  scriptText?: string; // Optional for Direct mode (url-to-scenes workflow)
   mode: VeoMode;
   sceneCount: number;
   batchSize: number;

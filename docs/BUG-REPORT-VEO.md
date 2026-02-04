@@ -14,7 +14,7 @@
 | 🟠 HIGH | 4 | 4 ✅ |
 | 🟡 MEDIUM | 6 | 0 |
 | 🟢 LOW | 4 | 0 |
-| **TOTAL** | **17** | **5** |
+| **TOTAL** | **17** | **7** |
 
 ---
 
@@ -71,7 +71,7 @@ export function canResumeProgress(progress: VeoProgress | null): boolean {
 ```
 **Impact**: Direct mode jobs can never be resumed via this check - they show as resumable but fail.
 **Fix**: Make scriptText optional or use different resume detection for Direct mode.
-**Status**: 🔄 TODO - Design decision needed
+**Status**: ✅ FIXED
 
 ### BUG-005: Audio settings hardcoded in handleResumeYes
 **File**: `app/veo/page.tsx:1046-1050`
@@ -102,7 +102,7 @@ const phase1Timeout = new Promise<never>((_, reject) => {
 **Status**: ✅ FIXED
 
 ### BUG-007: Unhandled promise rejection in handleJobsChange
-**File**: `app/veo/page.tsx:1213-1214`
+**File**: `app/veo/page.tsx:1236-1241`
 **Issue**: Promise rejection is unhandled if getCachedJobList throws.
 ```typescript
 const handleJobsChange = useCallback(() => {
@@ -112,7 +112,7 @@ const handleJobsChange = useCallback(() => {
 ```
 **Impact**: Unhandled promise rejection warning, potential state corruption.
 **Fix**: Add `.catch()` handler.
-**Status**: 🔄 TODO
+**Status**: ✅ FIXED
 
 ---
 
@@ -248,6 +248,32 @@ while (true) {
 }
 ```
 
+### FIX-004: Direct mode resume support (BUG-004)
+```typescript
+// 1. Make scriptText optional in VeoResumeData interface (lib/veo/types.ts)
+export interface VeoResumeData {
+  scriptText?: string; // Optional for Direct mode (url-to-scenes workflow)
+  // ...
+}
+
+// 2. Remove scriptText requirement in canResumeProgress (lib/veo/progress.ts)
+export function canResumeProgress(progress: VeoProgress | null): boolean {
+  return (
+    progress.status === "in_progress" &&
+    progress.completedBatches > 0 &&
+    progress.completedBatches < progress.totalBatches
+    // scriptText is optional for Direct mode
+  );
+}
+
+// 3. Update getResumeData to work without scriptText (lib/veo/progress.ts)
+// Removed !progress.scriptText check from return null condition
+
+// 4. Update handleResumeYes to detect workflow from scriptText presence (app/veo/page.tsx)
+const isDirectMode = !resumeData.scriptText;
+const workflow = isDirectMode ? "url-to-scenes" : "script-to-scenes";
+```
+
 ### FIX-005: Audio settings in handleResumeYes (BUG-005)
 ```typescript
 // Restore audio settings from VeoProgress if available
@@ -265,6 +291,17 @@ if (onLogUpdate) {
     // ... rest of fields
   });
 }
+```
+
+### FIX-007: Unhandled promise rejection in handleJobsChange (BUG-007)
+```typescript
+// Before
+getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
+
+// After
+getCachedJobList()
+  .then(jobs => setHasHistory(jobs.length > 0))
+  .catch(err => console.warn('[VEO] Failed to refresh job list:', err));
 ```
 
 ---

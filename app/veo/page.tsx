@@ -1053,10 +1053,15 @@ export default function VeoPage() {
     setCharacterRegistry(resumeData.existingCharacters);
     setCharacters(Object.keys(resumeData.existingCharacters));
 
+    // Determine workflow based on whether we have scriptText
+    // Direct mode (url-to-scenes) doesn't have scriptText
+    const isDirectMode = !resumeData.scriptText;
+    const workflow = isDirectMode ? "url-to-scenes" : "script-to-scenes";
+
     // Submit with resume parameters — convert legacy voice to AudioSettings
     handleSubmit({
-      workflow: "script-to-scenes",
-      scriptText: resumeData.scriptText,
+      workflow,
+      scriptText: resumeData.scriptText, // undefined for Direct mode
       mode: resumeData.mode,
       sceneCountMode: "manual",
       sceneCount: resumeData.sceneCount,
@@ -1072,7 +1077,7 @@ export default function VeoPage() {
       useVideoDescription: true, // Default for resume
       useVideoChapters: true, // Default for resume
       useVideoCaptions: true, // Default for resume
-      extractColorProfile: false, // No video in script-to-scenes
+      extractColorProfile: false, // Already have color profile from previous run
       mediaType: "video", // Default for resume
       selfieMode: false, // Default for resume
       resumeFromBatch: resumeData.completedBatches,
