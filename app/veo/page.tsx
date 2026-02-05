@@ -145,10 +145,37 @@ export default function VeoPage() {
     let mounted = true;
 
     // Fix any orphaned jobs (in_progress but have scenes) on mount
-    const fixedCount = fixOrphanedJobs();
-    if (fixedCount > 0) {
-      console.log(`[VEO] Fixed ${fixedCount} orphaned job(s) on mount`);
-    }
+    const fixLocalJobs = async () => {
+      // Fix local storage jobs
+      const fixedCount = fixOrphanedJobs();
+      if (fixedCount > 0) {
+        console.log(`[VEO] Fixed ${fixedCount} orphaned job(s) in localStorage`);
+      }
+
+      // Fix D1 jobs if cloud storage is enabled
+      const settings = await getUserSettingsAsync();
+      if (settings.databaseKey) {
+        try {
+          const response = await fetch('/api/veo/jobs/fix-orphaned', {
+            method: 'POST',
+            headers: {
+              'x-database-key': settings.databaseKey,
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.fixedCount > 0) {
+              console.log(`[VEO] Fixed ${data.fixedCount} orphaned job(s) in D1:`, data.fixedJobIds);
+            }
+          }
+        } catch (error) {
+          console.error('[VEO] Failed to fix D1 orphaned jobs:', error);
+        }
+      }
+    };
+
+    fixLocalJobs();
 
     getCachedJobList().then(jobs => {
       if (mounted) setHasHistory(jobs.length > 0);
