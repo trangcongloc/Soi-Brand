@@ -14,8 +14,7 @@ import { highlightJson } from "./json-highlight";
 import styles from "./VeoSceneDisplay.module.css";
 import jsonStyles from "./VeoJsonView.module.css";
 
-// BUG FIX #14: Pagination threshold for large datasets
-const JSON_VIEW_PAGE_SIZE = 50; // Scenes per page to prevent browser freeze
+// Batch-based pagination for JSON view (uses actual batch size from job)
 
 interface VeoSceneDisplayProps {
   scenes: Scene[];
@@ -97,20 +96,21 @@ function VeoSceneDisplay({
     }
   }, [script, jobId, downloadJson]);
 
-  // BUG FIX #14: Paginated JSON view for large datasets
-  const totalJsonPages = useMemo(() => Math.ceil(scenes.length / JSON_VIEW_PAGE_SIZE), [scenes.length]);
-  const isLargeDataset = scenes.length > JSON_VIEW_PAGE_SIZE;
+  // Batch-based pagination for JSON view
+  const batchSize = summary.batchSize || 30; // Default to 30 if not specified
+  const totalBatches = useMemo(() => Math.ceil(scenes.length / batchSize), [scenes.length, batchSize]);
+  const hasMultipleBatches = totalBatches > 1;
 
-  // Get paginated scenes for JSON view
-  const paginatedScenes = useMemo(() => {
-    if (!isLargeDataset) return scenes;
-    const start = jsonPage * JSON_VIEW_PAGE_SIZE;
-    const end = start + JSON_VIEW_PAGE_SIZE;
+  // Get scenes for current batch in JSON view
+  const batchScenes = useMemo(() => {
+    if (!hasMultipleBatches) return scenes;
+    const start = jsonPage * batchSize;
+    const end = start + batchSize;
     return scenes.slice(start, end);
-  }, [scenes, jsonPage, isLargeDataset]);
+  }, [scenes, jsonPage, batchSize, hasMultipleBatches]);
 
-  // Scenes JSON for the scenes tab code view (paginated for large datasets)
-  const scenesJson = useMemo(() => JSON.stringify(paginatedScenes, null, 2), [paginatedScenes]);
+  // Scenes JSON for the JSON tab (batch-based view)
+  const scenesJson = useMemo(() => JSON.stringify(batchScenes, null, 2), [batchScenes]);
   const highlightedScenesJson = useMemo(() => highlightJson(scenesJson, jsonStyles), [scenesJson]);
 
   // Full JSON for copy (not paginated)
@@ -128,14 +128,14 @@ function VeoSceneDisplay({
     }
   }, [fullScenesJson]);
 
-  // BUG FIX #14: Pagination controls for JSON view
-  const handleJsonPrevPage = useCallback(() => {
+  // Batch navigation controls for JSON view
+  const handleJsonPrevBatch = useCallback(() => {
     setJsonPage(p => Math.max(0, p - 1));
   }, []);
 
-  const handleJsonNextPage = useCallback(() => {
-    setJsonPage(p => Math.min(totalJsonPages - 1, p + 1));
-  }, [totalJsonPages]);
+  const handleJsonNextBatch = useCallback(() => {
+    setJsonPage(p => Math.min(totalBatches - 1, p + 1));
+  }, [totalBatches]);
 
   const hasLogs = logEntries && logEntries.length > 0;
 
@@ -155,8 +155,8 @@ function VeoSceneDisplay({
 
   return (
     <div className={styles.container}>
-      {/* Video Summary Header - Thumbnail + Title */}
-      <div className={styles.videoSummaryHeader}>
+        {/* Video Summary Header - Thumbnail + Title */}
+        <div className={styles.videoSummaryHeader}>
         {thumbnailUrl && (
           <div className={styles.thumbnailWrapper}>
             <img
@@ -245,6 +245,30 @@ function VeoSceneDisplay({
         </div>
       </div>
 
+      {/* Tabs - Navigation */}
+      <div className={styles.tabs}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            className={`${styles.tab} ${activeTab === tab.key ? styles.active : ""}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+            {tab.key === "scenes" && (
+              <span className={styles.badge}>{scenes.length}</span>
+            )}
+            {tab.key === "characters" && (
+              <span className={styles.badge}>
+                {Object.keys(characterRegistry).length}
+              </span>
+            )}
+            {tab.key === "logs" && hasLogs && (
+              <span className={styles.badge}>{logEntries.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Retry Section for Failed/Partial Jobs */}
       {(summary.status === "failed" || summary.status === "partial") && summary.error && (
         <div className={styles.retrySection}>
@@ -268,61 +292,30 @@ function VeoSceneDisplay({
         </div>
       )}
 
-      {/* Main Content Area with Sidebar + Content */}
-      <div className={styles.mainContentArea}>
-        {/* Sidebar (was tabs) */}
-        <div className={styles.sidebar}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              className={`${styles.sidebarItem} ${activeTab === tab.key ? styles.active : ""}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              <span className={styles.sidebarLabel}>{tab.label}</span>
-              {tab.key === "scenes" && (
-                <span className={styles.badge}>{scenes.length}</span>
-              )}
-              {tab.key === "characters" && (
-                <span className={styles.badge}>
-                  {Object.keys(characterRegistry).length}
-                </span>
-              )}
-              {tab.key === "logs" && hasLogs && (
-                <span className={styles.badge}>{logEntries.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Content Area */}
-        <div className={styles.content}>
+      {/* Content Area */}
+      <div className={styles.content}>
         {/* Scenes Tab - Interactive card list */}
         {activeTab === "scenes" && (
-          <VeoSceneCards
-            scenes={scenes}
-            logEntries={logEntries}
-            batchSize={summary.batchSize}
-          />
+          <VeoSceneCards scenes={scenes} />
         )}
 
-        {/* JSON Tab - Raw scenes JSON code view */}
-        {/* BUG FIX #14: Paginated view for large datasets */}
+        {/* JSON Tab - Raw scenes JSON code view (batch-based) */}
         {activeTab === "json" && (
           <div className={jsonStyles.jsonViewContainer}>
             <div className={jsonStyles.jsonHeader}>
               <h3>
                 Scenes ({scenes.length})
-                {isLargeDataset && (
+                {hasMultipleBatches && (
                   <span style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '0.5rem', opacity: 0.7 }}>
-                    - Showing {jsonPage * JSON_VIEW_PAGE_SIZE + 1}-{Math.min((jsonPage + 1) * JSON_VIEW_PAGE_SIZE, scenes.length)}
+                    - Batch {jsonPage + 1}/{totalBatches} (scenes {jsonPage * batchSize + 1}-{Math.min((jsonPage + 1) * batchSize, scenes.length)})
                   </span>
                 )}
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                {isLargeDataset && (
+                {hasMultipleBatches && (
                   <>
                     <button
-                      onClick={handleJsonPrevPage}
+                      onClick={handleJsonPrevBatch}
                       disabled={jsonPage === 0}
                       className={jsonStyles.copyButton}
                       style={{
@@ -334,15 +327,15 @@ function VeoSceneDisplay({
                       ← Prev
                     </button>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {jsonPage + 1} / {totalJsonPages}
+                      Batch {jsonPage + 1} / {totalBatches}
                     </span>
                     <button
-                      onClick={handleJsonNextPage}
-                      disabled={jsonPage >= totalJsonPages - 1}
+                      onClick={handleJsonNextBatch}
+                      disabled={jsonPage >= totalBatches - 1}
                       className={jsonStyles.copyButton}
                       style={{
-                        opacity: jsonPage >= totalJsonPages - 1 ? 0.5 : 1,
-                        cursor: jsonPage >= totalJsonPages - 1 ? 'not-allowed' : 'pointer',
+                        opacity: jsonPage >= totalBatches - 1 ? 0.5 : 1,
+                        cursor: jsonPage >= totalBatches - 1 ? 'not-allowed' : 'pointer',
                         padding: '0.5rem 0.75rem'
                       }}
                     >
@@ -397,7 +390,6 @@ function VeoSceneDisplay({
             onJobsChange={onJobsChange}
           />
         )}
-        </div>
       </div>
     </div>
   );

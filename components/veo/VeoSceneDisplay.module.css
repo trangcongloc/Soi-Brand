@@ -1,4 +1,8 @@
+/* Main container */
 .container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   width: 100%;
 }
 
@@ -174,34 +178,23 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Main Content Area with Sidebar */
-.mainContentArea {
-  display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 1.5rem;
-  min-height: 400px;
-}
-
-/* Sidebar (was tabs) */
-.sidebar {
+/* Tabs - Horizontal Navigation */
+.tabs {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  justify-content: center;
+  gap: 0.5rem;
   padding: 0.5rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  height: fit-content;
-  position: sticky;
-  top: 1rem;
+  overflow-x: auto;
 }
 
-.sidebarItem {
+.tab {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
@@ -210,22 +203,18 @@
   font-weight: 500;
   cursor: pointer;
   transition: var(--transition);
-  text-align: left;
+  white-space: nowrap;
 }
 
-.sidebarItem:hover:not(.active) {
+.tab:hover:not(.active) {
   background: var(--bg-hover);
   color: var(--text-main);
 }
 
-.sidebarItem.active {
+.tab.active {
   background: var(--bg-main);
   color: var(--text-main);
   box-shadow: var(--shadow-xs);
-}
-
-.sidebarLabel {
-  flex: 1;
 }
 
 .badge {
@@ -330,20 +319,12 @@
     right: 0;
   }
 
-  .mainContentArea {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+  .tabs {
+    flex-wrap: wrap;
+    gap: 0.25rem;
   }
 
-  .sidebar {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0.25rem;
-  }
-
-  .sidebarItem {
-    flex-shrink: 0;
+  .tab {
     padding: 0.5rem 0.75rem;
     font-size: var(--fs-xs);
   }

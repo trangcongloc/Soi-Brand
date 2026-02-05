@@ -1,29 +1,12 @@
 "use client";
 
 import { memo, useState, useMemo } from "react";
-import type { Scene, GeminiLogEntry } from "@/lib/veo/types";
+import type { Scene } from "@/lib/veo/types";
 import { highlightJson } from "./json-highlight";
 import styles from "./VeoSceneCards.module.css";
 
 interface VeoSceneCardsProps {
   scenes: Scene[];
-  logEntries?: GeminiLogEntry[];
-  batchSize?: number;
-}
-
-/**
- * Find the matching phase-2 log entry for a scene by batch number.
- * Scene at index i -> batchNumber = Math.floor(i / batchSize)
- */
-function findLogEntryForScene(
-  sceneIndex: number,
-  logEntries: GeminiLogEntry[],
-  batchSize: number
-): GeminiLogEntry | undefined {
-  const targetBatch = Math.floor(sceneIndex / batchSize);
-  return logEntries.find(
-    (entry) => entry.phase === "phase-2" && entry.batchNumber === targetBatch
-  );
 }
 
 function SceneCard({
@@ -31,13 +14,11 @@ function SceneCard({
   index,
   isExpanded,
   onToggle,
-  logEntry,
 }: {
   scene: Scene;
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
-  logEntry?: GeminiLogEntry;
 }) {
   const mediaType = scene.mediaType ?? "image";
   const promptPreview =
@@ -50,25 +31,6 @@ function SceneCard({
     return highlightJson(JSON.stringify(scene, null, 2), styles);
   }, [isExpanded, scene]);
 
-  const requestHighlighted = useMemo(() => {
-    if (!isExpanded || !logEntry) return null;
-    try {
-      const pretty = JSON.stringify(JSON.parse(logEntry.request.body), null, 2);
-      return highlightJson(pretty, styles);
-    } catch {
-      return logEntry.request.body;
-    }
-  }, [isExpanded, logEntry]);
-
-  const responseHighlighted = useMemo(() => {
-    if (!isExpanded || !logEntry) return null;
-    try {
-      const pretty = JSON.stringify(JSON.parse(logEntry.response.body), null, 2);
-      return highlightJson(pretty, styles);
-    } catch {
-      return logEntry.response.body;
-    }
-  }, [isExpanded, logEntry]);
 
   return (
     <div className={styles.card}>
@@ -108,41 +70,13 @@ function SceneCard({
               <code>{sceneJsonHighlighted}</code>
             </pre>
           </div>
-
-          {/* Request Sent */}
-          <div className={styles.detailSection}>
-            <span className={`${styles.detailLabel} ${styles.detailLabelRequest}`}>
-              Request Sent
-            </span>
-            {logEntry ? (
-              <pre className={styles.codeBlock}>
-                <code>{requestHighlighted}</code>
-              </pre>
-            ) : (
-              <span className={styles.noData}>No matching log entry found</span>
-            )}
-          </div>
-
-          {/* Response Received */}
-          <div className={styles.detailSection}>
-            <span className={`${styles.detailLabel} ${styles.detailLabelResponse}`}>
-              Response Received
-            </span>
-            {logEntry ? (
-              <pre className={styles.codeBlock}>
-                <code>{responseHighlighted}</code>
-              </pre>
-            ) : (
-              <span className={styles.noData}>No matching log entry found</span>
-            )}
-          </div>
         </div>
       )}
     </div>
   );
 }
 
-function VeoSceneCards({ scenes, logEntries, batchSize = 5 }: VeoSceneCardsProps) {
+function VeoSceneCards({ scenes }: VeoSceneCardsProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const handleToggle = (index: number) => {
@@ -151,22 +85,15 @@ function VeoSceneCards({ scenes, logEntries, batchSize = 5 }: VeoSceneCardsProps
 
   return (
     <div className={styles.cardList}>
-      {scenes.map((scene, i) => {
-        const logEntry = logEntries
-          ? findLogEntryForScene(i, logEntries, batchSize)
-          : undefined;
-
-        return (
-          <SceneCard
-            key={scene.id ?? i}
-            scene={scene}
-            index={i}
-            isExpanded={expandedIndex === i}
-            onToggle={() => handleToggle(i)}
-            logEntry={logEntry}
-          />
-        );
-      })}
+      {scenes.map((scene, i) => (
+        <SceneCard
+          key={scene.id ?? i}
+          scene={scene}
+          index={i}
+          isExpanded={expandedIndex === i}
+          onToggle={() => handleToggle(i)}
+        />
+      ))}
     </div>
   );
 }
