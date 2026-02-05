@@ -434,6 +434,7 @@ export type PromptSSEEvent =
   | PromptErrorEvent
   | PromptScriptEvent
   | PromptColorProfileEvent
+  | PromptVideoAnalysisEvent
   | PromptLogEvent
   | PromptLogUpdateEvent
   | PromptBatchCompleteEvent;
@@ -554,6 +555,9 @@ export interface CachedPromptJob {
     sceneCount: number;
     voice: VoiceLanguage;
     colorProfile?: CinematicProfile; // Phase 0: For resume
+    // Pre-extracted data from combined video analysis (Phase 0+1)
+    preExtractedCharacters?: CharacterSkeleton[];
+    preExtractedBackground?: string;
     // Extended fields for full settings restoration
     useVideoTitle?: boolean;
     useVideoDescription?: boolean;
@@ -767,6 +771,17 @@ export interface ColorProfileExtractionResult {
 }
 
 /**
+ * Combined result from Video Analysis phase (merged Phase 0 + Phase 1)
+ * Extracts both color profile and characters in a single API call
+ */
+export interface VideoAnalysisResult {
+  colorProfile: CinematicProfile;
+  confidence: number;
+  characters: CharacterSkeleton[];
+  background: string;
+}
+
+/**
  * SSE event for color profile extraction completion
  */
 export interface PromptColorProfileEvent {
@@ -774,6 +789,19 @@ export interface PromptColorProfileEvent {
   data: {
     profile: CinematicProfile;
     confidence: number;
+  };
+}
+
+/**
+ * SSE event for combined video analysis completion (Phase 0+1 merged)
+ */
+export interface PromptVideoAnalysisEvent {
+  event: "videoAnalysis";
+  data: {
+    colorProfile: CinematicProfile;
+    confidence: number;
+    characters: CharacterSkeleton[];
+    background: string;
   };
 }
 
@@ -1460,6 +1488,90 @@ export interface PromptTemplate {
 
 // Prompt 3 techniques are now integrated into base instructions (not optional toggles).
 // Only selfieMode remains as a genuine shot-type toggle.
+
+// ============================================================================
+// Interactions API Types (for video analysis and multi-turn chat)
+// ============================================================================
+
+/**
+ * Event types from the Interactions API stream
+ */
+export type InteractionEventType =
+  | "interaction.start"
+  | "content.delta"
+  | "interaction.complete"
+  | "error";
+
+/**
+ * Event from Interactions API stream
+ */
+export interface InteractionEvent {
+  event_type: InteractionEventType;
+  event_id?: string;
+  interaction?: {
+    id: string;
+    status?: "pending" | "in_progress" | "completed" | "failed";
+  };
+  delta?: {
+    type: "text" | "thought_summary";
+    text?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+/**
+ * Options for creating an interaction
+ */
+export interface InteractionOptions {
+  apiKey: string;
+  model?: string;
+  videoUrl?: string;
+  prompt: string;
+  previousInteractionId?: string;
+  stream?: boolean;
+}
+
+/**
+ * Session state for multi-turn interactions
+ */
+export interface InteractionSession {
+  jobId: string;
+  currentInteractionId: string | null;
+  batchCount: number;
+  createdAt: number;
+}
+
+// ============================================================================
+// Stream Recovery Types (for SSE resilience)
+// ============================================================================
+
+/**
+ * State for tracking stream recovery
+ */
+export interface StreamRecoveryState {
+  interactionId: string | null;
+  lastEventId: string | null;
+  isComplete: boolean;
+}
+
+/**
+ * Tracked SSE event with ID for recovery
+ */
+export interface TrackedSSEEvent {
+  eventId: string;
+  event: PromptSSEEvent;
+  timestamp: number;
+}
+
+/**
+ * Extended SSE event with optional event ID for recovery
+ */
+export type PromptSSEEventWithId = PromptSSEEvent & {
+  eventId?: string;
+};
 
 // ============================================================================
 // VEO Form Settings Persistence

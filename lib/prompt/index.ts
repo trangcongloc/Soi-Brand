@@ -49,6 +49,9 @@ export {
   // Phase 1: Character extraction
   buildCharacterExtractionPrompt,
   parseCharacterExtractionResponse,
+  // Combined Video Analysis (Phase 0+1 merged)
+  buildVideoAnalysisPrompt,
+  parseVideoAnalysisResponse,
 } from "./prompts";
 
 // Prompt 3 Templates
@@ -93,6 +96,8 @@ export {
   // Phase 1: Character extraction
   extractCharactersFromVideo,
   extractionResultToRegistry,
+  // Combined Video Analysis (Phase 0+1 merged)
+  extractVideoAnalysis,
 } from "./gemini";
 
 export type { GeminiCallMeta } from "./gemini";
@@ -122,18 +127,7 @@ export {
   savePromptFormSettings,
 } from "./settings";
 
-// Phase-level caching
-export {
-  getPhaseCache,
-  cachePhase0,
-  cachePhase1,
-  cachePhase2Batch,
-  addPhaseLog,
-  clearPhaseCache,
-  getAllPhaseCaches,
-  createPhaseCacheSettings,
-  getResumeDataFromPhaseCache,
-} from "./phase-cache";
+// D1-only: Phase-level caching removed - all data stored in CachedPromptJob via D1
 
 // Progress tracking
 export {
@@ -153,3 +147,19 @@ export {
   getResumeData,
   canResumeProgress,
 } from "./progress";
+
+// Interactions API (for video analysis and multi-turn chat)
+export {
+  startSession,
+  getSession,
+  updateSession,
+  closeSession,
+  createInteraction,
+  createInteractionStream,
+  createInteractionWithRetry,
+  continueSession,
+  continueSessionStream,
+  extractScenesWithInteractions,
+  shouldUseInteractionsAPI,
+  getSessionInfo,
+} from "./interactions";

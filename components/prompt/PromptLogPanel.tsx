@@ -7,6 +7,16 @@ import styles from "./PromptLogPanel.module.css";
 
 type LogMode = "compact" | "verbose";
 
+// Phase timer tracking for per-phase elapsed time
+interface PhaseTimer {
+  phase: string;
+  startTime: number;      // Date.now() when phase started
+  endTime?: number;       // Date.now() when phase completed
+  elapsedSeconds: number; // Running counter while active
+}
+
+type PhaseType = GeminiLogEntry["phase"];
+
 interface VeoLogPanelProps {
   entries: GeminiLogEntry[];
   // Progress props
@@ -86,6 +96,47 @@ function formatElapsedTime(seconds: number): string {
   const hours = Math.floor(mins / 60);
   const remainingMins = mins % 60;
   return `${hours}:${remainingMins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Detect current phase from entries or message
+ */
+function getCurrentPhase(entries: GeminiLogEntry[], message?: string): PhaseType | null {
+  // Check message for phase hints first
+  if (message) {
+    const lowerMsg = message.toLowerCase();
+    if (lowerMsg.includes("script")) return "phase-script";
+    if (lowerMsg.includes("color") || lowerMsg.includes("phase 0") || lowerMsg.includes("video analysis")) return "phase-0";
+    if (lowerMsg.includes("character") || lowerMsg.includes("phase 1")) return "phase-1";
+    if (lowerMsg.includes("scene") || lowerMsg.includes("phase 2") || lowerMsg.includes("batch")) return "phase-2";
+  }
+
+  // Fallback: check last pending entry
+  const pending = entries.find(e => e.status === "pending");
+  if (pending) return pending.phase;
+
+  // Fallback: check last entry
+  if (entries.length > 0) {
+    return entries[entries.length - 1].phase;
+  }
+
+  return null;
+}
+
+/**
+ * Get phase display name for compact headers
+ */
+function getPhaseDisplayName(phase: PhaseType): string {
+  switch (phase) {
+    case "phase-script":
+      return "Script Extraction";
+    case "phase-0":
+      return "Video Analysis";
+    case "phase-1":
+      return "Character Extraction";
+    case "phase-2":
+      return "Scene Generation";
+  }
 }
 
 /**
@@ -293,6 +344,34 @@ function groupByPhase(entries: GeminiLogEntry[]): PhaseGroups {
   return result;
 }
 
+/**
+ * Compact phase header with elapsed time (shown between phase changes)
+ */
+function CompactPhaseHeader({
+  phase,
+  timer,
+}: {
+  phase: PhaseType;
+  timer?: PhaseTimer;
+}) {
+  const isActive = timer && !timer.endTime;
+  const elapsed = timer?.endTime
+    ? Math.floor((timer.endTime - timer.startTime) / 1000)
+    : timer?.elapsedSeconds ?? 0;
+
+  return (
+    <div className={styles.compactPhaseHeader}>
+      <span className={styles.compactPhaseLine}>──</span>
+      <span className={getPhaseLabelClass(phase)}>{getPhaseDisplayName(phase)}</span>
+      <span className={styles.compactPhaseLine}>──</span>
+      <span className={isActive ? styles.phaseTimeActive : styles.phaseTimeComplete}>
+        {isActive ? `${formatElapsedTime(elapsed)}...` : `✓ ${formatElapsedTime(elapsed)}`}
+      </span>
+      <span className={styles.compactPhaseLine}>──</span>
+    </div>
+  );
+}
+
 function PhaseGroupHeader({
   label,
   count,
@@ -300,6 +379,7 @@ function PhaseGroupHeader({
   phaseClass,
   isOpen,
   onToggle,
+  phaseTimer,
 }: {
   label: string;
   count: number;
@@ -307,7 +387,13 @@ function PhaseGroupHeader({
   phaseClass: string;
   isOpen: boolean;
   onToggle: () => void;
+  phaseTimer?: PhaseTimer;
 }) {
+  const isPhaseActive = phaseTimer && !phaseTimer.endTime;
+  const phaseElapsed = phaseTimer?.endTime
+    ? Math.floor((phaseTimer.endTime - phaseTimer.startTime) / 1000)
+    : phaseTimer?.elapsedSeconds ?? 0;
+
   return (
     <button className={`${styles.phaseGroupHeader} ${phaseClass}`} onClick={onToggle}>
       <svg
@@ -323,14 +409,53 @@ function PhaseGroupHeader({
       </svg>
       {label}
       <span className={styles.groupCount}>({count})</span>
-      {duration !== undefined && duration > 0 && (
+      {phaseTimer && (
+        <span className={isPhaseActive ? styles.phaseTimeActive : styles.phaseTimeComplete}>
+          {isPhaseActive ? `${formatElapsedTime(phaseElapsed)}...` : `✓ ${formatElapsedTime(phaseElapsed)}`}
+        </span>
+      )}
+      {duration !== undefined && duration > 0 && !phaseTimer && (
         <span className={styles.groupDuration}>{formatDuration(duration)}</span>
       )}
     </button>
   );
 }
 
-function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
+/**
+ * Render compact entries with phase headers when phase changes
+ */
+function renderCompactWithPhaseHeaders(
+  entries: GeminiLogEntry[],
+  phaseTimers: Map<string, PhaseTimer>
+): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  let currentPhase: PhaseType | null = null;
+
+  for (const entry of entries) {
+    // Add phase header when phase changes
+    if (entry.phase !== currentPhase) {
+      result.push(
+        <CompactPhaseHeader
+          key={`phase-header-${entry.phase}-${entry.id}`}
+          phase={entry.phase}
+          timer={phaseTimers.get(entry.phase)}
+        />
+      );
+      currentPhase = entry.phase;
+    }
+    result.push(<CompactEntry key={entry.id} entry={entry} />);
+  }
+
+  return result;
+}
+
+function VerboseGrouped({
+  entries,
+  phaseTimers,
+}: {
+  entries: GeminiLogEntry[];
+  phaseTimers: Map<string, PhaseTimer>;
+}) {
   const groups = useMemo(() => groupByPhase(entries), [entries]);
   const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({
     phaseScript: false,
@@ -375,6 +500,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
             phaseClass={styles.phaseHeaderScript}
             isOpen={openPhases.phaseScript ?? false}
             onToggle={() => togglePhase("phaseScript")}
+            phaseTimer={phaseTimers.get("phase-script")}
           />
           {(openPhases.phaseScript ?? false) &&
             groups.phaseScript.map((entry) => (
@@ -387,12 +513,13 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
       {groups.phase0.length > 0 && (
         <div className={`${styles.phaseGroup} ${styles.phaseGroup0}`}>
           <PhaseGroupHeader
-            label="Phase 0: Color Profile Extraction"
+            label="Phase 0: Video Analysis"
             count={groups.phase0.length}
             duration={calcGroupDuration(groups.phase0)}
             phaseClass={styles.phaseHeader0}
             isOpen={openPhases.phase0 ?? false}
             onToggle={() => togglePhase("phase0")}
+            phaseTimer={phaseTimers.get("phase-0")}
           />
           {(openPhases.phase0 ?? false) &&
             groups.phase0.map((entry) => (
@@ -411,6 +538,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
             phaseClass={styles.phaseHeader1}
             isOpen={openPhases.phase1 ?? false}
             onToggle={() => togglePhase("phase1")}
+            phaseTimer={phaseTimers.get("phase-1")}
           />
           {(openPhases.phase1 ?? false) &&
             groups.phase1.map((entry) => (
@@ -429,6 +557,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
             phaseClass={styles.phaseHeader2}
             isOpen={openPhases.phase2 ?? false}
             onToggle={() => togglePhase("phase2")}
+            phaseTimer={phaseTimers.get("phase-2")}
           />
           {(openPhases.phase2 ?? false) &&
             sortedBatches.map(([batchNum, batchEntries]) => (
@@ -482,18 +611,82 @@ export default function VeoLogPanel({
   const [spinnerIndex, setSpinnerIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
 
+  // Phase timer tracking
+  const [phaseTimers, setPhaseTimers] = useState<Map<string, PhaseTimer>>(new Map());
+  const [activePhase, setActivePhase] = useState<PhaseType | null>(null);
+
   // Track if we're actively streaming (for elapsed time reset)
   const isStreaming = batch !== undefined || !!message;
 
-  // Reset elapsed time when streaming starts (new job)
+  // Derive current phase from entries/message
+  const currentPhase = useMemo(
+    () => getCurrentPhase(entries, message),
+    [entries, message]
+  );
+
+  // Reset elapsed time and phase timers when streaming starts (new job)
   const prevStreamingRef = useRef(false);
   useEffect(() => {
     if (isStreaming && !prevStreamingRef.current) {
-      // Just started streaming - reset timer
+      // Just started streaming - reset timer and phase timers
       setElapsedTime(0);
+      setPhaseTimers(new Map());
+      setActivePhase(null);
     }
     prevStreamingRef.current = isStreaming;
   }, [isStreaming]);
+
+  // Start new phase timer when phase changes
+  useEffect(() => {
+    if (!isStreaming || !currentPhase) return;
+
+    if (currentPhase !== activePhase) {
+      // Mark previous phase as complete
+      if (activePhase) {
+        setPhaseTimers(prev => {
+          const updated = new Map(prev);
+          const timer = updated.get(activePhase);
+          if (timer && !timer.endTime) {
+            updated.set(activePhase, { ...timer, endTime: Date.now() });
+          }
+          return updated;
+        });
+      }
+
+      // Start new phase timer (only if not already tracked)
+      setPhaseTimers(prev => {
+        const updated = new Map(prev);
+        if (!updated.has(currentPhase)) {
+          updated.set(currentPhase, {
+            phase: currentPhase,
+            startTime: Date.now(),
+            elapsedSeconds: 0,
+          });
+        }
+        return updated;
+      });
+      setActivePhase(currentPhase);
+    }
+  }, [currentPhase, activePhase, isStreaming]);
+
+  // Update elapsed seconds for active phase every second
+  useEffect(() => {
+    if (!activePhase || !isStreaming) return;
+    const interval = setInterval(() => {
+      setPhaseTimers(prev => {
+        const updated = new Map(prev);
+        const timer = updated.get(activePhase);
+        if (timer && !timer.endTime) {
+          updated.set(activePhase, {
+            ...timer,
+            elapsedSeconds: Math.floor((Date.now() - timer.startTime) / 1000),
+          });
+        }
+        return updated;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activePhase, isStreaming]);
 
   // Elapsed time counter (only runs while streaming)
   useEffect(() => {
@@ -613,16 +806,14 @@ export default function VeoLogPanel({
           <div className={styles.empty}>{message || "Initializing..."}</div>
         ) : mode === "compact" ? (
           <>
-            {entries.map((entry) => (
-              <CompactEntry key={entry.id} entry={entry} />
-            ))}
+            {renderCompactWithPhaseHeaders(entries, phaseTimers)}
             <hr className={styles.separator} />
             <div className={styles.totalSummary}>
               Total: {totals.count} phase{totals.count !== 1 ? "s" : ""} | {formatChars(totals.totalTokens)} tokens | {formatDuration(totals.totalDuration)}
             </div>
           </>
         ) : (
-          <VerboseGrouped entries={entries} />
+          <VerboseGrouped entries={entries} phaseTimers={phaseTimers} />
         )}
       </div>
     </div>

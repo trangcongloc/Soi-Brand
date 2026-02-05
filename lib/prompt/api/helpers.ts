@@ -4,11 +4,18 @@
  */
 
 import { handleAPIError, type UnifiedErrorType } from "@/lib/error-handler";
-import type { PromptSSEEvent, PromptErrorType, GeminiApiError } from "@/lib/prompt/types";
+import type {
+  PromptSSEEvent,
+  PromptErrorType,
+  GeminiApiError,
+  TrackedSSEEvent,
+} from "@/lib/prompt/types";
 import {
   BASE_STREAM_TIMEOUT_MS,
   STREAM_TIMEOUT_PER_SCENE_MS,
   MAX_STREAM_TIMEOUT_MS,
+  MAX_RECOVERY_EVENTS,
+  EVENT_ID_SEPARATOR,
 } from "@/lib/prompt/constants";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -74,26 +81,124 @@ export function formatErrorMessage(error: unknown, context?: string): string {
  * SSE Encoder for streaming events
  */
 export interface SSEEncoder {
-  encode: (event: PromptSSEEvent) => Uint8Array;
+  encode: (event: PromptSSEEvent, eventId?: string) => Uint8Array;
   encodeKeepAlive: () => Uint8Array;
 }
 
 /**
- * Create SSE encoder for streaming events
+ * Create SSE encoder for streaming events with optional event ID support
  */
 export function createSSEEncoder(): SSEEncoder {
   const encoder = new TextEncoder();
 
   return {
-    encode: (event: PromptSSEEvent): Uint8Array => {
+    encode: (event: PromptSSEEvent, eventId?: string): Uint8Array => {
       const data = JSON.stringify(event);
-      return encoder.encode(`data: ${data}\n\n`);
+      // Include event ID if provided (for stream recovery)
+      const idLine = eventId ? `id: ${eventId}\n` : "";
+      return encoder.encode(`${idLine}data: ${data}\n\n`);
     },
     encodeKeepAlive: (): Uint8Array => {
       return encoder.encode(`: keepalive\n\n`);
     },
   };
 }
+
+// ============================================================================
+// Event ID Generation and Tracking
+// ============================================================================
+
+/**
+ * Generate event ID for SSE stream recovery
+ * Format: {jobId}-{batchNum}-{eventNum}
+ */
+export function generateEventId(jobId: string, batchNum: number, eventNum: number): string {
+  return `${jobId}${EVENT_ID_SEPARATOR}${batchNum}${EVENT_ID_SEPARATOR}${eventNum}`;
+}
+
+/**
+ * Parse event ID to extract job ID, batch number, and event number
+ */
+export function parseEventId(eventId: string): { jobId: string; batchNum: number; eventNum: number } | null {
+  const parts = eventId.split(EVENT_ID_SEPARATOR);
+  if (parts.length < 3) return null;
+
+  // Job ID may contain dashes, so we need to reconstruct it
+  const eventNum = parseInt(parts[parts.length - 1], 10);
+  const batchNum = parseInt(parts[parts.length - 2], 10);
+  const jobId = parts.slice(0, -2).join(EVENT_ID_SEPARATOR);
+
+  if (isNaN(eventNum) || isNaN(batchNum)) return null;
+
+  return { jobId, batchNum, eventNum };
+}
+
+/**
+ * Event tracker for stream recovery
+ * Stores recent events in memory keyed by job ID
+ */
+export class EventTracker {
+  private events: Map<string, TrackedSSEEvent[]> = new Map();
+
+  /**
+   * Track an event for potential recovery
+   */
+  track(jobId: string, eventId: string, event: PromptSSEEvent): void {
+    const jobEvents = this.events.get(jobId) ?? [];
+    jobEvents.push({
+      eventId,
+      event,
+      timestamp: Date.now(),
+    });
+
+    // Limit stored events per job to prevent memory bloat
+    if (jobEvents.length > MAX_RECOVERY_EVENTS) {
+      jobEvents.shift();
+    }
+
+    this.events.set(jobId, jobEvents);
+  }
+
+  /**
+   * Get events since a given event ID
+   */
+  getEventsSince(jobId: string, lastEventId: string): TrackedSSEEvent[] {
+    const jobEvents = this.events.get(jobId) ?? [];
+    const lastEventIndex = jobEvents.findIndex(e => e.eventId === lastEventId);
+
+    if (lastEventIndex === -1) {
+      // Event not found - return all events (client may need to restart)
+      return jobEvents;
+    }
+
+    // Return events after the last one client received
+    return jobEvents.slice(lastEventIndex + 1);
+  }
+
+  /**
+   * Get all events for a job
+   */
+  getAllEvents(jobId: string): TrackedSSEEvent[] {
+    return this.events.get(jobId) ?? [];
+  }
+
+  /**
+   * Clear events for a job (call when job completes)
+   */
+  clear(jobId: string): void {
+    this.events.delete(jobId);
+  }
+
+  /**
+   * Check if job has tracked events
+   */
+  has(jobId: string): boolean {
+    return this.events.has(jobId) && (this.events.get(jobId)?.length ?? 0) > 0;
+  }
+}
+
+// Global event tracker instance
+export const eventTracker = new EventTracker();
 
 /**
  * Create JSON error response

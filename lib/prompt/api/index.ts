@@ -14,6 +14,10 @@ export {
   createSSEEncoder,
   createErrorResponse,
   createRateLimitResponse,
+  generateEventId,
+  parseEventId,
+  eventTracker,
+  EventTracker,
   type SSEEncoder,
 } from "./helpers";
 

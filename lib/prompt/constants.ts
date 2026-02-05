@@ -132,6 +132,24 @@ export const GEMINI_API_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/";
 export const YOUTUBE_THUMBNAIL_BASE_URL = "https://img.youtube.com/vi/";
 
+// Interactions API (for video analysis and multi-turn chat)
+export const INTERACTIONS_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/interactions";
+export const INTERACTIONS_MODEL = "gemini-2.5-flash-preview";
+
+// ============================================================================
+// STREAM RECOVERY
+// ============================================================================
+
+// Event ID format: {jobId}-{batchNum}-{eventNum}
+export const EVENT_ID_SEPARATOR = "-";
+// Maximum events to keep in memory for recovery
+export const MAX_RECOVERY_EVENTS = 1000;
+// Recovery reconnection delays (exponential backoff)
+export const RECOVERY_INITIAL_DELAY_MS = 2000;
+export const RECOVERY_MAX_DELAY_MS = 30000;
+export const RECOVERY_BACKOFF_MULTIPLIER = 2;
+
 // ============================================================================
 // FORM SETTINGS PERSISTENCE
 // ============================================================================
