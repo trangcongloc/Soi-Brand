@@ -4,23 +4,58 @@
 
 import { isBrowser } from "./utils";
 
-// Use environment variable for salt, fallback to default (obfuscation only)
-const SALT = process.env.NEXT_PUBLIC_ENCRYPTION_SALT || "soi-brand-v1";
 const ALGORITHM = "AES-GCM";
+const USER_SALT_KEY = "soibrand_encryption_salt";
+const SALT_LENGTH = 32; // 256 bits
 
 /**
- * Generate a consistent encryption key from the origin
+ * Get or generate a per-user salt stored in localStorage
+ * Each user gets their own unique salt, preventing same-origin key derivation
+ */
+function getUserSalt(): Uint8Array | null {
+    if (!isBrowser()) {
+        return null;
+    }
+
+    try {
+        // Check if user already has a salt
+        const existingSalt = localStorage.getItem(USER_SALT_KEY);
+        if (existingSalt) {
+            // Decode base64 salt
+            const saltBytes = atob(existingSalt).split("").map((c) => c.charCodeAt(0));
+            return new Uint8Array(saltBytes);
+        }
+
+        // Generate new per-user salt
+        const newSalt = window.crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+        // Store as base64
+        const saltBase64 = btoa(String.fromCharCode.apply(null, Array.from(newSalt)));
+        localStorage.setItem(USER_SALT_KEY, saltBase64);
+        return newSalt;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Generate a consistent encryption key from the origin + per-user salt
+ * SECURITY: Each user has a unique salt, preventing shared encryption keys
  */
 async function getEncryptionKey(): Promise<CryptoKey | null> {
     if (!isBrowser() || !window.crypto?.subtle) {
         return null;
     }
 
+    const userSalt = getUserSalt();
+    if (!userSalt) {
+        return null;
+    }
+
     try {
-        // Use origin + salt as the base for key derivation
+        // Use origin + user-specific salt as the base for key derivation
         const keyMaterial = await window.crypto.subtle.importKey(
             "raw",
-            new TextEncoder().encode(window.location.origin + SALT),
+            new TextEncoder().encode(window.location.origin),
             { name: "PBKDF2" },
             false,
             ["deriveBits", "deriveKey"]
@@ -29,7 +64,7 @@ async function getEncryptionKey(): Promise<CryptoKey | null> {
         return await window.crypto.subtle.deriveKey(
             {
                 name: "PBKDF2",
-                salt: new TextEncoder().encode(SALT),
+                salt: userSalt.buffer as ArrayBuffer, // Per-user salt instead of shared salt
                 iterations: 100000,
                 hash: "SHA-256",
             },

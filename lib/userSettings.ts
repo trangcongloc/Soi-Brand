@@ -156,6 +156,7 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
         };
 
         // Encrypt API keys if crypto is available
+        // SECURITY: Do NOT silently fall back to plaintext - fail explicitly
         if (isEncryptionAvailable()) {
             stored.encrypted = true;
 
@@ -164,9 +165,10 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
                 if (encrypted) {
                     stored.youtubeApiKey = encrypted;
                 } else {
-                    logger.warn("[UserSettings] Encryption failed for YouTube key, storing unencrypted");
-                    stored.youtubeApiKey = settings.youtubeApiKey;
-                    stored.encrypted = false;
+                    // SECURITY: Throw error instead of falling back to plaintext
+                    const error = new Error("Encryption failed for YouTube API key. Please try again or check browser compatibility.");
+                    logger.error("[UserSettings] Encryption failed for YouTube key", error);
+                    throw error;
                 }
             }
 
@@ -175,9 +177,10 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
                 if (encrypted) {
                     stored.geminiApiKey = encrypted;
                 } else {
-                    logger.warn("[UserSettings] Encryption failed for Gemini key, storing unencrypted");
-                    stored.geminiApiKey = settings.geminiApiKey;
-                    stored.encrypted = false;
+                    // SECURITY: Throw error instead of falling back to plaintext
+                    const error = new Error("Encryption failed for Gemini API key. Please try again or check browser compatibility.");
+                    logger.error("[UserSettings] Encryption failed for Gemini key", error);
+                    throw error;
                 }
             }
 
@@ -186,13 +189,16 @@ export async function saveUserSettingsAsync(settings: UserSettings): Promise<voi
                 if (encrypted) {
                     stored.databaseKey = encrypted;
                 } else {
-                    logger.warn("[UserSettings] Encryption failed for Database key, storing unencrypted");
-                    stored.databaseKey = settings.databaseKey;
-                    stored.encrypted = false;
+                    // SECURITY: Throw error instead of falling back to plaintext
+                    const error = new Error("Encryption failed for Database key. Please try again or check browser compatibility.");
+                    logger.error("[UserSettings] Encryption failed for Database key", error);
+                    throw error;
                 }
             }
         } else {
-            // Fallback: store unencrypted (less secure)
+            // SECURITY: Encryption not available - warn user but allow unencrypted storage
+            // This is a conscious decision: better to work with a warning than to break completely
+            logger.warn("[UserSettings] Web Crypto API not available. API keys will be stored without encryption.");
             stored.youtubeApiKey = settings.youtubeApiKey;
             stored.geminiApiKey = settings.geminiApiKey;
             stored.databaseKey = settings.databaseKey;

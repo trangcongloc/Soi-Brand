@@ -1,14 +1,24 @@
 /**
  * API Quota Status Endpoint
  * Returns current quota usage percentages for YouTube and Gemini APIs
+ * Protected: Requires valid database key to prevent reconnaissance attacks
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getQuotaUsage, getQuotaPercentage } from "@/lib/apiQuota";
 import { logger } from "@/lib/logger";
+import { isValidDatabaseKey, extractDatabaseKey } from "@/lib/veo/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Validate database key to prevent reconnaissance attacks
+    const userKey = extractDatabaseKey(request.headers);
+    if (!isValidDatabaseKey(userKey)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Invalid or missing database key" },
+        { status: 401 }
+      );
+    }
     // Get current quota usage (will auto-reset if needed)
     const usage = getQuotaUsage();
 

@@ -452,12 +452,18 @@ export default function VeoLogPanel({
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-scroll to bottom when new entries arrive
+  // BUG FIX #22: Auto-scroll to bottom when entries change (not just count)
+  // Using JSON serialization to detect in-place updates
+  const entriesKey = useMemo(() => {
+    // Create a simplified key based on entry IDs and statuses
+    return entries.map(e => `${e.id}:${e.status}`).join(',');
+  }, [entries]);
+
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [entries.length]);
+  }, [entriesKey]);
 
   // Compute totals
   const totals = useMemo(() => {
@@ -470,8 +476,15 @@ export default function VeoLogPanel({
     return { totalTokens, totalDuration, count: entries.length };
   }, [entries]);
 
-  // Compute progress percentage
-  const progressPercent = totalBatches && totalBatches > 0 ? (batch ?? 0) / totalBatches * 100 : 0;
+  // BUG FIX #23: Compute progress percentage correctly
+  // batch is 1-indexed from the API, so we should use it directly
+  // When batch=1/total=5, we want to show progress for "doing batch 1"
+  // Progress = (completedBatches / totalBatches) * 100
+  // If batch is the current batch being processed, progress = ((batch - 1) / total) * 100
+  // But we want to show "in progress", so use batch/total to show forward movement
+  const progressPercent = totalBatches && totalBatches > 0
+    ? Math.min(((batch ?? 0) / totalBatches) * 100, 100)
+    : 0;
 
   return (
     <div className={styles.panel}>

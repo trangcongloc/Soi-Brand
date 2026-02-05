@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { VeoWorkflow } from "@/lib/veo";
+import { VeoWorkflow, extractVideoId, isValidYouTubeUrl, getYouTubeThumbnail } from "@/lib/veo";
 import { useLang } from "@/lib/lang";
 import styles from "./VeoForm.module.css";
 
@@ -19,23 +19,6 @@ interface VeoUrlInputProps {
   onEndTimeChange: (time: string) => void;
   isLoading: boolean;
   workflow: VeoWorkflow;
-}
-
-function extractVideoId(url: string): string | null {
-  if (!url) return null;
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
-function getThumbnailUrl(videoId: string): string {
-  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 }
 
 export function VeoUrlInput({
@@ -55,23 +38,33 @@ export function VeoUrlInput({
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
 
-  const validateUrl = useCallback((inputUrl: string) => {
+  // BUG FIX #12: Always return cleanup function to prevent race conditions
+  const validateUrl = useCallback((inputUrl: string): (() => void) => {
     if (!inputUrl.trim()) {
       setValidationStatus("idle");
       setThumbnailUrl(null);
       setVideoId(null);
-      return;
+      // Return empty cleanup function instead of undefined
+      return () => {};
     }
 
     setValidationStatus("loading");
 
     // Debounce validation
     const timeoutId = setTimeout(() => {
-      const extractedId = extractVideoId(inputUrl);
-      if (extractedId) {
-        setVideoId(extractedId);
-        setThumbnailUrl(getThumbnailUrl(extractedId));
-        setValidationStatus("valid");
+      // Use canonical validation from lib/veo/utils
+      if (isValidYouTubeUrl(inputUrl)) {
+        const extractedId = extractVideoId(inputUrl);
+        // BUG FIX #26: extractVideoId now returns null for invalid URLs
+        if (extractedId) {
+          setVideoId(extractedId);
+          setThumbnailUrl(getYouTubeThumbnail(extractedId, "medium"));
+          setValidationStatus("valid");
+        } else {
+          setVideoId(null);
+          setThumbnailUrl(null);
+          setValidationStatus("invalid");
+        }
       } else {
         setVideoId(null);
         setThumbnailUrl(null);
@@ -147,8 +140,10 @@ export function VeoUrlInput({
               alt="Video thumbnail"
               className={styles.thumbnailImage}
               onError={() => {
+                // BUG FIX #24: Don't mark URL invalid when thumbnail CDN fails
+                // The URL is still valid, just the thumbnail preview isn't available
                 setThumbnailUrl(null);
-                setValidationStatus("invalid");
+                // Keep validation status as "valid" since the URL format is correct
               }}
             />
             <div className={styles.thumbnailInfo}>

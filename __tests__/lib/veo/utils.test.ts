@@ -52,12 +52,12 @@ describe("VEO Utils", () => {
       ).toBe("dQw4w9WgXcQ");
     });
 
-    it("returns 'unknown' for invalid URL", () => {
-      expect(extractVideoId("not-a-valid-url")).toBe("unknown");
+    it("returns null for invalid URL", () => {
+      expect(extractVideoId("not-a-valid-url")).toBeNull();
     });
 
-    it("returns 'unknown' for non-YouTube URL", () => {
-      expect(extractVideoId("https://vimeo.com/123456789")).toBe("unknown");
+    it("returns null for non-YouTube URL", () => {
+      expect(extractVideoId("https://vimeo.com/123456789")).toBeNull();
     });
 
     it("handles URL with hyphens and underscores in video ID", () => {
@@ -240,8 +240,12 @@ describe("VEO Utils", () => {
       expect(formatTime(65)).toBe("01:05");
     });
 
-    it("handles large minutes", () => {
-      expect(formatTime(3661)).toBe("61:01");
+    it("handles 1+ hour durations with HH:MM:SS format", () => {
+      expect(formatTime(3661)).toBe("01:01:01");
+    });
+
+    it("formats just under 1 hour correctly", () => {
+      expect(formatTime(3599)).toBe("59:59");
     });
   });
 

@@ -90,6 +90,7 @@ export class LocalStorageCache<T> {
 
   /**
    * Set a cached item
+   * BUG FIX #5: Improved storage quota handling for large jobs
    */
   set(id: string, data: T, timestamp?: number): void {
     if (!isBrowser()) return;
@@ -98,9 +99,10 @@ export class LocalStorageCache<T> {
       const ts = timestamp ?? Date.now();
 
       // Enforce max item limit
-      const allKeys = this.getAllCacheKeys();
+      let allKeys = this.getAllCacheKeys();
       if (allKeys.length >= this.maxItems) {
         this.removeOldestItem(allKeys);
+        allKeys = this.getAllCacheKeys(); // Refresh after removal
       }
 
       const cacheData: CachedItem<T> = {
@@ -109,12 +111,63 @@ export class LocalStorageCache<T> {
       };
 
       const key = this.getCacheKey(id);
-      localStorage.setItem(key, JSON.stringify(cacheData));
+      const serialized = JSON.stringify(cacheData);
+
+      // Try to write - if quota exceeded, clear space and retry
+      try {
+        localStorage.setItem(key, serialized);
+      } catch (writeError) {
+        if (writeError instanceof Error && writeError.name === "QuotaExceededError") {
+          // Estimate how much space we need
+          const requiredBytes = serialized.length * 2; // UTF-16
+
+          // Remove items until we have enough space or run out of items
+          let removedCount = 0;
+          const maxRemovals = Math.min(allKeys.length, 10); // Safety limit
+
+          while (removedCount < maxRemovals) {
+            // Get fresh key list after each removal
+            const currentKeys = this.getAllCacheKeys();
+            if (currentKeys.length === 0) break;
+
+            // Skip if this is the key we're trying to write
+            const keysToRemove = currentKeys.filter(k => k !== key);
+            if (keysToRemove.length === 0) break;
+
+            this.removeOldestItem(keysToRemove);
+            removedCount++;
+
+            // Try writing again
+            try {
+              localStorage.setItem(key, serialized);
+              logger.info(`Cache quota recovery: removed ${removedCount} item(s) to fit new data`, {
+                prefix: this.prefix,
+                dataSize: requiredBytes,
+              });
+              return; // Success
+            } catch {
+              // Still not enough space - continue removing
+            }
+          }
+
+          // Final attempt after maximum removals
+          logger.warn(`Cache quota exhausted after removing ${removedCount} items`, {
+            prefix: this.prefix,
+            dataSize: requiredBytes,
+          });
+          // Clear more aggressively if still failing
+          this.clearOldItems(5);
+          try {
+            localStorage.setItem(key, serialized);
+          } catch {
+            logger.error(`Failed to cache item even after aggressive cleanup`, { prefix: this.prefix });
+          }
+        } else {
+          throw writeError;
+        }
+      }
     } catch (error) {
       logger.error(`Error writing to cache (${this.prefix})`, error);
-      if (error instanceof Error && error.name === "QuotaExceededError") {
-        this.clearOldItems();
-      }
     }
   }
 

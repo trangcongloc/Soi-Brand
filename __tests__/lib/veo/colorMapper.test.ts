@@ -17,9 +17,9 @@ import {
   getRecommendedColors,
   suggestPalette,
   type RGB,
-} from '../colorMapper';
+} from '@/lib/veo/colorMapper';
 
-import type { ColorEntry } from '../types';
+import type { ColorEntry } from '@/lib/veo/types';
 
 describe('colorMapper', () => {
   describe('hexToRgb', () => {

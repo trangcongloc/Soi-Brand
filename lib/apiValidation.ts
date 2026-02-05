@@ -13,12 +13,27 @@ export interface ValidationResult {
 }
 
 // Cache for validation results to avoid redundant API calls
+// SECURITY: Keys are hashed before being used as cache keys to prevent memory dump attacks
 interface CachedValidation {
     result: ValidationResult;
     timestamp: number;
 }
 const validationCache: Record<string, CachedValidation> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Hash an API key for safe cache storage
+ * Uses a simple but effective hash to prevent plaintext key storage in memory
+ */
+function hashApiKey(apiKey: string): string {
+    let hash = 0;
+    for (let i = 0; i < apiKey.length; i++) {
+        const char = apiKey.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
 
 /**
  * Validate YouTube API key by making a test request
@@ -30,8 +45,8 @@ export async function validateYouTubeApiKey(
         return { valid: false, error: "API key is empty" };
     }
 
-    // Check cache first
-    const cacheKey = `youtube:${apiKey}`;
+    // Check cache first (using hashed key for security)
+    const cacheKey = `youtube:${hashApiKey(apiKey)}`;
     const cached = validationCache[cacheKey];
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         return cached.result;
@@ -61,12 +76,27 @@ export async function validateYouTubeApiKey(
         const result = { valid: false, error: "Invalid response from YouTube API" };
         validationCache[cacheKey] = { result, timestamp: Date.now() };
         return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+        // Type guard for axios-like error structure
+        interface AxiosLikeError {
+            response?: {
+                status?: number;
+                data?: {
+                    error?: {
+                        message?: string;
+                    };
+                };
+            };
+            message?: string;
+        }
+
+        const axiosError = error as AxiosLikeError;
         const errorMessage =
-            error.response?.data?.error?.message || error.message;
+            axiosError.response?.data?.error?.message ||
+            (error instanceof Error ? error.message : "Unknown error");
 
         let result: ValidationResult;
-        if (error.response?.status === 400) {
+        if (axiosError.response?.status === 400) {
             if (errorMessage.includes("API key")) {
                 result = { valid: false, error: "Invalid API key format" };
             } else if (errorMessage.includes("quota")) {
@@ -75,7 +105,7 @@ export async function validateYouTubeApiKey(
             } else {
                 result = { valid: false, error: `Verification failed: ${errorMessage}` };
             }
-        } else if (error.response?.status === 403) {
+        } else if (axiosError.response?.status === 403) {
             result = {
                 valid: false,
                 error: "API key not authorized for YouTube Data API",
@@ -104,8 +134,8 @@ export async function validateGeminiApiKey(
         return { valid: false, error: "API key is empty" };
     }
 
-    // Check cache first
-    const cacheKey = `gemini:${apiKey}`;
+    // Check cache first (using hashed key for security)
+    const cacheKey = `gemini:${hashApiKey(apiKey)}`;
     const cached = validationCache[cacheKey];
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         return cached.result;
@@ -133,8 +163,8 @@ export async function validateGeminiApiKey(
         const result = { valid: true, tier: "paid" as const };
         validationCache[cacheKey] = { result, timestamp: Date.now() };
         return result;
-    } catch (error: any) {
-        const errorMessage = error.message || String(error);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
 
         let result: ValidationResult;
 

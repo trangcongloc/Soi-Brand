@@ -21,10 +21,11 @@ import {
 /**
  * Extract video ID from YouTube URL
  * Supports: youtube.com/watch?v=, youtu.be/, youtube.com/shorts/
+ * BUG FIX #26: Returns null instead of magic string "unknown" for invalid URLs
  */
-export function extractVideoId(url: string): string {
+export function extractVideoId(url: string): string | null {
   const match = url.match(/(?:v=|\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : "unknown";
+  return match ? match[1] : null;
 }
 
 /**
@@ -113,9 +114,18 @@ export function parseDuration(durationStr: string | undefined): number {
 }
 
 /**
- * Format seconds to MM:SS string
+ * Format seconds to MM:SS or HH:MM:SS string
+ * BUG FIX #27: Now handles videos over 1 hour correctly
  */
 export function formatTime(seconds: number): string {
+  if (seconds >= SECONDS_PER_HOUR) {
+    // For 1+ hour videos, use HH:MM:SS format
+    const hours = Math.floor(seconds / SECONDS_PER_HOUR);
+    const mins = Math.floor((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
+    const secs = seconds % SECONDS_PER_MINUTE;
+    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  // For under 1 hour, use MM:SS format
   const mins = Math.floor(seconds / SECONDS_PER_MINUTE);
   const secs = seconds % SECONDS_PER_MINUTE;
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;

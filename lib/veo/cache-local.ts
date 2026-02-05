@@ -17,6 +17,7 @@ import {
 import { isBrowser } from "./browser-utils";
 import { LocalStorageCache } from "@/lib/cache-manager";
 import { dispatchJobUpdateEvent } from "./storage-utils";
+import { clearPhaseCache } from "./phase-cache";
 import {
   CACHE_TTL_MS,
   MAX_CACHED_JOBS,
@@ -75,14 +76,17 @@ export function getCachedJobsForVideoLocal(videoId: string): CachedVeoJobInfo[] 
 
 /**
  * Get a cached VEO job by job ID
+ * BUG FIX #15: Uses job-level expiresAt as single source of truth for expiration
+ * The LocalStorageCache TTL is a backstop; job.expiresAt is the real expiration
  */
 export function getCachedJobLocal(jobId: string): CachedVeoJob | null {
   if (!isBrowser()) return null;
 
   const job = jobCache.get(jobId);
 
-  // Check if expired using expiresAt field
+  // Check if expired using expiresAt field (single source of truth)
   if (job && job.expiresAt && Date.now() > job.expiresAt) {
+    // Job expired according to its own expiration time
     jobCache.delete(jobId);
     return null;
   }
@@ -162,15 +166,35 @@ export function setCachedJobLocal(
 
 /**
  * Clear expired jobs from cache
+ * BUG FIX #15: Uses job-level expiresAt as single source of truth
  */
 export function clearExpiredJobsLocal(): void {
+  // First, use the cache manager's TTL-based cleanup
   jobCache.clearExpired();
+
+  // Then check job-level expiresAt for more precise expiration
+  const allItems = jobCache.getAll();
+  const now = Date.now();
+  for (const item of allItems) {
+    if (item.data.expiresAt && now > item.data.expiresAt) {
+      jobCache.delete(item.id);
+    }
+  }
 }
 
 /**
  * Clear all cached VEO jobs
+ * BUG FIX #16: Also clears all phase caches
  */
 export function clearAllJobsLocal(): void {
+  // Get all job IDs first to clear their phase caches
+  const allItems = jobCache.getAll();
+  for (const item of allItems) {
+    if (item.data.jobId) {
+      clearPhaseCache(item.data.jobId);
+    }
+  }
+
   jobCache.clearAll();
 
   // Notify listeners that all jobs were cleared
@@ -179,11 +203,15 @@ export function clearAllJobsLocal(): void {
 
 /**
  * Delete a specific cached job by job ID
+ * BUG FIX #16: Also deletes associated phase cache
  */
 export function deleteCachedJobLocal(jobId: string): void {
   if (!isBrowser()) return;
 
   jobCache.delete(jobId);
+
+  // Also delete associated phase cache to prevent orphaned data
+  clearPhaseCache(jobId);
 
   // Notify listeners of the deletion
   dispatchJobUpdateEvent(jobId);

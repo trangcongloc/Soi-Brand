@@ -89,15 +89,22 @@ export function createProgress(options: {
 
 /**
  * Update progress after batch completion
+ * BUG FIX #25: Guard against completedBatches overflow
  */
 export function updateProgressAfterBatch(
   progress: VeoProgress,
   batchScenes: Scene[],
   newCharacters: CharacterRegistry
 ): VeoProgress {
+  // BUG FIX #25: Prevent completedBatches from exceeding totalBatches
+  const newCompletedBatches = Math.min(
+    progress.completedBatches + 1,
+    progress.totalBatches
+  );
+
   return {
     ...progress,
-    completedBatches: progress.completedBatches + 1,
+    completedBatches: newCompletedBatches,
     scenes: [...progress.scenes, ...batchScenes],
     characterRegistry: { ...progress.characterRegistry, ...newCharacters },
     lastUpdated: new Date().toISOString(),

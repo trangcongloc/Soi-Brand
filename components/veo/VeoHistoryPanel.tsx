@@ -87,7 +87,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     };
   }, [refreshJobs]);
 
-  // Force re-render every minute to update countdowns
+  // BUG FIX #21: Force re-render every 5 seconds for better countdown UX
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
 
     const interval = setInterval(() => {
       forceUpdate(prev => prev + 1);
-    }, 60000); // Update every 60 seconds
+    }, 5000); // Update every 5 seconds for responsive countdown
 
     return () => clearInterval(interval);
   }, [jobs]);
@@ -111,14 +111,19 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     });
   }, [jobs]);
 
+  // BUG FIX #13: Move state reset to finally block and add error handling
   const handleDelete = useCallback(async (jobId: string) => {
     setLoading(true);
     try {
       // Delete from both local and cloud
       await deleteCachedJob(jobId);
-      setConfirmDeleteId(null);
       await refreshJobs();
+    } catch (error) {
+      console.error("[VeoHistory] Failed to delete job:", error);
+      // Still refresh to show current state
+      await refreshJobs().catch(() => {});
     } finally {
+      setConfirmDeleteId(null); // Always reset confirmation state
       setLoading(false);
     }
   }, [refreshJobs]);

@@ -3,11 +3,119 @@
  * Provides cross-device sync via Cloudflare D1
  */
 
-import { CachedVeoJob, CachedVeoJobInfo } from "./types";
+import type { CachedVeoJob, CachedVeoJobInfo } from "./types";
 import * as localCache from "./cache-local";
 import { getUserSettings } from "@/lib/userSettings";
 
 const API_TIMEOUT_MS = 5000; // 5 seconds
+
+// BUG FIX #4: Retry queue for D1 writes with exponential backoff
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1000; // 1 second base delay
+
+interface PendingWrite {
+  jobId: string;
+  job: CachedVeoJob;
+  attempts: number;
+  lastAttempt: number;
+}
+
+// Queue for pending D1 writes that need retry
+const pendingWrites = new Map<string, PendingWrite>();
+let retryTimerId: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Process pending write retry queue
+ */
+async function processRetryQueue(): Promise<void> {
+  if (pendingWrites.size === 0) {
+    retryTimerId = null;
+    return;
+  }
+
+  const now = Date.now();
+  const databaseKey = getDatabaseKey();
+  if (!databaseKey) {
+    // No key - clear queue
+    pendingWrites.clear();
+    retryTimerId = null;
+    return;
+  }
+
+  for (const [jobId, pending] of Array.from(pendingWrites.entries())) {
+    // Calculate delay with exponential backoff
+    const delay = RETRY_BASE_DELAY_MS * Math.pow(2, pending.attempts - 1);
+    if (now - pending.lastAttempt < delay) {
+      continue; // Not ready for retry yet
+    }
+
+    if (pending.attempts >= MAX_RETRY_ATTEMPTS) {
+      // Max attempts reached - give up and notify
+      console.warn(`[Cache] D1 write failed after ${MAX_RETRY_ATTEMPTS} attempts:`, jobId);
+      pendingWrites.delete(jobId);
+      // Dispatch event so UI can show sync failure indicator
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('d1-sync-failed', { detail: { jobId } }));
+      }
+      continue;
+    }
+
+    // Attempt write
+    try {
+      const response = await fetchWithTimeout(`/api/veo/jobs/${jobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pending.job),
+      });
+
+      if (response.ok) {
+        // Success - remove from queue
+        pendingWrites.delete(jobId);
+        // Dispatch success event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('d1-sync-success', { detail: { jobId } }));
+        }
+      } else if (response.status === 401) {
+        // Invalid key - clear queue
+        console.warn("[Cache] Invalid database key, clearing retry queue");
+        pendingWrites.clear();
+        break;
+      } else {
+        // Other error - increment attempts
+        pending.attempts++;
+        pending.lastAttempt = now;
+      }
+    } catch {
+      // Network error - increment attempts
+      pending.attempts++;
+      pending.lastAttempt = now;
+    }
+  }
+
+  // Schedule next check if queue not empty
+  if (pendingWrites.size > 0 && !retryTimerId) {
+    retryTimerId = setTimeout(processRetryQueue, RETRY_BASE_DELAY_MS);
+  } else {
+    retryTimerId = null;
+  }
+}
+
+/**
+ * Queue a D1 write for retry
+ */
+function queueWriteForRetry(jobId: string, job: CachedVeoJob): void {
+  pendingWrites.set(jobId, {
+    jobId,
+    job,
+    attempts: 1,
+    lastAttempt: Date.now(),
+  });
+
+  // Start retry processor if not running
+  if (!retryTimerId) {
+    retryTimerId = setTimeout(processRetryQueue, RETRY_BASE_DELAY_MS);
+  }
+}
 
 /**
  * Get database key from user settings
@@ -94,7 +202,8 @@ export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
     return localJobs.map(job => ({ ...job, storageSource: 'local' as const }));
   }
 
-  // Merge cloud and local jobs
+  // BUG FIX #3: Merge cloud and local jobs with conflict resolution
+  // Compare timestamps and status to prefer the most recent and most complete version
   const jobMap = new Map<string, CachedVeoJobInfo>();
 
   // Add cloud jobs first
@@ -102,13 +211,51 @@ export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
     jobMap.set(job.jobId, { ...job, storageSource: 'cloud' as const });
   }
 
-  // Add local jobs (only if not already in cloud)
+  // Merge local jobs with conflict resolution
   for (const job of localJobs) {
-    if (!jobMap.has(job.jobId)) {
+    const existingJob = jobMap.get(job.jobId);
+    if (!existingJob) {
       // Job only in local, not in cloud
       jobMap.set(job.jobId, { ...job, storageSource: 'local' as const });
+    } else {
+      // Job exists in both - resolve conflict
+      // Priority: 1) completed > partial > failed > in_progress
+      //           2) more scenes = more complete
+      //           3) more recent timestamp
+      const statusPriority: Record<string, number> = {
+        'completed': 4,
+        'partial': 3,
+        'failed': 2,
+        'in_progress': 1,
+      };
+
+      const existingPriority = statusPriority[existingJob.status] || 0;
+      const localPriority = statusPriority[job.status] || 0;
+
+      let useLocal = false;
+
+      if (localPriority > existingPriority) {
+        // Local has better status
+        useLocal = true;
+      } else if (localPriority === existingPriority) {
+        // Same status - prefer more scenes (more complete data)
+        if (job.sceneCount > existingJob.sceneCount) {
+          useLocal = true;
+        } else if (job.sceneCount === existingJob.sceneCount) {
+          // Same scene count - prefer more recent
+          if (job.timestamp > existingJob.timestamp) {
+            useLocal = true;
+          }
+        }
+      }
+
+      if (useLocal) {
+        // Local is better - update map with local data but mark as needing sync
+        jobMap.set(job.jobId, { ...job, storageSource: 'local' as const });
+        // Note: The job will be synced to cloud on next setCachedJob call
+      }
+      // Otherwise keep existing cloud version
     }
-    // If job exists in cloud, ignore local copy (cloud is source of truth)
   }
 
   // Convert to array and sort by timestamp (newest first)
@@ -146,6 +293,7 @@ export async function getCachedJob(jobId: string): Promise<CachedVeoJob | null> 
 
 /**
  * Save job (D1 with localStorage fallback)
+ * BUG FIX #4: Uses retry queue for D1 writes with exponential backoff
  */
 export async function setCachedJob(
   jobId: string,
@@ -158,23 +306,30 @@ export async function setCachedJob(
   const databaseKey = getDatabaseKey();
   if (!databaseKey) return;
 
-  // Then try D1 (fire-and-forget)
-  try {
-    const job = localCache.getCachedJobLocal(jobId);
-    if (!job) return;
+  // Get the full job from localStorage for D1 sync
+  const job = localCache.getCachedJobLocal(jobId);
+  if (!job) return;
 
+  // Try D1 write with retry queue fallback
+  try {
     const response = await fetchWithTimeout(`/api/veo/jobs/${jobId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(job),
     });
 
-    // Log if unauthorized (invalid key)
     if (response.status === 401) {
+      // Invalid key - don't retry
       console.warn("[Cache] Invalid database key, using localStorage only");
+    } else if (!response.ok) {
+      // Server error - queue for retry
+      queueWriteForRetry(jobId, job);
     }
+    // Success - nothing more to do
   } catch (error) {
-    console.warn("[Cache] D1 write failed, localStorage persisted:", error);
+    // Network error - queue for retry
+    console.warn("[Cache] D1 write failed, queuing for retry:", error);
+    queueWriteForRetry(jobId, job);
   }
 }
 

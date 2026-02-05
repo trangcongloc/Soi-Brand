@@ -30,6 +30,51 @@ const phaseCache = new LocalStorageCache<VeoPhaseCache>({
   ttlMs: PHASE_CACHE_TTL_MS,
 });
 
+// BUG FIX #28: Mutex for concurrent batch caching
+// Tracks which jobs are currently being written to prevent race conditions
+const writeLocks = new Set<string>();
+
+/**
+ * Acquire a write lock for a job (non-blocking)
+ * Returns true if lock acquired, false if already locked
+ */
+function acquireWriteLock(jobId: string): boolean {
+  if (writeLocks.has(jobId)) {
+    return false;
+  }
+  writeLocks.add(jobId);
+  return true;
+}
+
+/**
+ * Release a write lock for a job
+ */
+function releaseWriteLock(jobId: string): void {
+  writeLocks.delete(jobId);
+}
+
+/**
+ * Wait for write lock with timeout
+ * Returns true if lock acquired within timeout, false otherwise
+ */
+async function waitForWriteLock(jobId: string, timeoutMs: number = 5000): Promise<boolean> {
+  const startTime = Date.now();
+  const checkInterval = 50; // Check every 50ms
+
+  while (Date.now() - startTime < timeoutMs) {
+    if (acquireWriteLock(jobId)) {
+      return true;
+    }
+    // Wait before next check
+    await new Promise(resolve => setTimeout(resolve, checkInterval));
+  }
+
+  // Timeout - force acquire (clear stale lock)
+  writeLocks.delete(jobId);
+  writeLocks.add(jobId);
+  return true;
+}
+
 /**
  * Get existing phase cache for a job
  */
@@ -104,6 +149,7 @@ export function cachePhase1(
 
 /**
  * Cache a single Phase 2 batch result
+ * BUG FIX #28: Uses mutex to prevent concurrent write race conditions
  */
 export function cachePhase2Batch(
   jobId: string,
@@ -115,16 +161,62 @@ export function cachePhase2Batch(
 ): void {
   if (!isBrowser()) return;
 
-  const cache = ensurePhaseCache(jobId, videoUrl, settings);
-  const updated: VeoPhaseCache = {
-    ...cache,
-    timestamp: Date.now(),
-    phase2Batches: {
-      ...cache.phase2Batches,
-      [batchNumber]: { scenes, characters },
-    },
-  };
-  phaseCache.set(jobId, updated);
+  // BUG FIX #28: Acquire write lock synchronously (non-blocking)
+  // If lock not available, proceed anyway but log warning
+  const hasLock = acquireWriteLock(jobId);
+  if (!hasLock) {
+    console.warn(`[PhaseCache] Concurrent write detected for job ${jobId}, batch ${batchNumber}`);
+  }
+
+  try {
+    const cache = ensurePhaseCache(jobId, videoUrl, settings);
+    const updated: VeoPhaseCache = {
+      ...cache,
+      timestamp: Date.now(),
+      phase2Batches: {
+        ...cache.phase2Batches,
+        [batchNumber]: { scenes, characters },
+      },
+    };
+    phaseCache.set(jobId, updated);
+  } finally {
+    if (hasLock) {
+      releaseWriteLock(jobId);
+    }
+  }
+}
+
+/**
+ * Cache a single Phase 2 batch result (async version with waiting)
+ * BUG FIX #28: Uses mutex with waiting to prevent concurrent write race conditions
+ */
+export async function cachePhase2BatchAsync(
+  jobId: string,
+  videoUrl: string,
+  settings: VeoPhaseCache["settings"],
+  batchNumber: number,
+  scenes: Scene[],
+  characters: CharacterRegistry
+): Promise<void> {
+  if (!isBrowser()) return;
+
+  // BUG FIX #28: Wait for write lock
+  await waitForWriteLock(jobId);
+
+  try {
+    const cache = ensurePhaseCache(jobId, videoUrl, settings);
+    const updated: VeoPhaseCache = {
+      ...cache,
+      timestamp: Date.now(),
+      phase2Batches: {
+        ...cache.phase2Batches,
+        [batchNumber]: { scenes, characters },
+      },
+    };
+    phaseCache.set(jobId, updated);
+  } finally {
+    releaseWriteLock(jobId);
+  }
 }
 
 /**

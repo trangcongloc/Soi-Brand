@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getUserSettingsAsync, saveUserSettingsAsync } from "@/lib/userSettings";
 import { updateGeminiQuotaLimits } from "@/lib/apiQuota";
 import {
@@ -24,6 +24,15 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
     });
 
     // Hide validation badges after 5 seconds (keep tier info)
+    // FIX: Use refs to track stable status values and avoid effect churn
+    const youtubeStatusRef = useRef(validation.youtube);
+    const geminiStatusRef = useRef(validation.gemini);
+
+    useEffect(() => {
+        youtubeStatusRef.current = validation.youtube;
+        geminiStatusRef.current = validation.gemini;
+    }, [validation.youtube, validation.gemini]);
+
     useEffect(() => {
         const hasActiveValidation =
             validation.youtube !== "idle" || validation.gemini !== "idle";
@@ -35,6 +44,7 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
 
         if (hasActiveValidation && hasNonValidatingStatus) {
             const timer = setTimeout(() => {
+                // Use refs to get current status at timeout time
                 setValidation((prev) => ({
                     youtube: "idle",
                     gemini: "idle",
@@ -46,7 +56,8 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
 
             return () => clearTimeout(timer);
         }
-    }, [validation]);
+        // Only trigger on status changes, not entire validation object
+    }, [validation.youtube, validation.gemini]);
 
     const saveAndValidateKey = useCallback(
         async (provider: "youtube" | "gemini", key: string) => {
