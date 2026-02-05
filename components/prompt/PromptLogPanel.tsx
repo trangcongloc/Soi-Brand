@@ -75,6 +75,20 @@ function formatChars(n: number): string {
 }
 
 /**
+ * Format elapsed time as m:ss or h:mm:ss
+ */
+function formatElapsedTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins < 60) {
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  return `${hours}:${remainingMins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+/**
  * Wrapper around shared highlightJson that passes local CSS module classes.
  */
 function highlightJsonLocal(json: string): React.ReactNode[] {
@@ -466,6 +480,29 @@ export default function VeoLogPanel({
   const [mode, setMode] = useState<LogMode>("compact");
   const terminalRef = useRef<HTMLDivElement>(null);
   const [spinnerIndex, setSpinnerIndex] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Track if we're actively streaming (for elapsed time reset)
+  const isStreaming = batch !== undefined || !!message;
+
+  // Reset elapsed time when streaming starts (new job)
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    if (isStreaming && !prevStreamingRef.current) {
+      // Just started streaming - reset timer
+      setElapsedTime(0);
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming]);
+
+  // Elapsed time counter (only runs while streaming)
+  useEffect(() => {
+    if (!isStreaming) return;
+    const interval = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isStreaming]);
 
   // Spinner animation
   const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -533,6 +570,7 @@ export default function VeoLogPanel({
 
           {/* Meta info row */}
           <div className={styles.metaInfo}>
+            <span className={styles.elapsedTime}>{formatElapsedTime(elapsedTime)}</span>
             {batch !== undefined && totalBatches && (
               <span>Batch {batch}/{totalBatches}</span>
             )}
