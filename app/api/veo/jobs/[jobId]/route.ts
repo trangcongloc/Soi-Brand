@@ -15,8 +15,9 @@ export const runtime = "nodejs"; // Use Node.js runtime for zlib
 // Maximum request body size: 10MB to prevent memory exhaustion attacks
 const MAX_REQUEST_SIZE_BYTES = 10 * 1024 * 1024;
 
-// Job ID format validation: UUID-like format with prefix
-const JOB_ID_PATTERN = /^veo_[a-zA-Z0-9_-]{8,64}$/;
+// Job ID format validation: UUID-like format with optional "veo_" prefix
+// Supports both old format (timestamp_random) and new format (veo_timestamp_random)
+const JOB_ID_PATTERN = /^(veo_)?[a-zA-Z0-9_-]{8,64}$/;
 
 /**
  * Validate job ID format to prevent enumeration attacks
@@ -30,11 +31,13 @@ function isValidJobIdFormat(jobId: string): boolean {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params;
+
     // Validate job ID format to prevent enumeration
-    if (!isValidJobIdFormat(params.jobId)) {
+    if (!isValidJobIdFormat(jobId)) {
       return NextResponse.json(
         { error: "Invalid job ID format" },
         { status: 400 }
@@ -50,7 +53,7 @@ export async function GET(
       );
     }
 
-    const job = await getJob(params.jobId);
+    const job = await getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: "Job not found or expired" },
@@ -72,11 +75,13 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params;
+
     // Validate job ID format to prevent enumeration
-    if (!isValidJobIdFormat(params.jobId)) {
+    if (!isValidJobIdFormat(jobId)) {
       return NextResponse.json(
         { error: "Invalid job ID format" },
         { status: 400 }
@@ -105,7 +110,7 @@ export async function PUT(
     }
 
     const job: CachedVeoJob = await request.json();
-    await upsertJob(params.jobId, job);
+    await upsertJob(jobId, job);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[D1 API] Upsert job failed:", error);
@@ -121,11 +126,13 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params;
+
     // Validate job ID format to prevent enumeration
-    if (!isValidJobIdFormat(params.jobId)) {
+    if (!isValidJobIdFormat(jobId)) {
       return NextResponse.json(
         { error: "Invalid job ID format" },
         { status: 400 }
@@ -141,7 +148,7 @@ export async function DELETE(
       );
     }
 
-    await deleteJob(params.jobId);
+    await deleteJob(jobId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[D1 API] Delete job failed:", error);
