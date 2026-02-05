@@ -289,6 +289,7 @@ function fixJobInPlace(job: CachedVeoJob): boolean {
 /**
  * Get job by ID (D1 with localStorage fallback)
  * Also fixes pending log entries and orphaned status without changing timestamp
+ * BUG FIX: Added conflict resolution to prefer the most complete version
  */
 export async function getCachedJob(jobId: string): Promise<CachedVeoJob | null> {
   const databaseKey = getDatabaseKey();
@@ -303,39 +304,105 @@ export async function getCachedJob(jobId: string): Promise<CachedVeoJob | null> 
     return job;
   }
 
+  // Get local version first
+  const localJob = localCache.getCachedJobLocal(jobId);
+
   try {
     const response = await fetchWithTimeout(`/api/veo/jobs/${jobId}`);
-    if (response.status === 404) return null;
+
+    // 404 = Not in cloud, use localStorage
+    if (response.status === 404) {
+      if (localJob && fixJobInPlace(localJob)) {
+        localCache.setCachedJobLocal(jobId, localJob, { preserveTimestamp: true });
+      }
+      return localJob;
+    }
 
     // 401 = Invalid key, use localStorage
     if (response.status === 401) {
-      const job = localCache.getCachedJobLocal(jobId);
-      if (job && fixJobInPlace(job)) {
-        localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
+      if (localJob && fixJobInPlace(localJob)) {
+        localCache.setCachedJobLocal(jobId, localJob, { preserveTimestamp: true });
       }
-      return job;
+      return localJob;
     }
 
     if (!response.ok) throw new Error("D1 request failed");
     const data = await response.json();
-    const job = data.job || null;
+    const cloudJob = data.job || null;
 
-    // Fix issues in cloud job
-    if (job && fixJobInPlace(job)) {
-      logger.info(`[Cache] Fixed job ${jobId} (status/logs)`);
-      // Save fixed job to localStorage with preserved timestamp
-      localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
-      // Don't sync back to cloud here to avoid infinite loop - let it happen naturally
+    // If no cloud job, use local
+    if (!cloudJob) {
+      if (localJob && fixJobInPlace(localJob)) {
+        localCache.setCachedJobLocal(jobId, localJob, { preserveTimestamp: true });
+      }
+      return localJob;
     }
 
-    return job;
+    // If no local job, use cloud
+    if (!localJob) {
+      if (fixJobInPlace(cloudJob)) {
+        logger.info(`[Cache] Fixed cloud job ${jobId} (status/logs)`);
+        localCache.setCachedJobLocal(jobId, cloudJob, { preserveTimestamp: true });
+      }
+      return cloudJob;
+    }
+
+    // BUG FIX: Conflict resolution - both versions exist
+    // Priority: 1) completed > partial > failed > in_progress
+    //           2) more scenes = more complete
+    //           3) more recent timestamp
+    const statusPriority: Record<string, number> = {
+      'completed': 4,
+      'partial': 3,
+      'failed': 2,
+      'in_progress': 1,
+    };
+
+    const cloudPriority = statusPriority[cloudJob.status] || 0;
+    const localPriority = statusPriority[localJob.status] || 0;
+
+    let useLocal = false;
+
+    if (localPriority > cloudPriority) {
+      // Local has better status
+      useLocal = true;
+    } else if (localPriority === cloudPriority) {
+      // Same status - prefer more scenes (more complete data)
+      const cloudSceneCount = cloudJob.scenes?.length || 0;
+      const localSceneCount = localJob.scenes?.length || 0;
+
+      if (localSceneCount > cloudSceneCount) {
+        useLocal = true;
+      } else if (localSceneCount === cloudSceneCount) {
+        // Same scene count - prefer more recent
+        const cloudTimestamp = new Date(cloudJob.summary?.createdAt || cloudJob.timestamp || 0).getTime();
+        const localTimestamp = new Date(localJob.summary?.createdAt || localJob.timestamp || 0).getTime();
+
+        if (localTimestamp > cloudTimestamp) {
+          useLocal = true;
+        }
+      }
+    }
+
+    const bestJob = useLocal ? localJob : cloudJob;
+
+    // Fix issues in the best job
+    if (fixJobInPlace(bestJob)) {
+      logger.info(`[Cache] Fixed job ${jobId} (status/logs) from ${useLocal ? 'local' : 'cloud'}`);
+      // Save fixed job to localStorage with preserved timestamp
+      localCache.setCachedJobLocal(jobId, bestJob, { preserveTimestamp: true });
+    }
+
+    // If local version is better and different from cloud, it will be synced on next setCachedJob
+    // We don't sync here to avoid blocking the UI
+
+    return bestJob;
   } catch (error) {
     logger.warn("[Cache] D1 failed, using localStorage fallback:", error);
-    const job = localCache.getCachedJobLocal(jobId);
-    if (job && fixJobInPlace(job)) {
-      localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
+    if (localJob && fixJobInPlace(localJob)) {
+      localCache.setCachedJobLocal(jobId, localJob, { preserveTimestamp: true });
     }
-    return job;
+    return localJob;
   }
 }
 
