@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useLang } from "@/lib/lang";
 import type { Scene, CharacterRegistry, VeoJobSummary, GeneratedScript, CinematicProfile, GeminiLogEntry } from "@/lib/veo";
 import { downloadJson as downloadJsonUtil, downloadText } from "@/lib/veo/download-utils";
+import { getYouTubeThumbnail } from "@/lib/veo/utils";
 import VeoCharacterPanel from "./VeoCharacterPanel";
 import VeoHistoryPanel from "./VeoHistoryPanel";
 import VeoColorProfilePanel from "./VeoColorProfilePanel";
@@ -147,9 +148,38 @@ function VeoSceneDisplay({
     ...(onViewJob ? [{ key: "history" as TabType, label: lang.veo.history.title }] : []),
   ];
 
+  // Get video thumbnail URL
+  const thumbnailUrl = summary.videoId ? getYouTubeThumbnail(summary.videoId, "high") : null;
+  // Get video title from script or use video ID as fallback
+  const videoTitle = script?.title || `Video ${summary.videoId}`;
+
   return (
     <div className={styles.container}>
-      {/* Summary Header - Always visible */}
+      {/* Video Summary Header - Thumbnail + Title */}
+      <div className={styles.videoSummaryHeader}>
+        {thumbnailUrl && (
+          <div className={styles.thumbnailWrapper}>
+            <img
+              src={thumbnailUrl}
+              alt={videoTitle}
+              className={styles.thumbnail}
+            />
+          </div>
+        )}
+        <div className={styles.videoInfo}>
+          <h3 className={styles.videoTitle}>{videoTitle}</h3>
+          <a
+            href={summary.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.videoLink}
+          >
+            {summary.youtubeUrl}
+          </a>
+        </div>
+      </div>
+
+      {/* Stats and Download Header */}
       <div className={styles.summaryHeader}>
         <div className={styles.summaryStats}>
           <div className={styles.statItem}>
@@ -238,32 +268,34 @@ function VeoSceneDisplay({
         </div>
       )}
 
-      {/* Tabs */}
-      <div className={styles.tabs}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`${styles.tab} ${activeTab === tab.key ? styles.active : ""}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-            {tab.key === "scenes" && (
-              <span className={styles.badge}>{scenes.length}</span>
-            )}
-            {tab.key === "characters" && (
-              <span className={styles.badge}>
-                {Object.keys(characterRegistry).length}
-              </span>
-            )}
-            {tab.key === "logs" && hasLogs && (
-              <span className={styles.badge}>{logEntries.length}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      {/* Main Content Area with Sidebar + Content */}
+      <div className={styles.mainContentArea}>
+        {/* Sidebar (was tabs) */}
+        <div className={styles.sidebar}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={`${styles.sidebarItem} ${activeTab === tab.key ? styles.active : ""}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <span className={styles.sidebarLabel}>{tab.label}</span>
+              {tab.key === "scenes" && (
+                <span className={styles.badge}>{scenes.length}</span>
+              )}
+              {tab.key === "characters" && (
+                <span className={styles.badge}>
+                  {Object.keys(characterRegistry).length}
+                </span>
+              )}
+              {tab.key === "logs" && hasLogs && (
+                <span className={styles.badge}>{logEntries.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
 
-      {/* Tab Content */}
-      <div className={styles.content}>
+        {/* Content Area */}
+        <div className={styles.content}>
         {/* Scenes Tab - Interactive card list */}
         {activeTab === "scenes" && (
           <VeoSceneCards
@@ -365,6 +397,7 @@ function VeoSceneDisplay({
             onJobsChange={onJobsChange}
           />
         )}
+        </div>
       </div>
     </div>
   );
