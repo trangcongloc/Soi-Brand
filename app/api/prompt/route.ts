@@ -1,14 +1,14 @@
 /**
- * VEO API Route - Video Scene Generation with SSE
+ * Prompt API Route - Video Scene Generation with SSE
  * POST /api/prompt - Generate scenes from YouTube video or script
  *
- * Supports two workflows:
+ * Supports three workflows:
  * 1. url-to-script: Generate script/transcript from video URL
  * 2. script-to-scenes: Generate scenes from provided script text
+ * 3. url-to-scenes: Direct video analysis to scenes (no intermediate script)
  */
 
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import {
   isValidYouTubeUrl,
   extractVideoId,
@@ -39,7 +39,6 @@ import {
   PromptMode,
   VoiceLanguage,
   AudioSettings,
-  PromptErrorType,
   Scene,
   CharacterRegistry,
   CharacterSkeleton,
@@ -52,6 +51,8 @@ import {
   MediaType,
   calculateDynamicOverlap,
 } from "@/lib/prompt";
+
+const isDev = process.env.NODE_ENV === "development";
 import { processSceneBatch } from "@/lib/prompt/scene-processor";
 import { getVideoInfo, parseISO8601Duration, parseVideoDescription, type VideoDescription } from "@/lib/youtube";
 import {
@@ -62,178 +63,33 @@ import {
 } from "@/lib/rateLimit";
 import { VEO_CONFIG } from "@/lib/config";
 import { logger } from "@/lib/logger";
-import { handleAPIError, type UnifiedErrorType } from "@/lib/error-handler";
+import { handleAPIError } from "@/lib/error-handler";
 import {
   SSE_KEEPALIVE_INTERVAL_MS,
   BATCH_DELAY_MS,
   FALLBACK_VIDEO_DURATION_SECONDS,
   DEFAULT_SECONDS_PER_SCENE,
   PHASE1_TIMEOUT_MS,
-  // SSE-003 FIX: Dynamic stream timeout constants
-  BASE_STREAM_TIMEOUT_MS,
-  STREAM_TIMEOUT_PER_SCENE_MS,
-  MAX_STREAM_TIMEOUT_MS,
   // SSE-002 FIX: Stream flush constants
   SSE_FLUSH_DELAY_MS,
   SSE_FLUSH_RETRIES,
   // Content pacing presets
   PACING_PRESETS,
-  DEFAULT_CONTENT_PACING,
 } from "@/lib/prompt/constants";
-
-/**
- * SSE-003 FIX: Calculate dynamic stream timeout based on scene count
- * Longer videos need more time for processing
- */
-function calculateStreamTimeout(sceneCount: number): number {
-  const dynamicTimeout = BASE_STREAM_TIMEOUT_MS + (sceneCount * STREAM_TIMEOUT_PER_SCENE_MS);
-  return Math.min(dynamicTimeout, MAX_STREAM_TIMEOUT_MS);
-}
-
-const isDev = process.env.NODE_ENV === "development";
-
-/**
- * Map UnifiedErrorType to PromptErrorType
- * Converts general error types to VEO-specific error types
- */
-function mapToPromptErrorType(unifiedType: UnifiedErrorType): PromptErrorType {
-  // Map unified types to VEO types
-  const mapping: Record<string, PromptErrorType> = {
-    INVALID_URL: "INVALID_URL",
-    GEMINI_API_ERROR: "GEMINI_API_ERROR",
-    GEMINI_QUOTA: "GEMINI_QUOTA",
-    GEMINI_RATE_LIMIT: "GEMINI_RATE_LIMIT",
-    NETWORK_ERROR: "NETWORK_ERROR",
-    PARSE_ERROR: "PARSE_ERROR",
-    AI_PARSE_ERROR: "PARSE_ERROR",
-    TIMEOUT: "TIMEOUT",
-    // Map other types to closest VEO equivalent
-    YOUTUBE_QUOTA: "GEMINI_QUOTA", // Rate limiting
-    YOUTUBE_API_ERROR: "GEMINI_API_ERROR", // General API error
-    RATE_LIMIT: "GEMINI_RATE_LIMIT", // Rate limiting
-    MODEL_OVERLOAD: "GEMINI_API_ERROR", // API overload
-    API_CONFIG: "GEMINI_API_ERROR", // Configuration error
-    CHANNEL_NOT_FOUND: "INVALID_URL", // URL-related error
-    UNKNOWN: "UNKNOWN_ERROR",
-    UNKNOWN_ERROR: "UNKNOWN_ERROR",
-  };
-
-  return mapping[unifiedType] || "UNKNOWN_ERROR";
-}
-
-/**
- * Format error for SSE response with detailed info
- * Uses unified error handler for consistent error messages
- */
-function formatErrorMessage(error: unknown, context?: string): string {
-  const errorResult = handleAPIError(error, context);
-
-  // Use English message for error logging/display (default)
-  let message = errorResult.message.en;
-
-  // In dev mode, add additional debug info
-  if (isDev && typeof error === "object" && error !== null) {
-    const geminiError = error as GeminiApiError;
-    if (geminiError.status) {
-      message += ` [${geminiError.status}]`;
-    }
-    if (geminiError.response?.error?.message) {
-      message += ` - ${geminiError.response.error.message}`;
-    }
-  }
-
-  return message;
-}
-
-// Request schema validation
-const VeoRequestSchema = z.object({
-  workflow: z.enum(["url-to-script", "script-to-scenes", "url-to-scenes"]),
-  videoUrl: z.string().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  scriptText: z.string().optional(),
-  mode: z.enum(["direct", "hybrid"]).default("hybrid"),
-  sceneCount: z.number().int().min(1).max(VEO_CONFIG.MAX_AUTO_SCENES).default(40),
-  sceneCountMode: z.enum(["auto", "manual", "gemini"]).default("auto"),
-  batchSize: z.number().int().min(1).max(60).default(VEO_CONFIG.DEFAULT_BATCH_SIZE),
-  contentPacing: z.enum(["fast", "standard", "slow"]).default(DEFAULT_CONTENT_PACING),
-  voice: z
-    .enum([
-      "no-voice",
-      "english",
-      "vietnamese",
-      "spanish",
-      "french",
-      "german",
-      "japanese",
-      "korean",
-      "chinese",
-    ])
-    .default("no-voice"),
-  audio: z.object({
-    voiceLanguage: z.enum([
-      "no-voice",
-      "english",
-      "vietnamese",
-      "spanish",
-      "french",
-      "german",
-      "japanese",
-      "korean",
-      "chinese",
-    ]),
-    music: z.boolean(),
-    soundEffects: z.boolean(),
-    environmentalAudio: z.boolean(),
-  }).optional(),
-  useVideoTitle: z.boolean().default(true), // Include video title in script prompt
-  useVideoDescription: z.boolean().default(true), // Include full description text in script prompt
-  useVideoChapters: z.boolean().default(true), // Include video description chapters
-  useVideoCaptions: z.boolean().default(true), // Extract on-screen captions/subtitles
-  negativePrompt: z.string().optional(),
-  resumeJobId: z.string().optional(),
-  geminiApiKey: z.string().optional(),
-  geminiModel: z.string().optional(),
-  apiKeyTier: z.enum(["free", "paid"]).optional(),
-  // Resume parameters with validation (BUG FIX #7)
-  // Using z.any() with runtime type checking to avoid overly strict schema
-  // that would break backwards compatibility with existing cached data
-  resumeFromBatch: z.number().int().min(0).optional(),
-  existingScenes: z.array(z.any()).optional(),
-  existingCharacters: z.record(z.string(), z.any()).optional(),
-  // Phase 0: Color profile extraction
-  extractColorProfile: z.boolean().default(true), // Enable by default
-  existingColorProfile: z.any().optional(), // For resume
-  // Media type: image vs video generation
-  mediaType: z.enum(["image", "video"]).default("video"),
-  // Selfie mode (genuine shot-type toggle — VEO 3 techniques are integrated by default)
-  selfieMode: z.boolean().default(false),
-});
-
-type VeoRequest = z.infer<typeof VeoRequestSchema>;
-
-/**
- * Create SSE encoder for streaming events
- */
-function createSSEEncoder() {
-  const encoder = new TextEncoder();
-
-  return {
-    encode: (event: PromptSSEEvent): Uint8Array => {
-      const data = JSON.stringify(event);
-      return encoder.encode(`data: ${data}\n\n`);
-    },
-    encodeKeepAlive: (): Uint8Array => {
-      return encoder.encode(`: keepalive\n\n`);
-    },
-  };
-}
+// Extracted modules for better organization
+import { PromptRequestSchema, type PromptRequest } from "@/lib/prompt/request-schema";
+import {
+  calculateStreamTimeout,
+  mapToPromptErrorType,
+  formatErrorMessage,
+  createSSEEncoder,
+} from "@/lib/prompt/route-helpers";
 
 /**
  * Run URL to Script workflow - generates script from video
  */
 async function runUrlToScript(
-  request: VeoRequest,
+  request: PromptRequest,
   apiKey: string,
   sendEvent: (event: PromptSSEEvent) => void,
   videoDescription?: VideoDescription,
@@ -326,7 +182,7 @@ async function runUrlToScript(
  * Run Script to Scenes - Direct mode (single API call)
  */
 async function runScriptToScenesDirect(
-  request: VeoRequest,
+  request: PromptRequest,
   apiKey: string,
   sendEvent: (event: PromptSSEEvent) => void
 ): Promise<{
@@ -432,7 +288,7 @@ async function runScriptToScenesDirect(
  * Phase 2: Can use pre-extracted characters from Phase 1
  */
 async function runScriptToScenesHybrid(
-  request: VeoRequest,
+  request: PromptRequest,
   apiKey: string,
   jobId: string,
   sendEvent: (event: PromptSSEEvent) => void,
@@ -697,7 +553,7 @@ async function runScriptToScenesHybrid(
  * Uses time-based batching to analyze video segments directly
  */
 async function runUrlToScenesDirect(
-  request: VeoRequest,
+  request: PromptRequest,
   apiKey: string,
   jobId: string,
   videoDurationSeconds: number,
@@ -1186,7 +1042,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate request
-  const parseResult = VeoRequestSchema.safeParse(rawBody);
+  const parseResult = PromptRequestSchema.safeParse(rawBody);
   if (!parseResult.success) {
     const errorMessage = parseResult.error.issues.map((i) => i.message).join(", ");
     return new Response(
