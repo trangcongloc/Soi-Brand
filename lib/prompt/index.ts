@@ -132,6 +132,7 @@ export {
   clearPhaseCache,
   getAllPhaseCaches,
   createPhaseCacheSettings,
+  getResumeDataFromPhaseCache,
 } from "./phase-cache";
 
 // Progress tracking

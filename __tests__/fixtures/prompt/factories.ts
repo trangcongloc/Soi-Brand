@@ -22,6 +22,7 @@ import type {
   Composition,
   Technical,
   CinematicProfile,
+  EnrichedColorEntry,
   GeminiLogEntry,
   MediaType,
   SceneCountMode,
@@ -237,6 +238,116 @@ export function createMockCharacterRegistry(
   }
 
   return registry;
+}
+
+// ============================================================================
+// Cinematic Profile Factory
+// ============================================================================
+
+export interface CreateMockCinematicProfileOptions {
+  dominantColors?: EnrichedColorEntry[];
+  colorTemperature?: Partial<CinematicProfile["colorTemperature"]>;
+  contrast?: Partial<CinematicProfile["contrast"]>;
+  shadows?: Partial<CinematicProfile["shadows"]>;
+  highlights?: Partial<CinematicProfile["highlights"]>;
+  filmStock?: Partial<CinematicProfile["filmStock"]>;
+  mood?: Partial<CinematicProfile["mood"]>;
+  grain?: Partial<CinematicProfile["grain"]>;
+  postProcessing?: Partial<CinematicProfile["postProcessing"]>;
+}
+
+const DEFAULT_ENRICHED_COLORS: EnrichedColorEntry[] = [
+  {
+    hex: "#2C3E50",
+    name: "dark slate blue",
+    usage: "background",
+    semanticName: "deep ocean mystery blue",
+    moods: ["professional", "calm", "trustworthy"],
+    temperature: "cool",
+    psychologyNotes: "Evokes stability and trust",
+    confidence: 0.95,
+  },
+  {
+    hex: "#E74C3C",
+    name: "warm coral red",
+    usage: "accent",
+    semanticName: "energetic passion red",
+    moods: ["energetic", "passionate", "urgent"],
+    temperature: "warm",
+    psychologyNotes: "Draws attention, conveys importance",
+    confidence: 0.88,
+  },
+  {
+    hex: "#F5DEB3",
+    name: "wheat",
+    usage: "skin tones",
+    semanticName: "natural warmth beige",
+    moods: ["natural", "warm", "organic"],
+    temperature: "warm",
+    psychologyNotes: "Creates approachable, human connection",
+    confidence: 0.92,
+  },
+];
+
+export function createMockCinematicProfile(
+  options: CreateMockCinematicProfileOptions = {}
+): CinematicProfile {
+  return {
+    dominantColors: options.dominantColors ?? DEFAULT_ENRICHED_COLORS,
+    colorTemperature: {
+      category: "warm",
+      kelvinEstimate: 5600,
+      description: "Natural daylight with warm undertones",
+      ...options.colorTemperature,
+    },
+    contrast: {
+      level: "medium",
+      style: "soft and natural",
+      blackPoint: "lifted slightly for vintage feel",
+      whitePoint: "preserved highlights",
+      ...options.contrast,
+    },
+    shadows: {
+      color: "cool blue-grey",
+      density: "medium",
+      falloff: "gradual and soft",
+      ...options.shadows,
+    },
+    highlights: {
+      color: "warm cream",
+      handling: "soft roll-off",
+      bloom: false,
+      ...options.highlights,
+    },
+    filmStock: {
+      suggested: "Kodak Portra 400",
+      characteristics: "natural skin tones, fine grain",
+      digitalProfile: "CineStyle/LOG",
+      ...options.filmStock,
+    },
+    mood: {
+      primary: "warm and inviting",
+      atmosphere: "comfortable, professional",
+      emotionalTone: "confident yet approachable",
+      ...options.mood,
+    },
+    grain: {
+      amount: "subtle",
+      type: "fine photographic grain",
+      pattern: "organic and natural",
+      ...options.grain,
+    },
+    postProcessing: {
+      colorGrade: "warm teal and orange",
+      saturation: "slightly desaturated for cinema look",
+      vignettePresent: false,
+      splitToning: {
+        shadows: "cool blue",
+        highlights: "warm orange",
+      },
+      ...options.postProcessing,
+    },
+  };
 }
 
 // ============================================================================

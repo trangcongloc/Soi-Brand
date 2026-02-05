@@ -289,3 +289,58 @@ export function createPhaseCacheSettings(opts: {
     workflow: opts.workflow,
   };
 }
+
+/**
+ * Reconstruct scenes and characters from phase cache
+ * This is the single source of truth for resume data - no need to duplicate in resumeData
+ *
+ * @param jobId - The job ID to get data for
+ * @returns Object with scenes array and character registry, or null if no cache
+ */
+export function getResumeDataFromPhaseCache(jobId: string): {
+  scenes: Scene[];
+  characterRegistry: CharacterRegistry;
+  completedBatches: number;
+  colorProfile?: { colorProfile: CinematicProfile; confidence: number };
+  characters?: { characters: CharacterSkeleton[]; background: string; registry: CharacterRegistry };
+} | null {
+  if (!isBrowser()) return null;
+
+  const cache = getPhaseCache(jobId);
+  if (!cache) return null;
+
+  // Reconstruct scenes from all completed batches (sorted by batch number)
+  const batchNumbers = Object.keys(cache.phase2Batches)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  let allScenes: Scene[] = [];
+  let mergedCharacters: CharacterRegistry = {};
+
+  // Merge Phase 1 characters first (from video extraction - higher priority)
+  if (cache.phase1?.registry) {
+    mergedCharacters = { ...cache.phase1.registry };
+  }
+
+  // Then merge characters from each batch (additive only - don't overwrite)
+  for (const batchNum of batchNumbers) {
+    const batch = cache.phase2Batches[batchNum];
+    if (batch) {
+      allScenes = [...allScenes, ...batch.scenes];
+      // Additive merge - Phase 1 and earlier batches have priority
+      for (const [name, details] of Object.entries(batch.characters)) {
+        if (!(name in mergedCharacters)) {
+          mergedCharacters[name] = details;
+        }
+      }
+    }
+  }
+
+  return {
+    scenes: allScenes,
+    characterRegistry: mergedCharacters,
+    completedBatches: batchNumbers.length,
+    colorProfile: cache.phase0,
+    characters: cache.phase1,
+  };
+}

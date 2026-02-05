@@ -38,6 +38,7 @@ import {
   addPhaseLog,
   clearPhaseCache,
   createPhaseCacheSettings,
+  getResumeDataFromPhaseCache,
 } from "@/lib/prompt/phase-cache";
 import { PromptForm, PromptSceneDisplay, PromptHistoryPanel, PromptLogPanel } from "@/components/prompt";
 import styles from "./page.module.css";
@@ -1085,10 +1086,18 @@ export default function PromptPage() {
 
     setShowResumeDialog(false);
 
+    // REFACTOR: Use PhaseCache as primary source of truth for scene data
+    // This avoids data duplication - scenes are stored only in phase cache
+    // Fall back to resumeData for backwards compatibility with old cached jobs
+    const phaseCacheData = getResumeDataFromPhaseCache(resumeData.jobId);
+    const existingScenes = phaseCacheData?.scenes ?? resumeData.existingScenes;
+    const existingCharacters = phaseCacheData?.characterRegistry ?? resumeData.existingCharacters;
+    const completedBatches = phaseCacheData?.completedBatches ?? resumeData.completedBatches;
+
     // Pre-populate state with existing data
-    setScenes(resumeData.existingScenes);
-    setCharacterRegistry(resumeData.existingCharacters);
-    setCharacters(Object.keys(resumeData.existingCharacters));
+    setScenes(existingScenes);
+    setCharacterRegistry(existingCharacters);
+    setCharacters(Object.keys(existingCharacters));
 
     // Determine workflow based on whether we have scriptText
     // Direct mode (url-to-scenes) doesn't have scriptText
@@ -1114,12 +1123,13 @@ export default function PromptPage() {
       useVideoDescription: true, // Default for resume
       useVideoChapters: true, // Default for resume
       useVideoCaptions: true, // Default for resume
-      extractColorProfile: false, // Already have color profile from previous run
+      extractColorProfile: !phaseCacheData?.colorProfile, // Skip if we have cached color profile
+      existingColorProfile: phaseCacheData?.colorProfile?.colorProfile,
       mediaType: "video", // Default for resume
       selfieMode: false, // Default for resume
-      resumeFromBatch: resumeData.completedBatches,
-      existingScenes: resumeData.existingScenes,
-      existingCharacters: resumeData.existingCharacters,
+      resumeFromBatch: completedBatches,
+      existingScenes,
+      existingCharacters,
     });
   }, [resumeProgressData, handleSubmit]);
 
@@ -1163,7 +1173,14 @@ export default function PromptPage() {
   // Handle retrying a failed job from the last successful batch
   const handleRetryJob = useCallback(async (retryJobId: string) => {
     const cached = await getCachedJob(retryJobId);
-    if (!cached || !cached.resumeData) {
+
+    // REFACTOR: Try PhaseCache first as primary source of truth
+    // This avoids data duplication - scenes are stored only in phase cache
+    const phaseCacheData = getResumeDataFromPhaseCache(retryJobId);
+
+    // Check if we have enough data to retry (from either source)
+    const hasResumeData = cached?.resumeData || phaseCacheData;
+    if (!cached || !hasResumeData) {
       console.error("Cannot retry job: missing cache or resume data");
 
       // If job has valid scenes, it's actually completed - just view it
@@ -1186,55 +1203,61 @@ export default function PromptPage() {
 
     const rd = cached.resumeData;
 
+    // Use PhaseCache as primary, fall back to resumeData for backwards compatibility
+    const existingScenes = phaseCacheData?.scenes ?? rd?.existingScenes ?? [];
+    const existingCharacters = phaseCacheData?.characterRegistry ?? rd?.existingCharacters ?? {};
+    const completedBatches = phaseCacheData?.completedBatches ?? rd?.completedBatches ?? 0;
+    const colorProfile = phaseCacheData?.colorProfile?.colorProfile ?? cached.colorProfile;
+
     // Pre-populate state with existing data
-    setScenes(rd.existingScenes);
-    setCharacterRegistry(rd.existingCharacters);
-    setCharacters(Object.keys(rd.existingCharacters));
+    setScenes(existingScenes);
+    setCharacterRegistry(existingCharacters);
+    setCharacters(Object.keys(existingCharacters));
     if (cached.script) {
       setGeneratedScript(cached.script);
     }
     // Restore color profile if it exists
-    if (cached.colorProfile) {
-      setColorProfile(cached.colorProfile);
-      setColorProfileConfidence(0.8); // Default confidence for cached profiles
+    if (colorProfile) {
+      setColorProfile(colorProfile);
+      setColorProfileConfidence(phaseCacheData?.colorProfile?.confidence ?? 0.8);
     }
 
     // Retry from the failed batch — restore all original settings
     // Convert legacy voice to AudioSettings for backward compat
     await handleSubmit({
-      workflow: rd.workflow,
+      workflow: rd?.workflow ?? "url-to-scenes",
       videoUrl: cached.videoUrl,
-      scriptText: rd.workflow === "script-to-scenes" || rd.workflow === "url-to-scenes"
+      scriptText: (rd?.workflow === "script-to-scenes" || rd?.workflow === "url-to-scenes")
         ? cached.script?.rawText
         : undefined,
-      mode: rd.mode,
-      sceneCountMode: rd.sceneCountMode ?? "auto",
-      sceneCount: rd.sceneCount,
-      batchSize: rd.batchSize,
+      mode: rd?.mode ?? "hybrid",
+      sceneCountMode: rd?.sceneCountMode ?? "auto",
+      sceneCount: rd?.sceneCount ?? 40,
+      batchSize: rd?.batchSize ?? 30,
       audio: {
-        voiceLanguage: rd.voice,
+        voiceLanguage: rd?.voice ?? "no-voice",
         music: true,
         soundEffects: true,
         environmentalAudio: true,
       },
-      useVideoTitle: rd.useVideoTitle ?? true,
-      useVideoDescription: rd.useVideoDescription ?? true,
-      useVideoChapters: rd.useVideoChapters ?? true,
-      useVideoCaptions: rd.useVideoCaptions ?? true,
-      negativePrompt: rd.negativePrompt,
-      extractColorProfile: cached.colorProfile ? false : true, // Explicitly skip Phase 0 if we have it
-      existingColorProfile: cached.colorProfile ?? undefined, // Pass existing color profile
-      mediaType: rd.mediaType ?? "video",
-      startTime: rd.startTime,
-      endTime: rd.endTime,
-      selfieMode: rd.selfieMode ?? false,
+      useVideoTitle: rd?.useVideoTitle ?? true,
+      useVideoDescription: rd?.useVideoDescription ?? true,
+      useVideoChapters: rd?.useVideoChapters ?? true,
+      useVideoCaptions: rd?.useVideoCaptions ?? true,
+      negativePrompt: rd?.negativePrompt,
+      extractColorProfile: !colorProfile, // Skip Phase 0 if we have cached color profile
+      existingColorProfile: colorProfile,
+      mediaType: rd?.mediaType ?? "video",
+      startTime: rd?.startTime,
+      endTime: rd?.endTime,
+      selfieMode: rd?.selfieMode ?? false,
       // Resume parameters
-      resumeFromBatch: rd.completedBatches,
-      existingScenes: rd.existingScenes,
-      existingCharacters: rd.existingCharacters,
+      resumeFromBatch: completedBatches,
+      existingScenes,
+      existingCharacters,
       resumeJobId: retryJobId, // Reuse the same job ID (matches server schema)
     });
-  }, [handleSubmit]);
+  }, [handleSubmit, handleViewJob, lang.prompt.cacheExpired, lang.prompt.jobExpiredCannotRetry]);
 
   const handleNewAnalysis = useCallback(() => {
     setState("idle");
