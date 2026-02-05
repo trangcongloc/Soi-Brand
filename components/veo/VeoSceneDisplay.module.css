@@ -176,15 +176,14 @@
 
 /* Main Content Area with Sidebar */
 .mainContentArea {
-  display: flex;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 1.5rem;
   min-height: 400px;
 }
 
 /* Sidebar (was tabs) */
 .sidebar {
-  flex-shrink: 0;
-  width: 200px;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -332,11 +331,11 @@
   }
 
   .mainContentArea {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .sidebar {
-    width: 100%;
     position: static;
     flex-direction: row;
     overflow-x: auto;
