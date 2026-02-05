@@ -200,21 +200,19 @@ export function PromptSettingsPanel({
                 )}
 
               </div>
-              {settings.mode === "hybrid" && (
-                <div className={styles.settingsGroupContent} style={{ marginTop: "0.4rem" }}>
-                  <span className={styles.rowLabel}>{lang.prompt.settings.batchSize}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={settings.batchSize}
-                    onChange={(e) => onSettingsChange({ batchSize: parseInt(e.target.value) || 30 })}
-                    disabled={isLoading}
-                    className={`${styles.compactInput} ${styles.tooltip}`}
-                    data-tooltip={lang.prompt.settings.batchSizeDesc}
-                  />
-                </div>
-              )}
+              <div className={styles.settingsGroupContent} style={{ marginTop: "0.4rem" }}>
+                <span className={styles.rowLabel}>{lang.prompt.settings.batchSize}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={settings.batchSize}
+                  onChange={(e) => onSettingsChange({ batchSize: parseInt(e.target.value) || 30 })}
+                  disabled={isLoading}
+                  className={`${styles.compactInput} ${styles.tooltip}`}
+                  data-tooltip={lang.prompt.settings.batchSizeDesc}
+                />
+              </div>
             </div>
 
             {/* Output Group */}

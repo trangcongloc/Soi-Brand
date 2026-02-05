@@ -61,6 +61,13 @@ function formatDuration(ms: number): string {
 }
 
 /**
+ * Calculate total duration for a group of entries
+ */
+function calcGroupDuration(entries: GeminiLogEntry[]): number {
+  return entries.reduce((sum, e) => sum + e.timing.durationMs, 0);
+}
+
+/**
  * Format character count with commas
  */
 function formatChars(n: number): string {
@@ -275,12 +282,14 @@ function groupByPhase(entries: GeminiLogEntry[]): PhaseGroups {
 function PhaseGroupHeader({
   label,
   count,
+  duration,
   phaseClass,
   isOpen,
   onToggle,
 }: {
   label: string;
   count: number;
+  duration?: number;
   phaseClass: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -300,6 +309,9 @@ function PhaseGroupHeader({
       </svg>
       {label}
       <span className={styles.groupCount}>({count})</span>
+      {duration !== undefined && duration > 0 && (
+        <span className={styles.groupDuration}>{formatDuration(duration)}</span>
+      )}
     </button>
   );
 }
@@ -332,6 +344,11 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
     [sortedBatches]
   );
 
+  const phase2TotalDuration = useMemo(
+    () => sortedBatches.reduce((sum, [, entries]) => sum + calcGroupDuration(entries), 0),
+    [sortedBatches]
+  );
+
   return (
     <>
       {/* Phase Script: Script Extraction */}
@@ -340,6 +357,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
           <PhaseGroupHeader
             label="Script Extraction"
             count={groups.phaseScript.length}
+            duration={calcGroupDuration(groups.phaseScript)}
             phaseClass={styles.phaseHeaderScript}
             isOpen={openPhases.phaseScript ?? false}
             onToggle={() => togglePhase("phaseScript")}
@@ -357,6 +375,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
           <PhaseGroupHeader
             label="Phase 0: Color Profile Extraction"
             count={groups.phase0.length}
+            duration={calcGroupDuration(groups.phase0)}
             phaseClass={styles.phaseHeader0}
             isOpen={openPhases.phase0 ?? false}
             onToggle={() => togglePhase("phase0")}
@@ -374,6 +393,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
           <PhaseGroupHeader
             label="Phase 1: Character Extraction"
             count={groups.phase1.length}
+            duration={calcGroupDuration(groups.phase1)}
             phaseClass={styles.phaseHeader1}
             isOpen={openPhases.phase1 ?? false}
             onToggle={() => togglePhase("phase1")}
@@ -391,6 +411,7 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
           <PhaseGroupHeader
             label="Phase 2: Scene Generation"
             count={phase2TotalEntries}
+            duration={phase2TotalDuration}
             phaseClass={styles.phaseHeader2}
             isOpen={openPhases.phase2 ?? false}
             onToggle={() => togglePhase("phase2")}
@@ -416,6 +437,9 @@ function VerboseGrouped({ entries }: { entries: GeminiLogEntry[] }) {
                   Batch {batchNum + 1}
                   <span className={styles.groupCount}>
                     ({batchEntries.length})
+                  </span>
+                  <span className={styles.groupDuration}>
+                    {formatDuration(calcGroupDuration(batchEntries))}
                   </span>
                 </button>
                 {(openBatches[batchNum] ?? false) &&

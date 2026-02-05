@@ -405,6 +405,14 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+.groupDuration {
+  font-weight: 500;
+  font-size: 11px;
+  color: rgba(76, 175, 80, 0.8);
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+
 .batchGroup {
   margin-left: 0.75rem;
   margin-bottom: 0.75rem;
