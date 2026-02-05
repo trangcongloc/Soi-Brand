@@ -92,7 +92,9 @@ app/veo/
 - `buildCharacterExtractionPrompt()` - Phase 1
 - `buildScenePrompt()` - Phase 2
 - `buildScriptPrompt()` - Script generation
-- `buildContinuityContext()` - Scene continuity
+- `buildContinuityContext()` - Scene continuity (raw)
+- `buildContinuityContextCached()` - Scene continuity (PERF-001: jobId-keyed cache)
+- `resetContinuityCache()` - Clear continuity cache
 
 ### lib/veo/cache-remote.ts
 **Purpose**: Hybrid D1 + localStorage caching
@@ -263,14 +265,29 @@ VeoPage
 ## Key Constants
 
 ```typescript
+// Timing
 DEFAULT_SECONDS_PER_SCENE = 8
-MAX_CACHED_JOBS = 20
-CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
-FAILED_JOB_CACHE_TTL_MS = 48 * 60 * 60 * 1000  // 48 hours
-DEFAULT_MAX_RETRIES = 3
 DEFAULT_API_TIMEOUT_MS = 5 * 60 * 1000  // 5 min
 SSE_KEEPALIVE_INTERVAL_MS = 15000
 BATCH_DELAY_MS = 2000
+
+// Caching
+MAX_CACHED_JOBS = 20
+CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
+FAILED_JOB_CACHE_TTL_MS = 48 * 60 * 60 * 1000  // 48 hours
+
+// Retry (API-005 FIX)
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_MAX_RETRY_DELAY_MS = 30000  // 30s max with jitter
+
+// Dynamic Stream Timeout (SSE-003 FIX)
+BASE_STREAM_TIMEOUT_MS = 10 * 60 * 1000  // 10 min base
+STREAM_TIMEOUT_PER_SCENE_MS = 30 * 1000  // +30s per scene
+MAX_STREAM_TIMEOUT_MS = 60 * 60 * 1000   // 60 min max
+
+// SSE Flush (SSE-002 FIX)
+SSE_FLUSH_DELAY_MS = 250
+SSE_FLUSH_RETRIES = 3
 ```
 
 ---
@@ -290,4 +307,4 @@ BATCH_DELAY_MS = 2000
 
 ---
 
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-05*

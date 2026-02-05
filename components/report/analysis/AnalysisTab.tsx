@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Post, ReportPart2 } from "@/lib/types";
 import { useLanguage } from "@/lib/lang";
 

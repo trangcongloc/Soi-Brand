@@ -1,4 +1,3 @@
-import React from "react";
 import Image from "next/image";
 import { colors } from "@/lib/theme";
 import { HistoryItem as HistoryItemType, formatDate, getInitial, getAvatarColor } from "./historyUtils";

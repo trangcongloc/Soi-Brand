@@ -23,7 +23,9 @@ import {
   MAX_CACHED_JOBS,
   FAILED_JOB_CACHE_TTL_MS,
   COMPLETED_JOB_CACHE_TTL_MS,
+  ESTIMATED_GEMINI_RESPONSE_MS,
 } from "./constants";
+import { logger } from "@/lib/logger";
 
 const CACHE_PREFIX = "veo_job_";
 
@@ -105,6 +107,8 @@ export function getLatestCachedJobLocal(videoId: string): CachedVeoJob | null {
 
 /**
  * Save a VEO job to cache
+ * @param options.preserveTimestamp - If true and existing job exists, keep original timestamp
+ *                                    Useful for fixing log entries without changing sort order
  */
 export function setCachedJobLocal(
   jobId: string,
@@ -126,11 +130,19 @@ export function setCachedJobLocal(
       retryable: boolean;
     };
     resumeData?: CachedVeoJob["resumeData"];
-  }
+  },
+  options?: { preserveTimestamp?: boolean }
 ): void {
   if (!isBrowser()) return;
 
-  const timestamp = Date.now();
+  // BUG FIX: When preserveTimestamp is true, keep original timestamp so job doesn't jump to top
+  let timestamp = Date.now();
+  if (options?.preserveTimestamp) {
+    const existingJob = jobCache.get(jobId);
+    if (existingJob) {
+      timestamp = existingJob.timestamp;
+    }
+  }
   const status = data.status || "completed";
 
   // Compute expiration based on status
@@ -218,7 +230,62 @@ export function deleteCachedJobLocal(jobId: string): void {
 }
 
 /**
+ * Fix pending log entries in a job
+ * When SSE disconnects, log entries remain "pending" even though requests completed
+ * This function marks them as "completed" with estimated timing data
+ * Also fixes stale "Batch X/Y" processingTime in summary
+ */
+export function fixPendingLogEntries(job: CachedVeoJob): boolean {
+  if (!job.logs || job.logs.length === 0) return false;
+
+  let fixed = false;
+  for (const log of job.logs) {
+    if (log.status === "pending") {
+      log.status = "completed";
+      // If response data is missing (SSE disconnected before response), add placeholder
+      if (!log.response || !log.response.body) {
+        log.response = {
+          success: true,
+          body: "[Response received but SSE disconnected before delivery]",
+          responseLength: 0,
+          parsedSummary: "Completed (connection lost)",
+        };
+      }
+      // If timing is missing, estimate based on typical response time
+      if (!log.timing || log.timing.durationMs === 0) {
+        log.timing = {
+          durationMs: ESTIMATED_GEMINI_RESPONSE_MS,
+          retries: 0,
+        };
+      }
+      fixed = true;
+    }
+  }
+
+  // Fix stale "Batch X/Y" processingTime in summary
+  // This happens when SSE disconnects before the complete event updates the summary
+  if (job.summary && job.summary.processingTime) {
+    const isBatchProgress = /^Batch \d+\/\d+$/.test(job.summary.processingTime);
+    const isInProgress = job.summary.processingTime.toLowerCase().includes("progress");
+
+    if (isBatchProgress || isInProgress) {
+      // Calculate total processing time from log entries
+      const totalMs = job.logs.reduce((sum, log) => {
+        return sum + (log.timing?.durationMs || 0);
+      }, 0);
+
+      // Format as seconds with 1 decimal place
+      job.summary.processingTime = `${(totalMs / 1000).toFixed(1)}s`;
+      fixed = true;
+    }
+  }
+
+  return fixed;
+}
+
+/**
  * Fix orphaned jobs that are marked as "in_progress" but actually have scenes
+ * Also fixes any pending log entries in completed jobs (SSE disconnect issue)
  * This can happen when SSE stream disconnects before final status update
  */
 export function fixOrphanedJobsLocal(): number {
@@ -229,27 +296,29 @@ export function fixOrphanedJobsLocal(): number {
 
   for (const item of allItems) {
     const job = item.data;
+    let needsUpdate = false;
 
     // Check if job is "in_progress" but has scenes (meaning it actually completed)
     if (job.status === "in_progress" && job.scenes && job.scenes.length > 0) {
       // Fix the status to "completed"
       job.status = "completed";
+      needsUpdate = true;
+      logger.info(`[Cache] Fixed orphaned job ${job.jobId}: ${job.scenes.length} scenes, status now "completed"`);
+    }
 
-      // Also fix any "pending" log entries (displayed as "SENDING") that never got a response
-      if (job.logs) {
-        for (const log of job.logs) {
-          if (log.status === "pending") {
-            // If this is a phase-2 batch and the job has scenes, mark as complete
-            log.status = "completed";
-          }
-        }
+    // Fix pending log entries regardless of job status
+    // This handles jobs that were synced from cloud with completed status but pending logs
+    if (job.scenes && job.scenes.length > 0) {
+      if (fixPendingLogEntries(job)) {
+        needsUpdate = true;
+        logger.info(`[Cache] Fixed pending log entries for job ${job.jobId}`);
       }
+    }
 
+    if (needsUpdate) {
       // Update the cache
       jobCache.set(job.jobId, job, item.timestamp);
       fixedCount++;
-
-      console.log(`[Cache] Fixed orphaned job ${job.jobId}: ${job.scenes.length} scenes, status now "completed"`);
     }
   }
 

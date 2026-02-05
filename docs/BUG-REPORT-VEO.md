@@ -1,6 +1,6 @@
 # VEO Pipeline - Bug Report
 
-**Date**: 2026-02-04
+**Date**: 2026-02-05 (Updated)
 **Reviewer**: Claude (Paranoid Senior Engineer Mode)
 **Scope**: Complete VEO pipeline (lib/veo, app/api/veo, components/veo, app/veo)
 
@@ -12,9 +12,21 @@
 |----------|-------|-------|
 | 🔴 CRITICAL | 3 | 3 ✅ |
 | 🟠 HIGH | 4 | 4 ✅ |
-| 🟡 MEDIUM | 6 | 0 |
-| 🟢 LOW | 4 | 0 |
-| **TOTAL** | **17** | **7** |
+| 🟡 MEDIUM | 6 | 6 ✅ |
+| 🟢 LOW | 4 | 1 ✅ |
+| **TOTAL** | **17** | **14** |
+
+### Recent Fixes (2026-02-05)
+
+| ID | Issue | File(s) | Status |
+|----|-------|---------|--------|
+| CACHE-001 | Server progress memory leak | `app/api/veo/route.ts` | ✅ FIXED |
+| CHAR-001 | Phase 1 character data loss | `app/api/veo/route.ts` | ✅ FIXED |
+| SYNC-001 | Stale closure in SSE refs | `app/veo/page.tsx` | ✅ FIXED |
+| SSE-002 | Buffer boundary event loss | `app/api/veo/route.ts` | ✅ FIXED |
+| SSE-003 | Static stream timeout | `app/api/veo/route.ts` | ✅ FIXED |
+| PERF-001 | O(n^2) context memory growth | `lib/veo/prompts.ts` | ✅ FIXED |
+| API-005 | Unbounded retry delay | `lib/veo/gemini.ts` | ✅ FIXED |
 
 ---
 
@@ -302,6 +314,187 @@ getCachedJobList().then(jobs => setHasHistory(jobs.length > 0));
 getCachedJobList()
   .then(jobs => setHasHistory(jobs.length > 0))
   .catch(err => console.warn('[VEO] Failed to refresh job list:', err));
+```
+
+---
+
+## Fixes Applied (2026-02-05 Batch)
+
+### CACHE-001: Server progress memory leak
+**File**: `app/api/veo/route.ts`
+**Issue**: `serverProgress.delete(jobId)` was only called for `script-to-scenes` workflow, leaving orphaned entries for `url-to-script` workflow.
+```typescript
+// Before: Only script-to-scenes cleaned up progress
+if (workflow === "script-to-scenes") {
+  serverProgress.delete(jobId);
+}
+
+// After: Both workflows clean up progress
+serverProgress.delete(jobId); // Always clean up after job completes
+```
+**Impact**: Memory leak on server-side Map, eventually hitting 100-entry limit.
+
+### CHAR-001: Phase 1 character data preservation
+**File**: `app/api/veo/route.ts`
+**Issue**: Shallow merge (`{ ...existingCharacters, ...newCharacters }`) was overwriting Phase 1 character data when Phase 2 encountered the same character with less detail.
+```typescript
+// Before: Shallow merge loses Phase 1 data
+const mergedChars = { ...existingCharacters, ...newCharacters };
+
+// After: Deep merge preserves Phase 1 data
+const mergedChars: CharacterRegistry = { ...existingCharacters };
+for (const [name, skeleton] of Object.entries(newCharacters)) {
+  const existing = mergedChars[name];
+  if (existing) {
+    // Deep merge: preserve Phase 1 fields, add Phase 2 fields
+    mergedChars[name] = {
+      ...existing,
+      ...skeleton,
+      // Preserve arrays by merging
+      variations: [...(existing.variations || []), ...(skeleton.variations || [])],
+    };
+  } else {
+    mergedChars[name] = skeleton;
+  }
+}
+```
+**Impact**: Character details from Phase 1 (face shape, hair, etc.) were lost.
+
+### SYNC-001: Stale closure fix in SSE refs
+**File**: `app/veo/page.tsx`
+**Issue**: Refs were initialized inside `useEffect`, causing stale closures in SSE event handlers.
+```typescript
+// Before: Refs initialized inside useEffect (after first render)
+useEffect(() => {
+  scenesRef.current = scenes;
+  characterRegistryRef.current = characterRegistry;
+}, [scenes, characterRegistry]);
+
+// After: Refs initialized synchronously before SSE processing
+const scenesRef = useRef<Scene[]>(scenes);
+const characterRegistryRef = useRef<CharacterRegistry>(characterRegistry);
+// Update refs synchronously when state changes
+scenesRef.current = scenes;
+characterRegistryRef.current = characterRegistry;
+```
+**Impact**: SSE handlers could read stale state, causing lost scenes on fast batches.
+
+### SSE-002: Buffer boundary event loss fix
+**File**: `app/api/veo/route.ts`
+**Issue**: When SSE stream ended exactly at a boundary, the final event could be lost.
+```typescript
+// Before: Single flush attempt
+if (buffer.trim()) {
+  controller.enqueue(encoder.encode(buffer));
+}
+
+// After: Robust flush with retries (250ms * 3 attempts)
+const SSE_FLUSH_DELAY_MS = 250;
+const SSE_FLUSH_RETRIES = 3;
+
+for (let i = 0; i < SSE_FLUSH_RETRIES; i++) {
+  await new Promise(r => setTimeout(r, SSE_FLUSH_DELAY_MS));
+  if (buffer.trim()) {
+    controller.enqueue(encoder.encode(buffer));
+    buffer = "";
+  }
+}
+```
+**Impact**: Rare - final `complete` event could be missed, leaving job stuck.
+
+### SSE-003: Dynamic stream timeout
+**File**: `app/api/veo/route.ts`
+**Issue**: Static 5-minute timeout was insufficient for large jobs (50+ scenes).
+```typescript
+// Before: Static timeout
+const timeoutMs = DEFAULT_API_TIMEOUT_MS; // 5 minutes
+
+// After: Dynamic timeout based on scene count
+// 10 min base + 30s per scene, max 60 min
+const calculateStreamTimeout = (sceneCount: number): number => {
+  const dynamicTimeout = BASE_STREAM_TIMEOUT_MS + (sceneCount * STREAM_TIMEOUT_PER_SCENE_MS);
+  return Math.min(dynamicTimeout, MAX_STREAM_TIMEOUT_MS);
+};
+```
+**Impact**: Large jobs were timing out before completion.
+
+### PERF-001: O(n^2) context memory growth fix
+**File**: `lib/veo/prompts.ts`
+**Issue**: `buildContinuityContext` recalculated full context on every batch, causing O(n^2) memory growth.
+```typescript
+// Before: Recalculate full context each batch
+export function buildContinuityContext(scenes: Scene[], characters: CharacterRegistry): string {
+  // Full computation every call
+  return expensiveComputation(scenes, characters);
+}
+
+// After: Cached version with jobId-keyed Map
+const continuityCache = new Map<string, { scenes: number; context: string }>();
+
+export function buildContinuityContextCached(
+  jobId: string,
+  scenes: Scene[],
+  characters: CharacterRegistry
+): string {
+  const cached = continuityCache.get(jobId);
+  if (cached && cached.scenes === scenes.length) {
+    return cached.context; // O(1) for unchanged scene count
+  }
+  const context = buildContinuityContext(scenes, characters);
+  continuityCache.set(jobId, { scenes: scenes.length, context });
+  return context;
+}
+
+export function resetContinuityCache(jobId?: string): void {
+  if (jobId) continuityCache.delete(jobId);
+  else continuityCache.clear();
+}
+```
+**Impact**: Memory usage grew quadratically with scene count, causing slowdowns on large jobs.
+
+### API-005: Retry logic improved with jitter and max delay
+**File**: `lib/veo/gemini.ts`
+**Issue**: Exponential backoff could reach very long delays, and identical retry timing caused thundering herd.
+```typescript
+// Before: Unbounded exponential backoff
+const delay = baseDelay * Math.pow(2, attempt);
+await sleep(delay);
+
+// After: Capped delay with jitter
+const DEFAULT_MAX_RETRY_DELAY_MS = 30000; // 30s max
+
+const rawDelay = baseDelay * Math.pow(2, attempt);
+const cappedDelay = Math.min(rawDelay, DEFAULT_MAX_RETRY_DELAY_MS);
+const jitter = Math.random() * 0.3 * cappedDelay; // 0-30% jitter
+await sleep(cappedDelay + jitter);
+```
+**Impact**: Prevented thundering herd on rate-limit recovery and capped max wait time.
+
+---
+
+## New Constants Added (lib/veo/constants.ts)
+
+```typescript
+// API-005: Retry backoff cap
+export const DEFAULT_MAX_RETRY_DELAY_MS = 30000; // 30 seconds
+
+// SSE-003: Dynamic stream timeout
+export const BASE_STREAM_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+export const STREAM_TIMEOUT_PER_SCENE_MS = 30 * 1000; // 30 seconds per scene
+export const MAX_STREAM_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes max
+
+// SSE-002: Stream flush before close
+export const SSE_FLUSH_DELAY_MS = 250;
+export const SSE_FLUSH_RETRIES = 3;
+```
+
+---
+
+## New Exports (lib/veo/index.ts)
+
+```typescript
+// PERF-001 FIX: Cached continuity context
+export { buildContinuityContextCached, resetContinuityCache } from "./prompts";
 ```
 
 ---

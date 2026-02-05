@@ -259,6 +259,7 @@ export default function SettingsButton() {
                         free: lang.settings.free,
                         paid: lang.settings.paid,
                     }}
+                    geminiTier={validation.geminiTier}
                 />
 
                 {/* Image Generation Model Selection */}
@@ -273,6 +274,7 @@ export default function SettingsButton() {
                         free: lang.settings.free,
                         paid: lang.settings.paid,
                     }}
+                    geminiTier={validation.geminiTier}
                 />
 
                 {/* Gemini API Key */}

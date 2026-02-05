@@ -6,6 +6,7 @@
 import type { CachedVeoJob, CachedVeoJobInfo } from "./types";
 import * as localCache from "./cache-local";
 import { getUserSettings } from "@/lib/userSettings";
+import { logger } from "@/lib/logger";
 
 const API_TIMEOUT_MS = 5000; // 5 seconds
 
@@ -51,7 +52,7 @@ async function processRetryQueue(): Promise<void> {
 
     if (pending.attempts >= MAX_RETRY_ATTEMPTS) {
       // Max attempts reached - give up and notify
-      console.warn(`[Cache] D1 write failed after ${MAX_RETRY_ATTEMPTS} attempts:`, jobId);
+      logger.warn(`[Cache] D1 write failed after ${MAX_RETRY_ATTEMPTS} attempts:`, jobId);
       pendingWrites.delete(jobId);
       // Dispatch event so UI can show sync failure indicator
       if (typeof window !== 'undefined') {
@@ -77,7 +78,7 @@ async function processRetryQueue(): Promise<void> {
         }
       } else if (response.status === 401) {
         // Invalid key - clear queue
-        console.warn("[Cache] Invalid database key, clearing retry queue");
+        logger.warn("[Cache] Invalid database key, clearing retry queue");
         pendingWrites.clear();
         break;
       } else {
@@ -189,7 +190,7 @@ export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
 
     // 401 = Invalid key, use only localStorage
     if (response.status === 401) {
-      console.warn("[Cache] Invalid database key, using localStorage only");
+      logger.warn("[Cache] Invalid database key, using localStorage only");
       return localJobs.map(job => ({ ...job, storageSource: 'local' as const }));
     }
 
@@ -198,7 +199,7 @@ export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
       cloudJobs = data.jobs || [];
     }
   } catch (error) {
-    console.warn("[Cache] D1 failed, using localStorage only:", error);
+    logger.warn("[Cache] D1 failed, using localStorage only:", error);
     return localJobs.map(job => ({ ...job, storageSource: 'local' as const }));
   }
 
@@ -263,14 +264,43 @@ export async function getCachedJobList(): Promise<CachedVeoJobInfo[]> {
 }
 
 /**
+ * Helper to fix job status and logs without changing timestamp
+ * Returns true if any fixes were made
+ */
+function fixJobInPlace(job: CachedVeoJob): boolean {
+  let needsFix = false;
+
+  // BUG FIX: Fix status if marked "in_progress" but has scenes (job actually completed)
+  if (job.status === "in_progress" && job.scenes && job.scenes.length > 0) {
+    job.status = "completed";
+    needsFix = true;
+  }
+
+  // Fix pending log entries
+  if (job.scenes && job.scenes.length > 0) {
+    if (localCache.fixPendingLogEntries(job)) {
+      needsFix = true;
+    }
+  }
+
+  return needsFix;
+}
+
+/**
  * Get job by ID (D1 with localStorage fallback)
+ * Also fixes pending log entries and orphaned status without changing timestamp
  */
 export async function getCachedJob(jobId: string): Promise<CachedVeoJob | null> {
   const databaseKey = getDatabaseKey();
 
   // If no key, use localStorage directly
   if (!databaseKey) {
-    return localCache.getCachedJobLocal(jobId);
+    const job = localCache.getCachedJobLocal(jobId);
+    if (job && fixJobInPlace(job)) {
+      // BUG FIX: Use preserveTimestamp to prevent job from jumping to top of list
+      localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
+    }
+    return job;
   }
 
   try {
@@ -279,15 +309,33 @@ export async function getCachedJob(jobId: string): Promise<CachedVeoJob | null> 
 
     // 401 = Invalid key, use localStorage
     if (response.status === 401) {
-      return localCache.getCachedJobLocal(jobId);
+      const job = localCache.getCachedJobLocal(jobId);
+      if (job && fixJobInPlace(job)) {
+        localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
+      }
+      return job;
     }
 
     if (!response.ok) throw new Error("D1 request failed");
     const data = await response.json();
-    return data.job || null;
+    const job = data.job || null;
+
+    // Fix issues in cloud job
+    if (job && fixJobInPlace(job)) {
+      logger.info(`[Cache] Fixed job ${jobId} (status/logs)`);
+      // Save fixed job to localStorage with preserved timestamp
+      localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
+      // Don't sync back to cloud here to avoid infinite loop - let it happen naturally
+    }
+
+    return job;
   } catch (error) {
-    console.warn("[Cache] D1 failed, using localStorage fallback:", error);
-    return localCache.getCachedJobLocal(jobId);
+    logger.warn("[Cache] D1 failed, using localStorage fallback:", error);
+    const job = localCache.getCachedJobLocal(jobId);
+    if (job && fixJobInPlace(job)) {
+      localCache.setCachedJobLocal(jobId, job, { preserveTimestamp: true });
+    }
+    return job;
   }
 }
 
@@ -320,7 +368,7 @@ export async function setCachedJob(
 
     if (response.status === 401) {
       // Invalid key - don't retry
-      console.warn("[Cache] Invalid database key, using localStorage only");
+      logger.warn("[Cache] Invalid database key, using localStorage only");
     } else if (!response.ok) {
       // Server error - queue for retry
       queueWriteForRetry(jobId, job);
@@ -328,7 +376,7 @@ export async function setCachedJob(
     // Success - nothing more to do
   } catch (error) {
     // Network error - queue for retry
-    console.warn("[Cache] D1 write failed, queuing for retry:", error);
+    logger.warn("[Cache] D1 write failed, queuing for retry:", error);
     queueWriteForRetry(jobId, job);
   }
 }
@@ -346,14 +394,14 @@ export async function deleteJobFromLocal(jobId: string): Promise<void> {
 export async function deleteJobFromCloud(jobId: string): Promise<void> {
   const databaseKey = getDatabaseKey();
   if (!databaseKey) {
-    console.warn("[Cache] No database key, cannot delete from cloud");
+    logger.warn("[Cache] No database key, cannot delete from cloud");
     return;
   }
 
   try {
     await fetchWithTimeout(`/api/veo/jobs/${jobId}`, { method: "DELETE" });
   } catch (error) {
-    console.warn("[Cache] D1 delete failed:", error);
+    logger.warn("[Cache] D1 delete failed:", error);
     throw error;
   }
 }
@@ -381,7 +429,7 @@ export async function deleteCachedJob(jobId: string): Promise<void> {
   try {
     await fetchWithTimeout(`/api/veo/jobs/${jobId}`, { method: "DELETE" });
   } catch (error) {
-    console.warn("[Cache] D1 delete failed, localStorage deleted:", error);
+    logger.warn("[Cache] D1 delete failed, localStorage deleted:", error);
   }
 }
 
@@ -400,7 +448,7 @@ export async function clearAllJobs(): Promise<void> {
   try {
     await fetchWithTimeout("/api/veo/jobs", { method: "DELETE" });
   } catch (error) {
-    console.warn("[Cache] D1 clear failed, localStorage cleared:", error);
+    logger.warn("[Cache] D1 clear failed, localStorage cleared:", error);
   }
 }
 
@@ -410,7 +458,7 @@ export async function clearAllJobs(): Promise<void> {
 export async function syncJobToCloud(jobId: string): Promise<boolean> {
   const databaseKey = getDatabaseKey();
   if (!databaseKey) {
-    console.warn("[Cache] No database key, cannot sync to cloud");
+    logger.warn("[Cache] No database key, cannot sync to cloud");
     return false;
   }
 
@@ -418,7 +466,7 @@ export async function syncJobToCloud(jobId: string): Promise<boolean> {
     // Get job from localStorage
     const job = localCache.getCachedJobLocal(jobId);
     if (!job) {
-      console.warn("[Cache] Job not found in localStorage:", jobId);
+      logger.warn("[Cache] Job not found in localStorage:", jobId);
       return false;
     }
 
@@ -430,7 +478,7 @@ export async function syncJobToCloud(jobId: string): Promise<boolean> {
     });
 
     if (response.status === 401) {
-      console.warn("[Cache] Invalid database key, cannot sync");
+      logger.warn("[Cache] Invalid database key, cannot sync");
       return false;
     }
 
@@ -440,10 +488,10 @@ export async function syncJobToCloud(jobId: string): Promise<boolean> {
 
     // Delete from localStorage after successful sync
     localCache.deleteCachedJobLocal(jobId);
-    console.log("[Cache] Job synced to cloud and removed from localStorage:", jobId);
+    logger.info("[Cache] Job synced to cloud and removed from localStorage:", jobId);
     return true;
   } catch (error) {
-    console.error("[Cache] Failed to sync job to cloud:", error);
+    logger.error("[Cache] Failed to sync job to cloud:", error);
     return false;
   }
 }

@@ -1460,6 +1460,56 @@ function extractActions(scenes: Array<{ description: string }>): string[] {
   return Array.from(actions).slice(0, 15); // Cap at 15 to keep context concise
 }
 
+// PERF-001 FIX: Cache for continuity context to avoid O(n²) rebuilds
+// Keyed by jobId to prevent cross-request cache pollution in shared Node.js module
+const continuityCache = new Map<string, {
+  sceneCount: number;
+  characterCount: number;
+  context: string;
+}>();
+
+/**
+ * Reset continuity cache for a specific job (call at job start or completion)
+ */
+export function resetContinuityCache(jobId: string): void {
+  continuityCache.delete(jobId);
+}
+
+/**
+ * Build continuity context with per-job caching for performance
+ * Returns cached result if scene count hasn't changed for this job
+ */
+export function buildContinuityContextCached(
+  jobId: string,
+  previousScenes: Array<{
+    description: string;
+    character?: string;
+    visual_specs?: { environment?: string };
+  }>,
+  characterRegistry: Record<string, string | CharacterSkeleton>,
+  summaryMode: boolean = true,
+  detailSceneCount: number = 5
+): string {
+  const sceneCount = previousScenes.length;
+  const characterCount = Object.keys(characterRegistry).length;
+
+  // Return cached result if scene count and character count haven't changed for this job
+  const cached = continuityCache.get(jobId);
+  if (cached &&
+      cached.sceneCount === sceneCount &&
+      cached.characterCount === characterCount) {
+    return cached.context;
+  }
+
+  // Build fresh context
+  const context = buildContinuityContext(previousScenes, characterRegistry, summaryMode, detailSceneCount);
+
+  // Cache the result for this job
+  continuityCache.set(jobId, { sceneCount, characterCount, context });
+
+  return context;
+}
+
 export function buildContinuityContext(
   previousScenes: Array<{
     description: string;

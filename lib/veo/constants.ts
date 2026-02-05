@@ -93,14 +93,32 @@ export const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-exp";
 export const DEFAULT_API_TIMEOUT_MS = 300000; // 5 minutes
 export const DEFAULT_MAX_RETRIES = 3;
 export const DEFAULT_RETRY_BASE_DELAY_MS = 1000;
+// API-005 FIX: Max delay cap for retry backoff
+export const DEFAULT_MAX_RETRY_DELAY_MS = 30000; // 30 seconds max delay
 
 // SSE & Streaming
 export const SSE_KEEPALIVE_INTERVAL_MS = 15000; // 15 seconds
 export const BATCH_DELAY_MS = 2000; // 2 seconds between batches
 export const FALLBACK_VIDEO_DURATION_SECONDS = 300; // 5 minutes
 
+// SSE-003 FIX: Dynamic stream timeout based on scene count
+export const BASE_STREAM_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes base
+export const STREAM_TIMEOUT_PER_SCENE_MS = 30 * 1000; // 30 seconds per scene
+export const MAX_STREAM_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes max
+
+// SSE-002 FIX: Stream flush before close
+export const SSE_FLUSH_DELAY_MS = 250; // Delay between flush attempts
+export const SSE_FLUSH_RETRIES = 3; // Number of flush attempts
+
 // Phase 1 timeout (character extraction can hang if Gemini is slow)
 export const PHASE1_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+// ============================================================================
+// ESTIMATED VALUES (for recovery/fallback scenarios)
+// ============================================================================
+
+// Estimated Gemini response time when actual timing is unavailable (SSE disconnect)
+export const ESTIMATED_GEMINI_RESPONSE_MS = 15000; // 15 seconds typical
 
 // ============================================================================
 // STRINGS & FORMATTING

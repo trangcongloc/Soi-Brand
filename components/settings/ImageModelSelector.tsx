@@ -16,6 +16,7 @@ interface ImageModelSelectorProps {
         free: string;
         paid: string;
     };
+    geminiTier?: "free" | "paid"; // API key tier - filters available models
 }
 
 export default function ImageModelSelector({
@@ -25,8 +26,16 @@ export default function ImageModelSelector({
     onSelect,
     langCode,
     lang,
+    geminiTier,
 }: ImageModelSelectorProps) {
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Filter models based on API key tier
+    // If paid tier: show all models (free + paid)
+    // If free tier or not configured: show only free models
+    const availableModels = geminiTier === "paid"
+        ? GEMINI_IMAGE_MODELS
+        : GEMINI_IMAGE_MODELS.filter(m => m.tier === "free");
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -99,7 +108,7 @@ export default function ImageModelSelector({
                 </button>
                 {isOpen && (
                     <div className={styles.dropdownMenu}>
-                        {GEMINI_IMAGE_MODELS.map((model) => (
+                        {availableModels.map((model) => (
                             <button
                                 key={model.id}
                                 className={`${styles.dropdownItem} ${model.id === selectedModel ? styles.dropdownItemSelected : ""}`}

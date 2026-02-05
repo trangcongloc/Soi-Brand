@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { ReportPart2 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang } from "@/lib/lang";

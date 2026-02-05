@@ -296,6 +296,7 @@ When listing jobs:
 - Max 100 entries
 - Used for real-time progress queries
 - Lost on server restart
+- **CACHE-001 FIX**: Cleanup now runs for ALL workflows (was missing for url-to-script)
 
 ### Resume Flow
 ```
@@ -320,6 +321,7 @@ When listing jobs:
 - Extracts character skeletons from video
 - Returns: names, physical attributes, clothing, expressions
 - Cached for continuity across scenes
+- **CHAR-001 FIX**: Phase 1 data now preserved during Phase 2 merges (deep merge, not shallow)
 
 ### Phase 2: Scene Generation (Batched)
 - Processes scenes in configurable batch sizes (1-60)
@@ -463,9 +465,10 @@ type VeoErrorType =
   | "UNKNOWN";
 ```
 
-### Retry Logic
-- Exponential backoff with jitter
+### Retry Logic (API-005 FIX)
+- Exponential backoff with 0-30% jitter
 - Max 3 retries by default
+- **Max delay capped at 30 seconds** (prevents excessive wait times)
 - Retryable errors: RATE_LIMITED, TIMEOUT, NETWORK_ERROR
 - Non-retryable: QUOTA_EXCEEDED, AUTH_ERROR, VALIDATION_ERROR
 
@@ -499,9 +502,21 @@ MAX_CACHED_JOBS = 20
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_API_TIMEOUT_MS = 5 * 60 * 1000  // 5 minutes
 
+// Retry (API-005 FIX)
+DEFAULT_MAX_RETRY_DELAY_MS = 30000  // 30s max delay with jitter
+
 // SSE
 SSE_KEEPALIVE_INTERVAL_MS = 15000
 BATCH_DELAY_MS = 2000
+
+// SSE Flush (SSE-002 FIX)
+SSE_FLUSH_DELAY_MS = 250
+SSE_FLUSH_RETRIES = 3
+
+// Dynamic Stream Timeout (SSE-003 FIX)
+BASE_STREAM_TIMEOUT_MS = 10 * 60 * 1000  // 10 min base
+STREAM_TIMEOUT_PER_SCENE_MS = 30 * 1000  // +30s per scene
+MAX_STREAM_TIMEOUT_MS = 60 * 60 * 1000   // 60 min max
 
 // Quality
 MIN_CHAR_ATTRS_FULL_SCORE = 15
@@ -546,10 +561,18 @@ MIN_SCENE_DETAILS_FULL_SCORE = 10
 - D1 for cross-device persistence
 - Phase-level caching for resume
 
-### SSE Streaming
+### Continuity Context Caching (PERF-001 FIX)
+- `buildContinuityContextCached()` uses jobId-keyed Map
+- O(1) lookup for unchanged scene counts (was O(n^2) memory growth)
+- `resetContinuityCache()` clears cache after job completion
+- Prevents memory bloat on large jobs (50+ scenes)
+
+### SSE Streaming (SSE-002, SSE-003 FIXES)
 - Real-time progress updates
 - No polling required
 - Keeps connection alive with keepalives
+- **Dynamic timeout**: 10 min base + 30s per scene (max 60 min)
+- **Robust flush**: 250ms * 3 retries before stream close
 
 ---
 
@@ -640,4 +663,4 @@ const job = await getCachedJob(jobId);
 
 ---
 
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-05*

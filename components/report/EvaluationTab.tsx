@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ReportPart3 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang } from "@/lib/lang";

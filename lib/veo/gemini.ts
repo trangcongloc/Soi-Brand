@@ -27,6 +27,7 @@ import {
   DEFAULT_API_TIMEOUT_MS,
   DEFAULT_MAX_RETRIES,
   DEFAULT_RETRY_BASE_DELAY_MS,
+  DEFAULT_MAX_RETRY_DELAY_MS,
   GEMINI_API_BASE_URL,
 } from "./constants";
 
@@ -228,8 +229,32 @@ export interface GeminiCallMeta {
 }
 
 /**
+ * API-005 FIX: Calculate delay with exponential backoff, jitter, and max cap
+ * Matches the pattern from lib/retry.ts for consistency
+ */
+function calculateRetryDelay(
+  attempt: number,
+  baseDelayMs: number,
+  maxDelayMs: number = DEFAULT_MAX_RETRY_DELAY_MS
+): number {
+  // Exponential backoff: baseDelay * 2^attempt
+  const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
+
+  // Cap at max delay
+  const cappedDelay = Math.min(exponentialDelay, maxDelayMs);
+
+  // Add jitter (±20%) to prevent thundering herd
+  const jitter = cappedDelay * 0.2 * (Math.random() * 2 - 1);
+
+  return Math.round(cappedDelay + jitter);
+}
+
+/**
  * Call Gemini API with retry logic.
  * Returns both the response and metadata for logging.
+ *
+ * API-005 FIX: Now includes jitter and max delay cap to prevent
+ * thundering herd and unbounded retry delays.
  */
 export async function callGeminiAPIWithRetry(
   requestBody: GeminiRequestBody,
@@ -239,12 +264,14 @@ export async function callGeminiAPIWithRetry(
     timeoutMs?: number;
     maxRetries?: number;
     baseDelayMs?: number;
+    maxDelayMs?: number;
     onRetry?: (attempt: number, error: Error) => void;
   }
 ): Promise<{ response: GeminiResponse; meta: GeminiCallMeta }> {
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
     baseDelayMs = DEFAULT_RETRY_BASE_DELAY_MS,
+    maxDelayMs = DEFAULT_MAX_RETRY_DELAY_MS,
     onRetry,
     ...callOptions
   } = options;
@@ -295,7 +322,8 @@ export async function callGeminiAPIWithRetry(
       }
 
       if (attempt < maxRetries - 1) {
-        const delay = baseDelayMs * Math.pow(2, attempt);
+        // API-005 FIX: Use calculateRetryDelay with jitter and max cap
+        const delay = calculateRetryDelay(attempt, baseDelayMs, maxDelayMs);
         onRetry?.(attempt + 1, lastError);
         await new Promise((r) => setTimeout(r, delay));
       }

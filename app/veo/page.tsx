@@ -22,6 +22,7 @@ import {
   GeminiLogEntry,
   setCachedJob,
   getCachedJob,
+  getCachedJobList,
   hasProgress,
   loadProgress,
   clearProgress,
@@ -39,7 +40,6 @@ import {
   createPhaseCacheSettings,
 } from "@/lib/veo/phase-cache";
 import { VeoForm, VeoSceneDisplay, VeoHistoryPanel, VeoLogPanel } from "@/components/veo";
-import { getCachedJobList } from "@/lib/veo";
 import styles from "./page.module.css";
 
 type PageState = "idle" | "loading" | "script-complete" | "complete" | "error";
@@ -448,6 +448,16 @@ export default function VeoPage() {
         setColorProfileConfidence(0);
       }
       setLogEntries([]);
+
+      // SYNC-001 FIX: Initialize refs synchronously BEFORE SSE processing starts
+      // This ensures handleError and handleCancel have correct values even before
+      // the async useEffect-based sync runs
+      scenesRef.current = options.existingScenes || [];
+      characterRegistryRef.current = options.existingCharacters || {};
+      generatedScriptRef.current = null;
+      colorProfileRef.current = options.existingColorProfile || null;
+      logEntriesRef.current = [];
+      summaryRef.current = null;
 
       // Save current form data for retry/error handling
       const formData = {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { colors } from "@/lib/theme";
 import { MarketingReport } from "@/lib/types";
 

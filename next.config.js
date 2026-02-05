@@ -23,9 +23,6 @@ const nextConfig = {
     poweredByHeader: false,
     reactStrictMode: true,
 
-    // Remove unused features to reduce bundle size
-    swcMinify: true,
-
     // Environment variable prefixes for client-side
     env: {
         NEXT_PUBLIC_APP_NAME: "Soi'Brand",

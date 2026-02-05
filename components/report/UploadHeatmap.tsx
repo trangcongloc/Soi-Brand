@@ -1,4 +1,3 @@
-import React from "react";
 import { motion } from "framer-motion";
 import { Post } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";

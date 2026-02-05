@@ -10,7 +10,7 @@ interface VeoScriptInputProps {
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   scriptFileName: string;
   isLoading: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export function VeoScriptInput({

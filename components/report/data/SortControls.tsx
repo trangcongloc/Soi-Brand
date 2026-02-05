@@ -1,4 +1,3 @@
-import React from "react";
 import { motion } from "framer-motion";
 import styles from "@/components/ReportDisplay.module.css";
 import { sortAnimations } from "@/lib/animations";

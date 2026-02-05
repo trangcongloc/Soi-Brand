@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Post, ChannelInfo } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";

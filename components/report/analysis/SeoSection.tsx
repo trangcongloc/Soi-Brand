@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Post, ReportPart2 } from "@/lib/types";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";

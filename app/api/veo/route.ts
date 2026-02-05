@@ -16,7 +16,9 @@ import {
   buildScriptPrompt,
   buildScriptToScenesPrompt,
   buildScenePrompt,
-  buildContinuityContext,
+  // PERF-001 FIX: Cached version for O(1) repeated calls
+  buildContinuityContextCached,
+  resetContinuityCache,
   callGeminiAPIWithRetry,
   parseGeminiResponse,
   parseScriptResponse,
@@ -67,10 +69,23 @@ import {
   DEFAULT_SECONDS_PER_SCENE,
   BATCH_OVERLAP_SECONDS,
   PHASE1_TIMEOUT_MS,
+  // SSE-003 FIX: Dynamic stream timeout constants
+  BASE_STREAM_TIMEOUT_MS,
+  STREAM_TIMEOUT_PER_SCENE_MS,
+  MAX_STREAM_TIMEOUT_MS,
+  // SSE-002 FIX: Stream flush constants
+  SSE_FLUSH_DELAY_MS,
+  SSE_FLUSH_RETRIES,
 } from "@/lib/veo/constants";
 
-// Maximum SSE stream duration: 30 minutes to prevent connection exhaustion
-const MAX_STREAM_DURATION_MS = 30 * 60 * 1000;
+/**
+ * SSE-003 FIX: Calculate dynamic stream timeout based on scene count
+ * Longer videos need more time for processing
+ */
+function calculateStreamTimeout(sceneCount: number): number {
+  const dynamicTimeout = BASE_STREAM_TIMEOUT_MS + (sceneCount * STREAM_TIMEOUT_PER_SCENE_MS);
+  return Math.min(dynamicTimeout, MAX_STREAM_TIMEOUT_MS);
+}
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -431,6 +446,9 @@ async function runScriptToScenesHybrid(
   const startTime = Date.now();
   const totalBatches = Math.ceil(request.sceneCount / request.batchSize);
 
+  // PERF-001 FIX: Reset continuity cache at job start to avoid stale data
+  resetContinuityCache(jobId);
+
   // Resume support: Initialize with existing data if resuming
   const startBatch = request.resumeFromBatch ?? 0;
   let allScenes: Scene[] = request.existingScenes ?? [];
@@ -495,7 +513,7 @@ async function runScriptToScenesHybrid(
 
     // Build context from previous scenes (outside try for error logging)
     const continuityContext =
-      allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
+      allScenes.length > 0 ? buildContinuityContextCached(jobId, allScenes, characterRegistry, true, 5) : "";
 
     try {
       // Build prompt for Phase 2 scene generation with pre-extracted characters and color profile
@@ -691,6 +709,9 @@ async function runUrlToScenesDirect(
 }> {
   const startTime = Date.now();
 
+  // PERF-001 FIX: Reset continuity cache at job start to avoid stale data
+  resetContinuityCache(jobId);
+
   // Calculate time-based batches
   // Each scene is ~DEFAULT_SECONDS_PER_SCENE seconds, so batch covers batchSize * DEFAULT_SECONDS_PER_SCENE seconds of video
   const secondsPerScene = DEFAULT_SECONDS_PER_SCENE;
@@ -793,7 +814,13 @@ async function runUrlToScenesDirect(
 
       // Convert to registry and send character events immediately
       const extractedRegistry = extractionResultToRegistry(characterData);
-      characterRegistry = { ...characterRegistry, ...extractedRegistry };
+      // CHAR-001 FIX: Only add NEW characters, never overwrite Phase 1 data
+      // This preserves the canonical character skeletons from Phase 1
+      for (const [name, details] of Object.entries(extractedRegistry)) {
+        if (!(name in characterRegistry)) {
+          characterRegistry[name] = details;
+        }
+      }
 
       for (const char of characterData.characters) {
         sendEvent({
@@ -914,7 +941,7 @@ async function runUrlToScenesDirect(
 
     // Build context from previous scenes (outside try for error logging)
     const continuityContext =
-      allScenes.length > 0 ? buildContinuityContext(allScenes, characterRegistry) : "";
+      allScenes.length > 0 ? buildContinuityContextCached(jobId, allScenes, characterRegistry, true, 5) : "";
 
     // Define log ID outside try block so catch can access it
     const directBatchLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
@@ -1298,17 +1325,21 @@ export async function POST(request: NextRequest) {
         }
       }, SSE_KEEPALIVE_INTERVAL_MS);
 
-      // Maximum stream duration timeout to prevent connection exhaustion
+      // SSE-003 FIX: Dynamic stream timeout based on scene count
+      // Longer videos with more scenes need more processing time
+      const dynamicTimeoutMs = calculateStreamTimeout(veoRequest.sceneCount);
+      const dynamicTimeoutMinutes = Math.round(dynamicTimeoutMs / 60000);
+
       const streamTimeout = setTimeout(() => {
         if (streamClosed) return; // Already closed by normal completion
         streamTimedOut = true;
-        logger.warn("VEO SSE stream timeout", { jobId, duration: MAX_STREAM_DURATION_MS / 1000 });
+        logger.warn("VEO SSE stream timeout", { jobId, duration: dynamicTimeoutMs / 1000, sceneCount: veoRequest.sceneCount });
         try {
           controller.enqueue(sse.encode({
             event: "error",
             data: {
               type: "TIMEOUT",
-              message: `Stream timed out after ${MAX_STREAM_DURATION_MS / 60000} minutes. Please resume the job to continue.`,
+              message: `Stream timed out after ${dynamicTimeoutMinutes} minutes. Please resume the job to continue.`,
               retryable: true,
             },
           }));
@@ -1316,7 +1347,7 @@ export async function POST(request: NextRequest) {
           // Stream may be closed
         }
         safeCloseStream();
-      }, MAX_STREAM_DURATION_MS);
+      }, dynamicTimeoutMs);
 
       const sendEvent = (event: VeoSSEEvent) => {
         // Don't send events if stream has timed out or closed
@@ -1377,6 +1408,11 @@ export async function POST(request: NextRequest) {
               },
             },
           });
+
+          // CACHE-001 FIX: Clean up server progress for url-to-script workflow
+          serverProgress.delete(jobId);
+          // PERF-001 FIX: Clean up continuity cache to prevent memory leak
+          resetContinuityCache(jobId);
         }
         // Handle URL to Scenes (combined workflow)
         else if (veoRequest.workflow === "url-to-scenes") {
@@ -1912,6 +1948,8 @@ export async function POST(request: NextRequest) {
 
           // Clean up server progress
           serverProgress.delete(jobId);
+          // PERF-001 FIX: Clean up continuity cache to prevent memory leak
+          resetContinuityCache(jobId);
         }
         // Handle Script to Scenes workflow
         else if (veoRequest.workflow === "script-to-scenes") {
@@ -1976,6 +2014,8 @@ export async function POST(request: NextRequest) {
 
           // Clean up server progress
           serverProgress.delete(jobId);
+          // PERF-001 FIX: Clean up continuity cache to prevent memory leak
+          resetContinuityCache(jobId);
         }
       } catch (err) {
         const error = err as GeminiApiError;
@@ -2010,10 +2050,15 @@ export async function POST(request: NextRequest) {
           },
         });
       } finally {
-        // BUG FIX #2: Use safeCloseStream helper for consistent cleanup
-        // BUG FIX #27: Add small delay before closing stream to ensure complete event is flushed
-        // The complete event may be buffered and not yet sent to client when close() is called
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // SSE-002 FIX: Robust stream flush with multiple attempts
+        // The 100ms single delay was unreliable for buffer boundary events
+        // Note: There's no reliable way to detect if SSE data has reached the client.
+        // We use multiple delays as a best-effort flush before closing.
+        for (let i = 0; i < SSE_FLUSH_RETRIES; i++) {
+          await new Promise(r => setTimeout(r, SSE_FLUSH_DELAY_MS));
+          // Check if controller is already closed (desiredSize is null when closed)
+          if (controller.desiredSize === null) break;
+        }
         safeCloseStream();
       }
     },

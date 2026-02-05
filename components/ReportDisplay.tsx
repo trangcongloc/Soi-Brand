@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { MarketingReport } from "@/lib/types";
 import styles from "./ReportDisplay.module.css";
 import { downloadJSON } from "@/lib/utils";

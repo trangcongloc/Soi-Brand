@@ -33,6 +33,9 @@ export {
   addAudioInstructions,
   voiceLanguageToAudioSettings,
   buildContinuityContext,
+  // PERF-001 FIX: Cached version for O(1) repeated calls
+  buildContinuityContextCached,
+  resetContinuityCache,
   buildScenePrompt,
   buildScriptPrompt,
   buildScriptToScenesPrompt,

@@ -284,8 +284,8 @@ function SubComponent({ ... }) { ... }
 | `utils.ts` | `extractVideoId`, `isValidYouTubeUrl`, `generateJobId`, `parseDuration`, `formatTime`, `getYouTubeThumbnail`, `cleanScriptText` | **Core VEO utilities — USE THESE** |
 | `types.ts` | `Scene`, `CachedVeoJob`, `VeoJobSummary`, `GeneratedScript`, etc. | Type definitions |
 | `constants.ts` | All VEO constants | **REFERENCE THIS for magic numbers** |
-| `gemini.ts` | `callGeminiAPIWithRetry`, `parseGeminiResponse` | Gemini API integration |
-| `prompts.ts` | VEO prompt templates | AI prompts |
+| `gemini.ts` | `callGeminiAPIWithRetry`, `parseGeminiResponse` | Gemini API integration (jittered retry with 30s max delay) |
+| `prompts.ts` | `buildContinuityContext`, `buildContinuityContextCached`, `resetContinuityCache` | AI prompts + cached continuity context |
 | `cache.ts` | `setCachedJob`, `getCachedJob` | Async cache facade (D1 + localStorage) |
 | `cache-local.ts` | `setCachedJobLocal`, `getCachedJobLocal` | Local storage caching |
 | `cache-remote.ts` | Cloud sync utilities | D1 database integration |
