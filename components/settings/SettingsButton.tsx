@@ -283,7 +283,13 @@ export default function SettingsButton() {
                     label="Gemini API Key"
                     value={geminiKey}
                     onChange={setGeminiKey}
-                    onBlur={(value) => saveAndValidateKey("gemini", value)}
+                    onBlur={async (value) => {
+                        const result = await saveAndValidateKey("gemini", value);
+                        // If model was automatically changed to free tier, update local state
+                        if (result.modelChanged && result.newModel) {
+                            setSelectedModel(result.newModel);
+                        }
+                    }}
                     onResetValidation={() => resetValidation("gemini")}
                     validation={validation}
                     lang={{

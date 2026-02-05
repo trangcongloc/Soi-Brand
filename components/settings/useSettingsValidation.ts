@@ -8,6 +8,7 @@ import {
     validateGeminiApiKey,
 } from "@/lib/apiValidation";
 import { GeminiModel } from "@/lib/types";
+import { GEMINI_MODELS, DEFAULT_MODEL } from "@/lib/geminiModels";
 
 export interface ValidationState {
     youtube: "idle" | "validating" | "valid" | "invalid";
@@ -60,7 +61,7 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
     }, [validation.youtube, validation.gemini]);
 
     const saveAndValidateKey = useCallback(
-        async (provider: "youtube" | "gemini", key: string) => {
+        async (provider: "youtube" | "gemini", key: string): Promise<{ modelChanged?: boolean; newModel?: GeminiModel }> => {
             const settings = await getUserSettingsAsync();
             if (provider === "youtube") {
                 await saveUserSettingsAsync({
@@ -81,7 +82,7 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
                     [`${provider}Error`]: undefined,
                     ...(provider === "gemini" ? { geminiTier: undefined } : {}),
                 }));
-                return;
+                return {};
             }
 
             setValidation((prev) => ({ ...prev, [provider]: "validating" }));
@@ -93,6 +94,7 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
                     youtube: result.valid ? "valid" : "invalid",
                     youtubeError: result.error,
                 }));
+                return {};
             } else {
                 const result = await validateGeminiApiKey(key);
                 setValidation((prev) => ({
@@ -102,9 +104,31 @@ export function useSettingsValidation(selectedModel: GeminiModel | null) {
                     geminiTier: result.tier,
                 }));
 
+                // Check if current model is compatible with the detected tier
+                let modelChanged = false;
+                let newModel: GeminiModel | undefined;
+
                 if (result.tier && selectedModel) {
-                    updateGeminiQuotaLimits(selectedModel, result.tier);
+                    const currentModelInfo = GEMINI_MODELS.find(m => m.id === selectedModel);
+
+                    // If free tier detected but current model is paid, switch to default free model
+                    if (result.tier === "free" && currentModelInfo?.tier === "paid") {
+                        newModel = DEFAULT_MODEL;
+                        modelChanged = true;
+
+                        // Update settings with the new model
+                        await saveUserSettingsAsync({
+                            ...settings,
+                            geminiModel: newModel,
+                        });
+
+                        updateGeminiQuotaLimits(newModel, result.tier);
+                    } else {
+                        updateGeminiQuotaLimits(selectedModel, result.tier);
+                    }
                 }
+
+                return { modelChanged, newModel };
             }
         },
         [selectedModel]
