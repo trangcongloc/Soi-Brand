@@ -8,11 +8,9 @@
 // ============================================================================
 
 export const SECONDS_PER_MINUTE = 60;
-export const MINUTES_PER_HOUR = 60;
 export const SECONDS_PER_HOUR = 3600;
 
 export const DEFAULT_SECONDS_PER_SCENE = 8;
-export const DURATION_THRESHOLD_FOR_MINUTES = 300; // 5 minutes
 
 export const MIN_PROCESSING_TIME_SECONDS = 30;
 export const MAX_PROCESSING_TIME_SECONDS = 120;
@@ -48,7 +46,6 @@ export const KEY_NEGATIVE_BONUS = 0.5;
 
 // Lighting & Audio scoring
 export const LIGHTING_SETUP_SCORE = 3;
-export const ADVANCED_LIGHTING_SCORE = 2;
 export const AUDIO_ENVIRONMENTAL_SCORE = 3;
 export const AUDIO_NEGATIONS_SCORE = 2;
 
@@ -73,7 +70,6 @@ export const MIN_SCRIPT_LENGTH = 100;
 export const CACHE_TTL_DAYS = 7;
 export const CACHE_TTL_MS = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 export const MAX_CACHED_JOBS = 20;
-export const MIN_JOBS_TO_KEEP_AFTER_CLEANUP = 5;
 
 // Failed job expiration (48 hours)
 export const FAILED_JOB_CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 172,800,000 ms

@@ -1,4 +1,4 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 /**
  * Simultaneous Video Analysis Test
@@ -177,7 +177,7 @@ test.describe('Prompt Simultaneous Processing Test', () => {
       }));
 
       // Click all submit buttons at roughly the same time
-      const submitPromises = pages.map(async (page, index) => {
+      const submitPromises = pages.map(async (_page, index) => {
         results[index].startTime = Date.now();
         const submitBtn = submitButtons[index];
 
@@ -198,7 +198,7 @@ test.describe('Prompt Simultaneous Processing Test', () => {
 
       // Monitor function for a single page
       const monitorJob = async (page: Page, index: number): Promise<void> => {
-        const video = TEST_VIDEOS[index];
+        const video = TEST_VIDEOS[index]; // Kept for debugging
         const startTime = Date.now();
         let lastProgressLog = Date.now();
         const progressLogInterval = 10000; // Log progress every 10 seconds

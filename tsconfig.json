@@ -44,6 +44,7 @@
     "node_modules",
     ".next",
     "out",
-    "build"
+    "build",
+    "tests/e2e"
   ]
 }
