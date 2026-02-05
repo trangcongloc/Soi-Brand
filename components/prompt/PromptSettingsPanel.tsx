@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PromptMode, VoiceLanguage, AudioSettings, PromptWorkflow, MediaType, SceneCountMode } from "@/lib/prompt";
+import { PromptMode, VoiceLanguage, AudioSettings, PromptWorkflow, MediaType, SceneCountMode, ContentPacing } from "@/lib/prompt";
+import { PACING_PRESETS } from "@/lib/prompt/constants";
 import { useLang } from "@/lib/lang";
 import styles from "./PromptForm.module.css";
 
@@ -11,6 +12,7 @@ interface SettingsState {
   sceneCountMode: SceneCountMode;
   sceneCount: number;
   batchSize: number;
+  contentPacing: ContentPacing;
   audio: AudioSettings;
   useVideoTitle: boolean;
   useVideoDescription: boolean;
@@ -212,6 +214,22 @@ export function PromptSettingsPanel({
                   className={`${styles.compactInput} ${styles.tooltip}`}
                   data-tooltip={lang.prompt.settings.batchSizeDesc}
                 />
+              </div>
+              <div className={styles.settingsGroupContent} style={{ marginTop: "0.4rem" }}>
+                <span className={styles.rowLabel}>{lang.prompt.settings.contentPacing || "Pacing"}</span>
+                <select
+                  value={settings.contentPacing}
+                  onChange={(e) => onSettingsChange({ contentPacing: e.target.value as ContentPacing })}
+                  disabled={isLoading}
+                  className={`${styles.compactSelect} ${styles.tooltip}`}
+                  data-tooltip={lang.prompt.settings.contentPacingDesc || "Content pacing affects scene duration"}
+                >
+                  {(Object.keys(PACING_PRESETS) as ContentPacing[]).map((pacing) => (
+                    <option key={pacing} value={pacing}>
+                      {PACING_PRESETS[pacing].label} ({PACING_PRESETS[pacing].secondsPerScene}s/scene)
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

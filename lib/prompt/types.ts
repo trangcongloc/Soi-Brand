@@ -218,6 +218,22 @@ export type PromptMode = "direct" | "hybrid";
 
 export type PromptWorkflow = "url-to-script" | "script-to-scenes" | "url-to-scenes";
 
+/**
+ * Content pacing presets for different video styles.
+ * Affects scene duration and overlap calculations.
+ */
+export type ContentPacing = "fast" | "standard" | "slow";
+
+/**
+ * Pacing preset configuration values
+ */
+export interface PacingPreset {
+  secondsPerScene: number;
+  baseOverlapSeconds: number;
+  label: string;
+  description: string;
+}
+
 export type VoiceLanguage =
   | "no-voice"
   | "english"
@@ -551,6 +567,7 @@ export interface CachedPromptJob {
     workflow: "url-to-script" | "script-to-scenes" | "url-to-scenes";
     mode: PromptMode;
     batchSize: number;
+    contentPacing?: ContentPacing;
     sceneCount: number;
     voice: VoiceLanguage;
     colorProfile?: CinematicProfile; // Phase 0: For resume
@@ -1476,6 +1493,7 @@ export interface PromptFormSettings {
   sceneCountMode: SceneCountMode;
   sceneCount: number;
   batchSize: number;
+  contentPacing: ContentPacing;
   audio: AudioSettings;
 
   // Processing

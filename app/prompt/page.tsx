@@ -19,6 +19,7 @@ import {
   CinematicProfile,
   MediaType,
   SceneCountMode,
+  ContentPacing,
   GeminiLogEntry,
   setCachedJob,
   getCachedJob,
@@ -430,6 +431,7 @@ export default function PromptPage() {
       sceneCountMode: SceneCountMode;
       sceneCount: number;
       batchSize: number;
+      contentPacing: ContentPacing;
       audio: AudioSettings;
       useVideoTitle: boolean;
       useVideoDescription: boolean;
@@ -494,6 +496,7 @@ export default function PromptPage() {
         mode: options.mode,
         sceneCount: options.sceneCount,
         batchSize: options.batchSize,
+        contentPacing: options.contentPacing,
         audio: options.audio,
         scriptText: options.scriptText,
         useVideoTitle: options.useVideoTitle,
@@ -550,6 +553,7 @@ export default function PromptPage() {
           workflow: options.workflow,
           mode: options.mode,
           batchSize: options.batchSize,
+          contentPacing: options.contentPacing,
           sceneCount: options.sceneCount,
           voice: options.audio.voiceLanguage,
           useVideoTitle: options.useVideoTitle,
@@ -1103,6 +1107,7 @@ export default function PromptPage() {
       sceneCountMode: "manual",
       sceneCount: resumeData.sceneCount,
       batchSize: resumeData.batchSize,
+      contentPacing: "standard", // Default for legacy resume data
       audio: {
         voiceLanguage: resumeData.voice,
         music: true,
@@ -1211,6 +1216,7 @@ export default function PromptPage() {
       sceneCountMode: rd.sceneCountMode ?? "auto",
       sceneCount: rd.sceneCount,
       batchSize: rd.batchSize,
+      contentPacing: rd.contentPacing ?? "standard", // Fallback for legacy data
       audio: {
         voiceLanguage: rd.voice,
         music: true,

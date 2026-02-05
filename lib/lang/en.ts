@@ -536,6 +536,8 @@ export const en = {
             manual: "Manual",
             batchSize: "Batch Size",
             batchSizeDesc: "Scenes per batch (hybrid mode only)",
+            contentPacing: "Pacing",
+            contentPacingDesc: "Content pacing affects scene duration",
             voice: "Voice",
             voiceDesc: "Narration language for video",
             dialogueLanguageDesc: "Language for voice narration and dialogue",

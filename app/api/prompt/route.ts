@@ -76,6 +76,9 @@ import {
   // SSE-002 FIX: Stream flush constants
   SSE_FLUSH_DELAY_MS,
   SSE_FLUSH_RETRIES,
+  // Content pacing presets
+  PACING_PRESETS,
+  DEFAULT_CONTENT_PACING,
 } from "@/lib/prompt/constants";
 
 /**
@@ -153,6 +156,7 @@ const VeoRequestSchema = z.object({
   sceneCount: z.number().int().min(1).max(VEO_CONFIG.MAX_AUTO_SCENES).default(40),
   sceneCountMode: z.enum(["auto", "manual", "gemini"]).default("auto"),
   batchSize: z.number().int().min(1).max(60).default(VEO_CONFIG.DEFAULT_BATCH_SIZE),
+  contentPacing: z.enum(["fast", "standard", "slow"]).default(DEFAULT_CONTENT_PACING),
   voice: z
     .enum([
       "no-voice",
@@ -712,9 +716,10 @@ async function runUrlToScenesDirect(
   // PERF-001 FIX: Reset continuity cache at job start to avoid stale data
   resetContinuityCache(jobId);
 
-  // Calculate time-based batches
-  // Each scene is ~DEFAULT_SECONDS_PER_SCENE seconds, so batch covers batchSize * DEFAULT_SECONDS_PER_SCENE seconds of video
-  const secondsPerScene = DEFAULT_SECONDS_PER_SCENE;
+  // Calculate time-based batches using content pacing preset
+  // Each scene duration is determined by the pacing preset (fast: 4s, standard: 8s, slow: 12s)
+  const pacingPreset = PACING_PRESETS[request.contentPacing];
+  const secondsPerScene = pacingPreset?.secondsPerScene ?? DEFAULT_SECONDS_PER_SCENE;
   const secondsPerBatch = request.batchSize * secondsPerScene;
   const totalBatches = Math.max(1, Math.ceil(videoDurationSeconds / secondsPerBatch));
 

@@ -12,6 +12,32 @@ export const SECONDS_PER_HOUR = 3600;
 
 export const DEFAULT_SECONDS_PER_SCENE = 8;
 
+// Content pacing presets for different video styles
+import type { ContentPacing, PacingPreset } from "./types";
+
+export const PACING_PRESETS: Record<ContentPacing, PacingPreset> = {
+  fast: {
+    secondsPerScene: 4,
+    baseOverlapSeconds: 6,
+    label: "Fast",
+    description: "Music videos, action, quick cuts (4s/scene)",
+  },
+  standard: {
+    secondsPerScene: 8,
+    baseOverlapSeconds: 10,
+    label: "Standard",
+    description: "General content, vlogs, tutorials (8s/scene)",
+  },
+  slow: {
+    secondsPerScene: 12,
+    baseOverlapSeconds: 15,
+    label: "Slow",
+    description: "Documentaries, interviews, slow pace (12s/scene)",
+  },
+};
+
+export const DEFAULT_CONTENT_PACING: ContentPacing = "standard";
+
 export const MIN_PROCESSING_TIME_SECONDS = 30;
 export const MAX_PROCESSING_TIME_SECONDS = 120;
 

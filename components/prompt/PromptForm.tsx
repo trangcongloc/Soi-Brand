@@ -10,6 +10,7 @@ import {
   PromptWorkflow,
   MediaType,
   SceneCountMode,
+  ContentPacing,
 } from "@/lib/prompt";
 import { loadPromptFormSettings, savePromptFormSettings } from "@/lib/prompt/settings";
 import { PromptWorkflowSelector } from "./PromptWorkflowSelector";
@@ -29,6 +30,7 @@ interface VeoFormProps {
     sceneCountMode: SceneCountMode;
     sceneCount: number;
     batchSize: number;
+    contentPacing: ContentPacing;
     audio: AudioSettings;
     useVideoTitle: boolean;
     useVideoDescription: boolean;
@@ -71,6 +73,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
   const [sceneCountMode, setSceneCountMode] = useState<SceneCountMode>(savedSettings.sceneCountMode);
   const [sceneCount, setSceneCount] = useState(savedSettings.sceneCount);
   const [batchSize, setBatchSize] = useState(savedSettings.batchSize);
+  const [contentPacing, setContentPacing] = useState<ContentPacing>(savedSettings.contentPacing);
   const [audio, setAudio] = useState<AudioSettings>(savedSettings.audio);
   const [useVideoTitle, setUseVideoTitle] = useState(savedSettings.useVideoTitle);
   const [useVideoDescription, setUseVideoDescription] = useState(savedSettings.useVideoDescription);
@@ -87,13 +90,13 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
   // Persist settings to localStorage whenever they change
   useEffect(() => {
     savePromptFormSettings({
-      mode, sceneCountMode, sceneCount, batchSize, audio,
+      mode, sceneCountMode, sceneCount, batchSize, contentPacing, audio,
       useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions,
       extractColorProfile, mediaType,
       negativePrompt, selfieMode,
     });
   }, [
-    mode, sceneCountMode, sceneCount, batchSize, audio,
+    mode, sceneCountMode, sceneCount, batchSize, contentPacing, audio,
     useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions,
     extractColorProfile, mediaType,
     negativePrompt, selfieMode,
@@ -166,6 +169,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
           sceneCountMode: workflow === "url-to-scenes" ? sceneCountMode : "manual",
           sceneCount,
           batchSize,
+          contentPacing,
           audio,
           useVideoTitle,
           useVideoDescription,
@@ -188,6 +192,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
           sceneCountMode: "manual",
           sceneCount,
           batchSize,
+          contentPacing,
           audio,
           useVideoTitle,
           useVideoDescription,
@@ -200,7 +205,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
         });
       }
     },
-    [workflow, url, durationMode, startTime, endTime, scriptText, mode, sceneCountMode, sceneCount, batchSize, audio, useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
+    [workflow, url, durationMode, startTime, endTime, scriptText, mode, sceneCountMode, sceneCount, batchSize, contentPacing, audio, useVideoTitle, useVideoDescription, useVideoChapters, useVideoCaptions, negativePrompt, extractColorProfile, mediaType, selfieMode, onError, onSubmit, lang]
   );
 
   const hasInput = workflow === "script-to-scenes" ? scriptText.trim().length > 0 : url.trim().length > 0;
@@ -213,6 +218,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
     sceneCountMode,
     sceneCount,
     batchSize,
+    contentPacing,
     audio,
     useVideoTitle,
     useVideoDescription,
@@ -230,6 +236,7 @@ function VeoForm({ onSubmit, onError, isLoading, hasApiKey = true, geminiModel, 
     if (updates.sceneCountMode !== undefined) setSceneCountMode(updates.sceneCountMode);
     if (updates.sceneCount !== undefined) setSceneCount(updates.sceneCount);
     if (updates.batchSize !== undefined) setBatchSize(updates.batchSize);
+    if (updates.contentPacing !== undefined) setContentPacing(updates.contentPacing);
     if (updates.audio !== undefined) setAudio(updates.audio);
     if (updates.useVideoTitle !== undefined) setUseVideoTitle(updates.useVideoTitle);
     if (updates.useVideoDescription !== undefined) setUseVideoDescription(updates.useVideoDescription);

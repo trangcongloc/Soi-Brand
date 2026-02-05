@@ -529,6 +529,8 @@ export const vi = {
             manual: "Thủ công",
             batchSize: "Kích thước batch",
             batchSizeDesc: "Số scene mỗi batch (chỉ cho hybrid mode)",
+            contentPacing: "Nhịp độ",
+            contentPacingDesc: "Tốc độ nội dung ảnh hưởng đến thời lượng scene",
             voice: "Giọng nói",
             voiceDesc: "Ngôn ngữ narration cho video",
             dialogueLanguageDesc: "Ngôn ngữ cho giọng nói và hội thoại",

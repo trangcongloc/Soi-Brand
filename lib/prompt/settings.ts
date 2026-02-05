@@ -5,7 +5,7 @@
 
 import { AudioSettings, PromptFormSettings, VoiceLanguage } from "./types";
 import { getStorageItem, setStorageItem } from "./storage-utils";
-import { PROMPT_FORM_SETTINGS_KEY } from "./constants";
+import { PROMPT_FORM_SETTINGS_KEY, DEFAULT_CONTENT_PACING } from "./constants";
 import { getDefaultNegativePrompt } from "./prompts";
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
@@ -21,6 +21,7 @@ export function getDefaultPromptFormSettings(): PromptFormSettings {
     sceneCountMode: "auto",
     sceneCount: 40,
     batchSize: 30,
+    contentPacing: DEFAULT_CONTENT_PACING,
     audio: { ...DEFAULT_AUDIO_SETTINGS },
     useVideoTitle: true,
     useVideoDescription: true,
