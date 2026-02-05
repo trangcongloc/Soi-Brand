@@ -50,6 +50,7 @@ import {
   GeminiApiError,
   GeneratedScript,
   MediaType,
+  calculateDynamicOverlap,
 } from "@/lib/prompt";
 import { processSceneBatch } from "@/lib/prompt/scene-processor";
 import { getVideoInfo, parseISO8601Duration, parseVideoDescription, type VideoDescription } from "@/lib/youtube";
@@ -67,7 +68,6 @@ import {
   BATCH_DELAY_MS,
   FALLBACK_VIDEO_DURATION_SECONDS,
   DEFAULT_SECONDS_PER_SCENE,
-  BATCH_OVERLAP_SECONDS,
   PHASE1_TIMEOUT_MS,
   // SSE-003 FIX: Dynamic stream timeout constants
   BASE_STREAM_TIMEOUT_MS,
@@ -908,15 +908,22 @@ async function runUrlToScenesDirect(
   // PHASE 2: Generate scenes using pre-extracted characters
   // ============================================================================
 
+  // Track previous batch info for dynamic overlap calculation
+  let prevBatchSceneCount = 0;
+  let prevBatchDuration = secondsPerBatch; // Default to configured batch duration
+
   for (let batchNum = startBatch; batchNum < totalBatches; batchNum++) {
     const batchStartSeconds = batchNum * secondsPerBatch;
     const batchEndSeconds = Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds);
     const batchSceneCount = Math.ceil((batchEndSeconds - batchStartSeconds) / secondsPerScene);
 
+    // Calculate dynamic overlap based on previous batch's scene density
+    const dynamicOverlap = calculateDynamicOverlap(prevBatchSceneCount, prevBatchDuration);
+
     // Compute analysis start with overlap (except first batch)
     const analysisStartSeconds = batchNum === 0
       ? batchStartSeconds
-      : Math.max(0, batchStartSeconds - BATCH_OVERLAP_SECONDS);
+      : Math.max(0, batchStartSeconds - dynamicOverlap);
 
     const directBatchInfo: DirectBatchInfo = {
       batchNum,
@@ -1025,6 +1032,10 @@ async function runUrlToScenesDirect(
         // Update state with processed results
         allScenes = result.scenes;
         characterRegistry = result.characterRegistry;
+
+        // Track this batch's stats for dynamic overlap calculation in next batch
+        prevBatchSceneCount = batchScenes.length;
+        prevBatchDuration = batchEndSeconds - batchStartSeconds;
 
         // Send log update with completed data
         sendEvent({

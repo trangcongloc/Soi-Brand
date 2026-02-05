@@ -19,6 +19,7 @@ import {
   truncateText,
   getYouTubeThumbnail,
   cleanScriptText,
+  calculateDynamicOverlap,
 } from "@/lib/prompt/utils";
 
 describe("VEO Utils", () => {
@@ -379,6 +380,47 @@ describe("VEO Utils", () => {
       const parts = jobId.split("_");
       expect(parts).toHaveLength(3);
       expect(parts[0]).toBe("prompt");
+    });
+  });
+
+  // ============================================================================
+  // calculateDynamicOverlap
+  // ============================================================================
+  describe("calculateDynamicOverlap", () => {
+    it("returns default overlap for first batch (no previous data)", () => {
+      expect(calculateDynamicOverlap(0, 0)).toBe(10); // Default BATCH_OVERLAP_SECONDS
+    });
+
+    it("returns default overlap when previous scene count is 0", () => {
+      expect(calculateDynamicOverlap(0, 240)).toBe(10);
+    });
+
+    it("returns default overlap when previous duration is 0", () => {
+      expect(calculateDynamicOverlap(30, 0)).toBe(10);
+    });
+
+    it("calculates overlap based on average scene duration", () => {
+      // 30 scenes in 240 seconds = 8s per scene
+      // Overlap = 8 * 1.5 = 12s
+      expect(calculateDynamicOverlap(30, 240)).toBe(12);
+    });
+
+    it("clamps to minimum overlap for fast content", () => {
+      // 60 scenes in 120 seconds = 2s per scene
+      // Overlap = 2 * 1.5 = 3s, clamped to MIN_OVERLAP_SECONDS (5)
+      expect(calculateDynamicOverlap(60, 120)).toBe(5);
+    });
+
+    it("clamps to maximum overlap for slow content", () => {
+      // 10 scenes in 240 seconds = 24s per scene
+      // Overlap = 24 * 1.5 = 36s, clamped to MAX_OVERLAP_SECONDS (20)
+      expect(calculateDynamicOverlap(10, 240)).toBe(20);
+    });
+
+    it("rounds to nearest integer", () => {
+      // 25 scenes in 200 seconds = 8s per scene
+      // Overlap = 8 * 1.5 = 12s (exact)
+      expect(calculateDynamicOverlap(25, 200)).toBe(12);
     });
   });
 

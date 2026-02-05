@@ -77,8 +77,11 @@ export const FAILED_JOB_CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 172,800,000 ms
 // Completed job expiration (7 days)
 export const COMPLETED_JOB_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 604,800,000 ms
 
-// Batch overlap for scene continuity (10 seconds)
-export const BATCH_OVERLAP_SECONDS = 10;
+// Batch overlap for scene continuity
+export const BATCH_OVERLAP_SECONDS = 10; // Default/fallback
+export const MIN_OVERLAP_SECONDS = 5;    // Minimum overlap (fast content)
+export const MAX_OVERLAP_SECONDS = 20;   // Maximum overlap (slow content)
+export const OVERLAP_SCENE_MULTIPLIER = 1.5; // Overlap = avgSceneDuration * multiplier
 
 // ============================================================================
 // API CONFIGURATION

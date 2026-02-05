@@ -23,6 +23,7 @@ export {
   truncateText,
   getYouTubeThumbnail,
   cleanScriptText,
+  calculateDynamicOverlap,
 } from "./utils";
 
 // Prompt building

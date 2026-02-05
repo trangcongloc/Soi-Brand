@@ -16,6 +16,10 @@ import {
   YOUTUBE_THUMBNAIL_BASE_URL,
   SCRIPT_CONTAMINATION_THRESHOLD,
   MIN_SCRIPT_LENGTH,
+  BATCH_OVERLAP_SECONDS,
+  MIN_OVERLAP_SECONDS,
+  MAX_OVERLAP_SECONDS,
+  OVERLAP_SCENE_MULTIPLIER,
 } from "./constants";
 
 /**
@@ -205,6 +209,38 @@ export function generateJobId(): string {
     .toString(RANDOM_STRING_RADIX)
     .substring(RANDOM_STRING_MIN_LENGTH, 8);
   return `prompt_${timestamp}_${random}`;
+}
+
+/**
+ * Calculate dynamic overlap based on previous batch's scene density.
+ * Adapts to content pacing: fast content = less overlap, slow content = more overlap.
+ *
+ * @param previousBatchSceneCount - Number of scenes in the previous batch
+ * @param previousBatchDurationSeconds - Duration of the previous batch in seconds
+ * @returns Overlap in seconds, clamped between MIN and MAX
+ */
+export function calculateDynamicOverlap(
+  previousBatchSceneCount: number,
+  previousBatchDurationSeconds: number
+): number {
+  // First batch or no data: use default
+  if (previousBatchSceneCount <= 0 || previousBatchDurationSeconds <= 0) {
+    return BATCH_OVERLAP_SECONDS;
+  }
+
+  // Calculate average scene duration from previous batch
+  const avgSceneDuration = previousBatchDurationSeconds / previousBatchSceneCount;
+
+  // Dynamic overlap = 1.5x average scene duration (covers ~1.5 scene transitions)
+  const dynamicOverlap = avgSceneDuration * OVERLAP_SCENE_MULTIPLIER;
+
+  // Clamp to safe range
+  const clampedOverlap = Math.min(
+    MAX_OVERLAP_SECONDS,
+    Math.max(MIN_OVERLAP_SECONDS, dynamicOverlap)
+  );
+
+  return Math.round(clampedOverlap);
 }
 
 /**
