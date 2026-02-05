@@ -10,7 +10,17 @@ const customJestConfig = {
     moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/$1",
     },
-    testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/"],
+    testPathIgnorePatterns: [
+        "<rootDir>/node_modules/",
+        "<rootDir>/.next/",
+        "<rootDir>/tests/e2e/",
+        "<rootDir>/__tests__/fixtures/prompt/(?!.*\\.test\\.ts$).*",
+    ],
+    testMatch: [
+        "**/__tests__/**/*.test.[jt]s?(x)",
+        "**/?(*.)+(spec|test).[jt]s?(x)",
+        "!**/__tests__/fixtures/**/*.ts",
+    ],
     collectCoverageFrom: [
         "lib/**/*.{ts,tsx}",
         "components/**/*.{ts,tsx}",

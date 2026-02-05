@@ -378,7 +378,7 @@ describe("VEO Utils", () => {
       const jobId = generateJobId();
       const parts = jobId.split("_");
       expect(parts).toHaveLength(3);
-      expect(parts[0]).toBe("veo");
+      expect(parts[0]).toBe("prompt");
     });
   });
 

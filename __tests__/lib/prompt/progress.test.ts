@@ -421,7 +421,7 @@ describe("VEO Progress", () => {
       expect(getResumeData(progress)).toBeNull();
     });
 
-    it("returns null if scriptText is missing", () => {
+    it("returns resume data even without scriptText (Direct mode support)", () => {
       const progress: PromptProgress = {
         jobId: "test",
         mode: "hybrid",
@@ -438,7 +438,10 @@ describe("VEO Progress", () => {
         status: "in_progress",
       };
 
-      expect(getResumeData(progress)).toBeNull();
+      // Direct mode doesn't require scriptText
+      const resumeData = getResumeData(progress);
+      expect(resumeData).not.toBeNull();
+      expect(resumeData?.scriptText).toBeUndefined();
     });
 
     it("returns null if completedBatches is 0", () => {
@@ -546,7 +549,7 @@ describe("VEO Progress", () => {
       expect(canResumeProgress(progress)).toBe(false);
     });
 
-    it("returns false for in_progress without scriptText", () => {
+    it("returns true for in_progress without scriptText (Direct mode support)", () => {
       const progress: PromptProgress = {
         jobId: "test",
         mode: "hybrid",
@@ -563,7 +566,8 @@ describe("VEO Progress", () => {
         status: "in_progress",
       };
 
-      expect(canResumeProgress(progress)).toBe(false);
+      // Direct mode doesn't require scriptText, so this should be resumable
+      expect(canResumeProgress(progress)).toBe(true);
     });
 
     it("returns false if all batches completed (completedBatches >= totalBatches)", () => {
