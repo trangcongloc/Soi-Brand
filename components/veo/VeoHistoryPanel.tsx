@@ -385,15 +385,14 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
         </div>
         {jobs.length > 0 && (
           <div className={styles.jobStats}>
-            {jobStats.inProgress > 0 && (
-              <button
-                className={`${styles.statInProgress} ${statusFilter === 'in_progress' ? styles.statActive : ''}`}
-                onClick={() => setStatusFilter(statusFilter === 'in_progress' ? null : 'in_progress')}
-                title={lang.veo.history.statusInProgress || "In Progress"}
-              >
-                ◐ {jobStats.inProgress}
-              </button>
-            )}
+            <button
+              className={`${styles.statInProgress} ${statusFilter === 'in_progress' ? styles.statActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'in_progress' ? null : 'in_progress')}
+              title={lang.veo.history.statusInProgress || "In Progress"}
+              disabled={jobStats.inProgress === 0}
+            >
+              ◐ {jobStats.inProgress}
+            </button>
             <button
               className={`${styles.statCompleted} ${statusFilter === 'completed' ? styles.statActive : ''}`}
               onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')}
