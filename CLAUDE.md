@@ -42,12 +42,12 @@ Find the most similar existing file. Read it. Understand the pattern. Follow it 
 
 | Need this?                | Check here FIRST                         |
 | ------------------------- | ---------------------------------------- |
-| URL extraction / parsing  | `lib/utils.ts`, `lib/veo/utils.ts`       |
+| URL extraction / parsing  | `lib/utils.ts`, `lib/prompt/utils.ts`       |
 | Retry / backoff           | `lib/retry.ts`                           |
-| Caching                   | `lib/cache.ts`, `lib/veo/phase-cache.ts` |
-| Constants / magic numbers | `lib/veo/constants.ts`, `lib/config.ts`  |
+| Caching                   | `lib/cache.ts`, `lib/prompt/phase-cache.ts` |
+| Constants / magic numbers | `lib/prompt/constants.ts`, `lib/config.ts`  |
 | Error handling patterns   | `lib/errorMappings.ts`                   |
-| Types / interfaces        | `lib/types.ts`, `lib/veo/types.ts`       |
+| Types / interfaces        | `lib/types.ts`, `lib/prompt/types.ts`       |
 | Validation / Zod schemas  | `lib/apiValidation.ts`                   |
 | i18n / language strings   | `lib/lang/vi.ts`, `lib/lang/en.ts`       |
 | API key validation        | `lib/apiValidation.ts`                   |
@@ -55,7 +55,7 @@ Find the most similar existing file. Read it. Understand the pattern. Follow it 
 ### Step 4 — If creating something NEW, justify it
 
 If no existing code covers your need, state WHY before writing. One sentence minimum.
-Example: _"No existing retry utility supports streaming SSE connections, so creating `lib/veo/sse-retry.ts`"_
+Example: _"No existing retry utility supports streaming SSE connections, so creating `lib/prompt/sse-retry.ts`"_
 
 ---
 
@@ -63,7 +63,7 @@ Example: _"No existing retry utility supports streaming SSE connections, so crea
 
 ### Rule 1: No Duplicate Utilities
 
-**Found violation:** `extractVideoId` existed in both `components/veo/VeoUrlInput.tsx` (local) and `lib/veo/utils.ts` (canonical).
+**Found violation:** `extractVideoId` existed in both `components/prompt/PromptUrlInput.tsx` (local) and `lib/prompt/utils.ts` (canonical).
 
 **Rule:** Always import from `lib/`. Never recreate locally.
 
@@ -72,7 +72,7 @@ Example: _"No existing retry utility supports streaming SSE connections, so crea
 function extractVideoId(url: string) { ... }
 
 // ✅ CORRECT
-import { extractVideoId } from '@/lib/veo/utils';
+import { extractVideoId } from '@/lib/prompt/utils';
 ```
 
 ### Rule 2: No `any` Types
@@ -100,7 +100,7 @@ import { extractVideoId } from '@/lib/veo/utils';
 Is it shared across multiple features?
   → YES → lib/config.ts
   → NO → Is it specific to VEO?
-           → YES → lib/veo/constants.ts
+           → YES → lib/prompt/constants.ts
            → NO → Is it used in only ONE component?
                     → YES → const at top of that file (NOT exported)
                     → NO → lib/config.ts
@@ -111,7 +111,7 @@ Is it shared across multiple features?
 setTimeout(() => setCopied(false), 2000);
 
 // ✅ CORRECT — import if shared
-import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/veo/constants";
+import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/prompt/constants";
 setTimeout(() => setCopied(false), UI_COPY_STATUS_TIMEOUT_MS);
 
 // ✅ ALSO OK — single-component-only constant at module top
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
 ### Rule 5: Follow Existing Constants Pattern
 
 ```typescript
-// lib/veo/constants.ts — reference model
+// lib/prompt/constants.ts — reference model
 export const CACHE_TTL_DAYS = 7;
 export const CACHE_TTL_MS = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000; // derive, don't repeat
 export const DEFAULT_API_TIMEOUT_MS = 300000;
@@ -181,7 +181,7 @@ import { useState, useEffect } from "react";
 import { NextResponse } from "next/server";
 
 // 2. Path-alias imports (@/) — lib, components, app
-import { extractVideoId } from "@/lib/veo/utils";
+import { extractVideoId } from "@/lib/prompt/utils";
 import { AnalysisForm } from "@/components/AnalysisForm";
 
 // 3. Relative imports ONLY for files in the same directory
@@ -221,7 +221,7 @@ Does this component fetch data?
 
 // 2. Imports (follow import order rules above)
 import { useState } from 'react';
-import { SOME_CONSTANT } from '@/lib/veo/constants';
+import { SOME_CONSTANT } from '@/lib/prompt/constants';
 import type { SomeType } from '@/lib/types';
 
 // 3. Module-level constants (non-exported, single-file only)
@@ -277,7 +277,7 @@ function SubComponent({ ... }) { ... }
 | `config.ts` | Shared configuration | App-wide constants |
 | `userSettings.ts` | User settings management | Preferences persistence |
 
-### VEO Pipeline (`lib/veo/`)
+### Prompt Pipeline (`lib/prompt/`)
 
 | File | Key Exports | Purpose |
 |------|-------------|---------|
@@ -419,9 +419,9 @@ app/
 ├── api/
 │   ├── analyze/route.ts        # Main analysis endpoint
 │   ├── quota/route.ts          # API quota check
-│   ├── veo/route.ts            # VEO video analysis
+│   ├── veo/route.ts            # Prompt video analysis
 │   └── loading-labels/route.ts
-├── veo/page.tsx                # VEO feature page
+├── veo/page.tsx                # Prompt feature page
 ├── layout.tsx
 └── page.tsx
 
@@ -434,8 +434,8 @@ components/
 ├── ErrorBoundary.tsx
 ├── LanguageProvider.tsx
 ├── VideoPerformanceChart.tsx
-├── veo/                        # VEO components
-│   ├── VeoUrlInput.tsx
+├── veo/                        # Prompt components
+│   ├── PromptUrlInput.tsx
 │   ├── VeoSceneCard.tsx
 │   ├── VeoHistoryPanel.tsx
 │   └── ...
@@ -519,15 +519,15 @@ User submits YouTube URL
 9.  Commit: feat(scope): description
 ```
 
-### C. VEO-Specific Pipeline
+### C. Prompt-Specific Pipeline
 
 ```
-1. Check lib/veo/types.ts for type definitions
-2. Check lib/veo/constants.ts for constants
-3. Check lib/veo/utils.ts for existing utilities
+1. Check lib/prompt/types.ts for type definitions
+2. Check lib/prompt/constants.ts for constants
+3. Check lib/prompt/utils.ts for existing utilities
 4. Follow SSE event pattern for streaming
-5. Use lib/veo/phase-cache.ts for caching
-6. Run: npm run test -- veo
+5. Use lib/prompt/phase-cache.ts for caching
+6. Run: npm run test -- prompt
 7. /code-review before commit
 ```
 

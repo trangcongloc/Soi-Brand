@@ -20,19 +20,19 @@ describe("Rate Limit", () => {
   describe("TIER_RATE_LIMITS", () => {
     it("has free tier configuration", () => {
       expect(TIER_RATE_LIMITS.free).toBeDefined();
-      expect(TIER_RATE_LIMITS.free.veo).toBeDefined();
+      expect(TIER_RATE_LIMITS.free.prompt).toBeDefined();
       expect(TIER_RATE_LIMITS.free.analyze).toBeDefined();
     });
 
     it("has paid tier configuration", () => {
       expect(TIER_RATE_LIMITS.paid).toBeDefined();
-      expect(TIER_RATE_LIMITS.paid.veo).toBeDefined();
+      expect(TIER_RATE_LIMITS.paid.prompt).toBeDefined();
       expect(TIER_RATE_LIMITS.paid.analyze).toBeDefined();
     });
 
     it("free tier has lower limits than paid tier", () => {
-      expect(TIER_RATE_LIMITS.free.veo.limit).toBeLessThan(
-        TIER_RATE_LIMITS.paid.veo.limit
+      expect(TIER_RATE_LIMITS.free.prompt.limit).toBeLessThan(
+        TIER_RATE_LIMITS.paid.prompt.limit
       );
       expect(TIER_RATE_LIMITS.free.analyze.limit).toBeLessThan(
         TIER_RATE_LIMITS.paid.analyze.limit
@@ -40,18 +40,18 @@ describe("Rate Limit", () => {
     });
 
     it("all rate limits have windowMs set to 60000 (1 minute)", () => {
-      expect(TIER_RATE_LIMITS.free.veo.windowMs).toBe(60000);
+      expect(TIER_RATE_LIMITS.free.prompt.windowMs).toBe(60000);
       expect(TIER_RATE_LIMITS.free.analyze.windowMs).toBe(60000);
-      expect(TIER_RATE_LIMITS.paid.veo.windowMs).toBe(60000);
+      expect(TIER_RATE_LIMITS.paid.prompt.windowMs).toBe(60000);
       expect(TIER_RATE_LIMITS.paid.analyze.windowMs).toBe(60000);
     });
 
-    it("free tier veo limit is 5 RPM", () => {
-      expect(TIER_RATE_LIMITS.free.veo.limit).toBe(5);
+    it("free tier prompt limit is 5 RPM", () => {
+      expect(TIER_RATE_LIMITS.free.prompt.limit).toBe(5);
     });
 
-    it("paid tier veo limit is 50 RPM", () => {
-      expect(TIER_RATE_LIMITS.paid.veo.limit).toBe(50);
+    it("paid tier prompt limit is 50 RPM", () => {
+      expect(TIER_RATE_LIMITS.paid.prompt.limit).toBe(50);
     });
   });
 
@@ -59,14 +59,14 @@ describe("Rate Limit", () => {
   // getTierRateLimit
   // ============================================================================
   describe("getTierRateLimit", () => {
-    it("returns free tier veo config", () => {
-      const config = getTierRateLimit("veo", "free");
-      expect(config).toEqual(TIER_RATE_LIMITS.free.veo);
+    it("returns free tier prompt config", () => {
+      const config = getTierRateLimit("prompt", "free");
+      expect(config).toEqual(TIER_RATE_LIMITS.free.prompt);
     });
 
-    it("returns paid tier veo config", () => {
-      const config = getTierRateLimit("veo", "paid");
-      expect(config).toEqual(TIER_RATE_LIMITS.paid.veo);
+    it("returns paid tier prompt config", () => {
+      const config = getTierRateLimit("prompt", "paid");
+      expect(config).toEqual(TIER_RATE_LIMITS.paid.prompt);
     });
 
     it("returns free tier analyze config", () => {
@@ -335,7 +335,7 @@ describe("Rate Limit", () => {
       expect(tier).toBe("free");
 
       // Step 2: Get tier-appropriate config
-      const config = getTierRateLimit("veo", tier);
+      const config = getTierRateLimit("prompt", tier);
       expect(config.limit).toBe(5); // Free tier VEO limit
 
       // Step 3: Check rate limit
@@ -348,8 +348,8 @@ describe("Rate Limit", () => {
       const freeClientId = `free-client-${Date.now()}`;
       const paidClientId = `paid-client-${Date.now()}`;
 
-      const freeConfig = getTierRateLimit("veo", "free");
-      const paidConfig = getTierRateLimit("veo", "paid");
+      const freeConfig = getTierRateLimit("prompt", "free");
+      const paidConfig = getTierRateLimit("prompt", "paid");
 
       // Exhaust free tier limit
       for (let i = 0; i < freeConfig.limit; i++) {

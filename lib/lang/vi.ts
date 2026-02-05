@@ -432,7 +432,7 @@ export const vi = {
         notAvailable: "N/A",
     },
 
-    veo: {
+    prompt: {
         title: "VEO - Workflow",
         subtitle: "Phân tích video YouTube và tạo scene cho video generation",
 
@@ -575,44 +575,44 @@ export const vi = {
             imageModeHint: "Tối ưu cho Midjourney, DALL-E, Flux (ảnh tĩnh)",
             videoModeHint:
                 "Tối ưu cho VEO, Sora, Runway Gen-3 (video chuyển động)",
-            // VEO 3 Advanced Features
-            veo3Title: "Tính năng VEO 3 Nâng cao",
-            veo3Audio: "Hệ thống Âm thanh",
-            veo3AudioDesc:
+            // Prompt 3 Advanced Features
+            prompt3Title: "Tính năng Prompt 3 Nâng cao",
+            prompt3Audio: "Hệ thống Âm thanh",
+            prompt3AudioDesc:
                 "Tạo âm thanh môi trường, nhạc nền và hiệu ứng âm thanh với chống ảo giác",
-            veo3Dialogue: "Hệ thống Đối thoại",
-            veo3DialogueDesc:
+            prompt3Dialogue: "Hệ thống Đối thoại",
+            prompt3DialogueDesc:
                 "Sử dụng định dạng dấu hai chấm cho đối thoại (ngăn phụ đề, quy tắc 8 giây)",
-            veo3Camera: "Vị trí Camera",
-            veo3CameraDesc:
+            prompt3Camera: "Vị trí Camera",
+            prompt3CameraDesc:
                 "Sử dụng cú pháp '(thats where the camera is)' để định vị chính xác",
-            veo3Expression: "Kiểm soát Biểu cảm",
-            veo3ExpressionDesc:
+            prompt3Expression: "Kiểm soát Biểu cảm",
+            prompt3ExpressionDesc:
                 "Kỹ thuật chống mặt người mẫu với biểu cảm vi mô và cung cảm xúc",
-            veo3Selfie: "Chế độ Selfie/POV",
-            veo3SelfieDesc:
+            prompt3Selfie: "Chế độ Selfie/POV",
+            prompt3SelfieDesc:
                 "Tạo cảnh quay kiểu selfie chân thực với tay hiện rõ và chất lượng như phim",
-            veo3Composition: "Bố cục Nâng cao",
-            veo3CompositionDesc:
+            prompt3Composition: "Bố cục Nâng cao",
+            prompt3CompositionDesc:
                 "Hiệu ứng ống kính, phân màu và thiết lập ánh sáng chuyên nghiệp",
-            veo3ColorPalette: "Bảng màu",
-            veo3ColorAuto: "Tự động (từ video)",
-            veo3ColorTealOrange: "Teal-Orange (Hollywood)",
-            veo3ColorWarm: "Cam ấm",
-            veo3ColorCool: "Xanh lạnh",
-            veo3ColorDesaturated: "Giảm bão hòa",
-            veo3ColorVibrant: "Sống động",
-            veo3ColorPastel: "Pastel",
-            veo3ColorNoir: "Noir (Đen trắng)",
-            veo3Lighting: "Thiết lập Ánh sáng",
-            veo3LightingAuto: "Tự động (từ video)",
-            veo3LightingThreePoint: "Ba điểm",
-            veo3LightingRembrandt: "Rembrandt",
-            veo3LightingGoldenHour: "Giờ vàng",
-            veo3LightingBlueHour: "Giờ xanh",
-            veo3LightingChiaroscuro: "Chiaroscuro",
-            veo3LightingNeon: "Neon",
-            veo3LightingNatural: "Tự nhiên",
+            prompt3ColorPalette: "Bảng màu",
+            prompt3ColorAuto: "Tự động (từ video)",
+            prompt3ColorTealOrange: "Teal-Orange (Hollywood)",
+            prompt3ColorWarm: "Cam ấm",
+            prompt3ColorCool: "Xanh lạnh",
+            prompt3ColorDesaturated: "Giảm bão hòa",
+            prompt3ColorVibrant: "Sống động",
+            prompt3ColorPastel: "Pastel",
+            prompt3ColorNoir: "Noir (Đen trắng)",
+            prompt3Lighting: "Thiết lập Ánh sáng",
+            prompt3LightingAuto: "Tự động (từ video)",
+            prompt3LightingThreePoint: "Ba điểm",
+            prompt3LightingRembrandt: "Rembrandt",
+            prompt3LightingGoldenHour: "Giờ vàng",
+            prompt3LightingBlueHour: "Giờ xanh",
+            prompt3LightingChiaroscuro: "Chiaroscuro",
+            prompt3LightingNeon: "Neon",
+            prompt3LightingNatural: "Tự nhiên",
         },
 
         loading: {
@@ -681,7 +681,7 @@ export const vi = {
                 subjectMotion: "Chuyển động chủ thể",
                 transitions: "Chuyển cảnh",
                 audioCues: "Hiệu ứng âm thanh",
-                // VEO 3 fields
+                // Prompt 3 fields
                 audio: "Âm thanh",
                 audioAmbient: "Môi trường",
                 audioMusic: "Nhạc nền",

@@ -436,7 +436,7 @@ export const en = {
         notAvailable: "N/A",
     },
 
-    veo: {
+    prompt: {
         title: "VEO - Workflow",
         subtitle:
             "Analyze YouTube videos and generate scenes for video generation",
@@ -583,44 +583,44 @@ export const en = {
                 "Optimized for Midjourney, DALL-E, Flux (still images)",
             videoModeHint:
                 "Optimized for VEO, Sora, Runway Gen-3 (motion video)",
-            // VEO 3 Advanced Features
-            veo3Title: "VEO 3 Advanced Features",
-            veo3Audio: "Audio System",
-            veo3AudioDesc:
+            // Prompt 3 Advanced Features
+            prompt3Title: "Prompt 3 Advanced Features",
+            prompt3Audio: "Audio System",
+            prompt3AudioDesc:
                 "Generate environmental audio, music, and sound effects with hallucination prevention",
-            veo3Dialogue: "Dialogue System",
-            veo3DialogueDesc:
+            prompt3Dialogue: "Dialogue System",
+            prompt3DialogueDesc:
                 "Use colon format for dialogue (prevents subtitles, 8-second rule)",
-            veo3Camera: "Camera Positioning",
-            veo3CameraDesc:
+            prompt3Camera: "Camera Positioning",
+            prompt3CameraDesc:
                 "Use '(thats where the camera is)' syntax for precise positioning",
-            veo3Expression: "Expression Control",
-            veo3ExpressionDesc:
+            prompt3Expression: "Expression Control",
+            prompt3ExpressionDesc:
                 "Anti-model-face technique with micro-expressions and emotional arcs",
-            veo3Selfie: "Selfie/POV Mode",
-            veo3SelfieDesc:
+            prompt3Selfie: "Selfie/POV Mode",
+            prompt3SelfieDesc:
                 "Generate authentic selfie-style footage with visible arm and film-like quality",
-            veo3Composition: "Advanced Composition",
-            veo3CompositionDesc:
+            prompt3Composition: "Advanced Composition",
+            prompt3CompositionDesc:
                 "Lens effects, color grading, and professional lighting setups",
-            veo3ColorPalette: "Color Palette",
-            veo3ColorAuto: "Auto (from video)",
-            veo3ColorTealOrange: "Teal-Orange (Hollywood)",
-            veo3ColorWarm: "Warm Orange",
-            veo3ColorCool: "Cool Blue",
-            veo3ColorDesaturated: "Desaturated",
-            veo3ColorVibrant: "Vibrant",
-            veo3ColorPastel: "Pastel",
-            veo3ColorNoir: "Noir (B&W)",
-            veo3Lighting: "Lighting Setup",
-            veo3LightingAuto: "Auto (from video)",
-            veo3LightingThreePoint: "Three-Point",
-            veo3LightingRembrandt: "Rembrandt",
-            veo3LightingGoldenHour: "Golden Hour",
-            veo3LightingBlueHour: "Blue Hour",
-            veo3LightingChiaroscuro: "Chiaroscuro",
-            veo3LightingNeon: "Neon",
-            veo3LightingNatural: "Natural",
+            prompt3ColorPalette: "Color Palette",
+            prompt3ColorAuto: "Auto (from video)",
+            prompt3ColorTealOrange: "Teal-Orange (Hollywood)",
+            prompt3ColorWarm: "Warm Orange",
+            prompt3ColorCool: "Cool Blue",
+            prompt3ColorDesaturated: "Desaturated",
+            prompt3ColorVibrant: "Vibrant",
+            prompt3ColorPastel: "Pastel",
+            prompt3ColorNoir: "Noir (B&W)",
+            prompt3Lighting: "Lighting Setup",
+            prompt3LightingAuto: "Auto (from video)",
+            prompt3LightingThreePoint: "Three-Point",
+            prompt3LightingRembrandt: "Rembrandt",
+            prompt3LightingGoldenHour: "Golden Hour",
+            prompt3LightingBlueHour: "Blue Hour",
+            prompt3LightingChiaroscuro: "Chiaroscuro",
+            prompt3LightingNeon: "Neon",
+            prompt3LightingNatural: "Natural",
         },
 
         loading: {
@@ -689,7 +689,7 @@ export const en = {
                 subjectMotion: "Subject Motion",
                 transitions: "Transitions",
                 audioCues: "Audio Cues",
-                // VEO 3 fields
+                // Prompt 3 fields
                 audio: "Audio",
                 audioAmbient: "Ambient",
                 audioMusic: "Music",

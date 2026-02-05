@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLanguage, useLang } from "@/lib/lang";
 import { getUserSettingsAsync, saveUserSettingsAsync } from "@/lib/userSettings";
 import { getQuotaUsage, updateGeminiQuotaLimits } from "@/lib/apiQuota";
-import { isUsingCloudStorage } from "@/lib/veo";
+import { isUsingCloudStorage } from "@/lib/prompt";
 import { DEFAULT_MODEL, DEFAULT_IMAGE_MODEL } from "@/lib/geminiModels";
 import { GeminiModel, GeminiImageModel } from "@/lib/types";
 import { useSettingsValidation } from "./useSettingsValidation";

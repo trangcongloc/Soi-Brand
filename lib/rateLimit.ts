@@ -63,11 +63,11 @@ export type ApiKeyTier = "free" | "paid";
  */
 export const TIER_RATE_LIMITS = {
     free: {
-        veo: { limit: 5, windowMs: 60000 }, // 5 RPM (conservative for free tier)
+        prompt: { limit: 5, windowMs: 60000 }, // 5 RPM (conservative for free tier)
         analyze: { limit: 10, windowMs: 60000 }, // 10 RPM
     },
     paid: {
-        veo: { limit: 50, windowMs: 60000 }, // 50 RPM (accounts for ~10-20 TPM-limited requests)
+        prompt: { limit: 50, windowMs: 60000 }, // 50 RPM (accounts for ~10-20 TPM-limited requests)
         analyze: { limit: 100, windowMs: 60000 }, // 100 RPM
     },
 } as const;
@@ -139,12 +139,12 @@ export function setApiKeyTier(apiKey: string, tier: ApiKeyTier): void {
 /**
  * Get tier-appropriate rate limit configuration
  *
- * @param endpoint - Endpoint name ('veo' or 'analyze')
+ * @param endpoint - Endpoint name ('prompt' or 'analyze')
  * @param tier - API key tier
  * @returns Rate limit configuration for the tier
  */
 export function getTierRateLimit(
-    endpoint: "veo" | "analyze",
+    endpoint: "prompt" | "analyze",
     tier: ApiKeyTier
 ): RateLimitConfig {
     return TIER_RATE_LIMITS[tier][endpoint];

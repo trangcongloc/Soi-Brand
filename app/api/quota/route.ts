@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getQuotaUsage, getQuotaPercentage } from "@/lib/apiQuota";
 import { logger } from "@/lib/logger";
-import { isValidDatabaseKey, extractDatabaseKey } from "@/lib/veo/auth";
+import { isValidDatabaseKey, extractDatabaseKey } from "@/lib/prompt/auth";
 
 export async function GET(request: NextRequest) {
   try {

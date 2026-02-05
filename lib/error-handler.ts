@@ -4,9 +4,9 @@
  */
 
 import { ErrorType as AnalyzeErrorType } from "./errorMappings";
-import type { VeoErrorType } from "./veo/types";
+import type { PromptErrorType } from "./prompt/types";
 
-export type UnifiedErrorType = AnalyzeErrorType | VeoErrorType;
+export type UnifiedErrorType = AnalyzeErrorType | PromptErrorType;
 
 export interface ErrorHandlerResult {
   type: UnifiedErrorType;
