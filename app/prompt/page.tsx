@@ -33,13 +33,12 @@ import {
   fixOrphanedJobs,
 } from "@/lib/prompt";
 import {
-  cachePhase0,
-  cachePhase2Batch,
-  addPhaseLog,
-  clearPhaseCache,
-  createPhaseCacheSettings,
-  getResumeDataFromPhaseCache,
-} from "@/lib/prompt/phase-cache";
+  AUTO_RETRY_MAX_ATTEMPTS,
+  AUTO_RETRY_BASE_DELAY_MS,
+  AUTO_RETRY_MAX_DELAY_MS,
+  AUTO_RETRY_ERROR_TYPES,
+} from "@/lib/prompt/constants";
+// D1-only: Phase cache removed - logs are stored in CachedPromptJob.logs
 import { PromptForm, PromptSceneDisplay, PromptHistoryPanel, PromptLogPanel } from "@/components/prompt";
 import styles from "./page.module.css";
 
@@ -140,35 +139,25 @@ export default function PromptPage() {
   // Sidebar collapse state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Auto-retry state
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [_isAutoRetrying, setIsAutoRetrying] = useState(false); // Prefix with _ to indicate future use
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Check for history on mount and when database key changes
   // BUG #8 FIX: Use mounted flag to prevent state updates after unmount
   useEffect(() => {
     let mounted = true;
 
-    // Fix any orphaned jobs (in_progress but have scenes) on mount
-    const fixLocalJobs = async () => {
-      // Fix local storage jobs
-      const fixedCount = fixOrphanedJobs();
-      if (fixedCount > 0) {
-        console.log(`[Prompt] Fixed ${fixedCount} orphaned job(s) in localStorage`);
-      }
-
-      // Fix D1 jobs if cloud storage is enabled
+    // Fix any orphaned jobs (in_progress but have scenes) on mount - D1-only
+    const fixD1Jobs = async () => {
       const settings = await getUserSettingsAsync();
       if (settings.databaseKey) {
         try {
-          const response = await fetch('/api/prompt/jobs/fix-orphaned', {
-            method: 'POST',
-            headers: {
-              'x-database-key': settings.databaseKey,
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.fixedCount > 0) {
-              console.log(`[Prompt] Fixed ${data.fixedCount} orphaned job(s) in D1:`, data.fixedJobIds);
-            }
+          // D1-only: Fix orphaned jobs via API
+          const fixedCount = await fixOrphanedJobs();
+          if (fixedCount > 0) {
+            console.log(`[Prompt] Fixed ${fixedCount} orphaned job(s) in D1`);
           }
         } catch (error) {
           console.error('[Prompt] Failed to fix D1 orphaned jobs:', error);
@@ -176,7 +165,7 @@ export default function PromptPage() {
       }
     };
 
-    fixLocalJobs();
+    fixD1Jobs();
 
     getCachedJobList().then(jobs => {
       if (mounted) setHasHistory(jobs.length > 0);
@@ -420,6 +409,114 @@ export default function PromptPage() {
     [lang]
   );
 
+  // Auto-retry logic for retryable errors
+  const attemptAutoRetry = useCallback(
+    (errorType: string, failedBatch?: number): boolean => {
+      // Check if error type is auto-retryable
+      if (!AUTO_RETRY_ERROR_TYPES.includes(errorType as typeof AUTO_RETRY_ERROR_TYPES[number])) {
+        console.log(`[Auto-retry] Error type ${errorType} not retryable`);
+        setRetryAttempt(0);
+        return false;
+      }
+
+      const currentForm = formDataRef.current;
+      if (!currentForm) {
+        console.log("[Auto-retry] No form data available");
+        setRetryAttempt(0);
+        return false;
+      }
+
+      // Check if we've exceeded max retry attempts
+      const nextAttempt = retryAttempt + 1;
+      if (nextAttempt > AUTO_RETRY_MAX_ATTEMPTS) {
+        console.log(`[Auto-retry] Max attempts (${AUTO_RETRY_MAX_ATTEMPTS}) exceeded`);
+        setRetryAttempt(0);
+        return false;
+      }
+
+      // Calculate exponential backoff delay
+      const delay = Math.min(
+        AUTO_RETRY_BASE_DELAY_MS * Math.pow(2, retryAttempt),
+        AUTO_RETRY_MAX_DELAY_MS
+      );
+
+      console.log(`[Auto-retry] Scheduling retry ${nextAttempt}/${AUTO_RETRY_MAX_ATTEMPTS} in ${delay}ms`);
+      setRetryAttempt(nextAttempt);
+      setIsAutoRetrying(true);
+      setLoadingMessage(`Auto-retry ${nextAttempt}/${AUTO_RETRY_MAX_ATTEMPTS} in ${Math.ceil(delay / 1000)}s...`);
+      setState("loading"); // Keep in loading state
+
+      // Clear any existing retry timeout
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+
+      // Schedule retry
+      retryTimeoutRef.current = setTimeout(() => {
+        setIsAutoRetrying(false);
+        const currentScenes = scenesRef.current;
+        const currentCharacters = characterRegistryRef.current;
+        const currentColorProfile = colorProfileRef.current;
+
+        // Calculate completed batches from failedBatch
+        const completedBatches = failedBatch ? failedBatch - 1 : 0;
+
+        console.log(`[Auto-retry] Executing retry ${nextAttempt} from batch ${completedBatches}`);
+
+        // Retry the job by calling handleSubmit with resume parameters
+        // We use a local reference to avoid dependency issues
+        const retryOptions = {
+          workflow: currentForm.workflow,
+          videoUrl: currentForm.videoUrl,
+          scriptText: currentForm.scriptText,
+          mode: currentForm.mode,
+          sceneCountMode: currentForm.sceneCountMode,
+          sceneCount: currentForm.sceneCount,
+          batchSize: currentForm.batchSize,
+          audio: currentForm.audio,
+          useVideoTitle: currentForm.useVideoTitle,
+          useVideoDescription: currentForm.useVideoDescription,
+          useVideoChapters: currentForm.useVideoChapters,
+          useVideoCaptions: currentForm.useVideoCaptions,
+          negativePrompt: currentForm.negativePrompt,
+          extractColorProfile: !currentColorProfile, // Skip if we have it
+          existingColorProfile: currentColorProfile || undefined,
+          mediaType: currentForm.mediaType,
+          selfieMode: currentForm.selfieMode || false,
+          startTime: currentForm.startTime,
+          endTime: currentForm.endTime,
+          // Resume parameters
+          resumeFromBatch: completedBatches,
+          existingScenes: currentScenes,
+          existingCharacters: currentCharacters,
+          resumeJobId: jobIdRef.current, // Keep same job ID
+        };
+
+        // Dispatch custom event to trigger retry (handled in useEffect)
+        window.dispatchEvent(new CustomEvent('prompt-auto-retry', { detail: retryOptions }));
+      }, delay);
+
+      return true;
+    },
+    [retryAttempt]
+  );
+
+  // Handle auto-retry event
+  useEffect(() => {
+    const handleAutoRetryEvent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const retryOptions = customEvent.detail;
+      // Call handleSubmit through the ref pattern
+      handleSubmitRef.current?.(retryOptions);
+    };
+
+    window.addEventListener('prompt-auto-retry', handleAutoRetryEvent);
+    return () => window.removeEventListener('prompt-auto-retry', handleAutoRetryEvent);
+  }, []);
+
+  // Reference to handleSubmit for auto-retry
+  const handleSubmitRef = useRef<typeof handleSubmit | null>(null);
+
   const handleSubmit = useCallback(
     async (options: {
       workflow: PromptWorkflow;
@@ -446,6 +543,7 @@ export default function PromptPage() {
       existingScenes?: Scene[];
       existingCharacters?: CharacterRegistry;
       resumeJobId?: string; // Reuse existing job ID when retrying (must match server schema)
+      lastInteractionId?: string; // Gemini session continuity for retry
     }) => {
       // Use existing job ID if retrying, otherwise generate new one
       const newJobId = options.resumeJobId || `prompt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -456,6 +554,11 @@ export default function PromptPage() {
       setState("loading");
       setError(null);
       setBatch(0);
+      // Only reset retry attempts on fresh jobs, not retries
+      if (!options.resumeJobId) {
+        setRetryAttempt(0);
+        setIsAutoRetrying(false);
+      }
       setTotalBatches(
         options.workflow === "script-to-scenes" && options.mode === "hybrid"
           ? Math.ceil(options.sceneCount / options.batchSize)
@@ -639,14 +742,28 @@ export default function PromptPage() {
         resetStreamTimeout();
 
         // Helper to process SSE lines from buffer
+        // SSE messages may contain multiple lines (id, event, data, etc.)
+        // We need to extract the data line from each message
         const processSSELines = (linesToProcess: string[]) => {
-          for (const line of linesToProcess) {
+          for (const message of linesToProcess) {
             // Abort check inside event loop to stop processing buffered events
             if (abortControllerRef.current?.signal.aborted) break;
 
-            if (line.startsWith("data: ")) {
+            // SSE messages can be multi-line (id:\ndata:\n)
+            // Find the data line within the message
+            const lines = message.split("\n");
+            let dataLine: string | null = null;
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                dataLine = line;
+                break;
+              }
+            }
+
+            if (dataLine) {
               try {
-                const event: PromptSSEEvent = JSON.parse(line.slice(6));
+                const event: PromptSSEEvent = JSON.parse(dataLine.slice(6));
 
                 // CRITICAL: Discard events from stale jobs (prevents race condition
                 // when user starts new job before previous one completes)
@@ -687,31 +804,21 @@ export default function PromptPage() {
             case "colorProfile":
               setColorProfile(event.data.profile);
               setColorProfileConfidence(event.data.confidence);
-              // Cache Phase 0 result
-              if (jobIdRef.current && formDataRef.current) {
-                const fd = formDataRef.current;
-                cachePhase0(
-                  jobIdRef.current,
-                  fd.videoUrl || "",
-                  createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
-                  event.data.profile,
-                  event.data.confidence
-                );
-              }
+              // D1-only: Color profile is saved via setCachedJob with full job data
+              break;
+
+            case "videoAnalysis":
+              // Combined video analysis event (Phase 0 + Phase 1 merged)
+              // Contains both color profile and pre-extracted characters
+              setColorProfile(event.data.colorProfile);
+              setColorProfileConfidence(event.data.confidence);
+              // Characters will be sent separately via "character" events for UI
+              // D1-only: All data saved via setCachedJob save point
               break;
 
             case "log":
               setLogEntries((prev) => [...prev, event.data]);
-              // Persist log to phase cache
-              if (jobIdRef.current && formDataRef.current) {
-                const fd = formDataRef.current;
-                addPhaseLog(
-                  jobIdRef.current,
-                  fd.videoUrl || "",
-                  createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
-                  event.data
-                );
-              }
+              // D1-only: Logs are saved via setCachedJob with full job data
               break;
 
             case "logUpdate":
@@ -721,18 +828,9 @@ export default function PromptPage() {
               break;
 
             case "batchComplete":
-              // Cache individual Phase 2 batch
+              // D1-only: Batch data saved via setCachedJob at batch end
               if (jobIdRef.current && formDataRef.current) {
                 const fd = formDataRef.current;
-                cachePhase2Batch(
-                  jobIdRef.current,
-                  fd.videoUrl || "",
-                  createPhaseCacheSettings({ mode: fd.mode, sceneCount: fd.sceneCount, batchSize: fd.batchSize, workflow: fd.workflow }),
-                  event.data.batchNumber,
-                  event.data.scenes,
-                  event.data.characters
-                );
-
                 // BUG #2 FIX: Use refs for current state values to avoid stale closures
                 // Without refs, scenes/characterRegistry are captured at handler creation time
                 // causing batch data loss (e.g., batch 2 loses batch 1 data)
@@ -808,6 +906,9 @@ export default function PromptPage() {
                 // This ensures resume starts from the correct batch, not re-doing the completed one
                 const nextBatchToProcess = event.data.batchNumber + 1;
 
+                // Get lastInteractionId from event for retry capability
+                const lastInteractionId = event.data.lastInteractionId as string | undefined;
+
                 setCachedJob(jobIdRef.current, {
                   videoId: fd.videoId || "",
                   videoUrl: fd.videoUrl || "",
@@ -831,6 +932,8 @@ export default function PromptPage() {
                   colorProfile: currentColorProfile || undefined,
                   logs: currentLogs,
                   status: "in_progress",
+                  // Store lastInteractionId for retry with Gemini session continuity
+                  lastInteractionId,
                   // Don't include resumeData for last batch - complete event will follow
                   // This prevents infinite retry loops when clicking completed jobs
                   resumeData: isLastBatch ? undefined : {
@@ -853,6 +956,8 @@ export default function PromptPage() {
                     startTime: fd.startTime,
                     endTime: fd.endTime,
                     selfieMode: fd.selfieMode,
+                    // Include lastInteractionId for retry with Gemini session continuity
+                    lastInteractionId,
                   },
                 });
               }
@@ -901,25 +1006,31 @@ export default function PromptPage() {
                 }
               }
 
-              // Clear phase cache on successful completion
-              if (event.data.jobId) {
-                clearPhaseCache(event.data.jobId);
-              }
+              // D1-only: Phase cache removed - data stored in D1
 
               // Clear any in-progress state
               clearProgress();
               break;
 
             case "error":
-              handleError(
+              // Try auto-retry first for retryable errors
+              const shouldAutoRetry = event.data.retryable && attemptAutoRetry(
                 event.data.type,
-                event.data.message,
-                event.data.failedBatch,
-                event.data.totalBatches,
-                event.data.scenesCompleted,
-                event.data.debug,
-                event.data.retryable
+                event.data.failedBatch
               );
+
+              if (!shouldAutoRetry) {
+                // No auto-retry - show error to user
+                handleError(
+                  event.data.type,
+                  event.data.message,
+                  event.data.failedBatch,
+                  event.data.totalBatches,
+                  event.data.scenesCompleted,
+                  event.data.debug,
+                  event.data.retryable
+                );
+              }
               break;
           }
         };
@@ -991,8 +1102,30 @@ export default function PromptPage() {
     [handleError, lang, geminiApiKey, geminiModel]
   );
 
+  // Keep ref updated for auto-retry
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+  // Cleanup auto-retry timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleCancel = useCallback(() => {
     abortControllerRef.current?.abort();
+
+    // Clear any pending auto-retry
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    setRetryAttempt(0);
+    setIsAutoRetrying(false);
 
     // Save cancelled job to history using refs to avoid stale closure
     const currentJobId = jobIdRef.current;
@@ -1086,13 +1219,10 @@ export default function PromptPage() {
 
     setShowResumeDialog(false);
 
-    // REFACTOR: Use PhaseCache as primary source of truth for scene data
-    // This avoids data duplication - scenes are stored only in phase cache
-    // Fall back to resumeData for backwards compatibility with old cached jobs
-    const phaseCacheData = getResumeDataFromPhaseCache(resumeData.jobId);
-    const existingScenes = phaseCacheData?.scenes ?? resumeData.existingScenes;
-    const existingCharacters = phaseCacheData?.characterRegistry ?? resumeData.existingCharacters;
-    const completedBatches = phaseCacheData?.completedBatches ?? resumeData.completedBatches;
+    // D1-only: Resume data is the single source of truth
+    const existingScenes = resumeData.existingScenes;
+    const existingCharacters = resumeData.existingCharacters;
+    const completedBatches = resumeData.completedBatches;
 
     // Pre-populate state with existing data
     setScenes(existingScenes);
@@ -1123,13 +1253,13 @@ export default function PromptPage() {
       useVideoDescription: true, // Default for resume
       useVideoChapters: true, // Default for resume
       useVideoCaptions: true, // Default for resume
-      extractColorProfile: !phaseCacheData?.colorProfile, // Skip if we have cached color profile
-      existingColorProfile: phaseCacheData?.colorProfile?.colorProfile,
+      extractColorProfile: true, // Always extract on resume (D1 stores in job)
       mediaType: "video", // Default for resume
       selfieMode: false, // Default for resume
       resumeFromBatch: completedBatches,
       existingScenes,
       existingCharacters,
+      lastInteractionId: resumeData.lastInteractionId,
     });
   }, [resumeProgressData, handleSubmit]);
 
@@ -1174,13 +1304,8 @@ export default function PromptPage() {
   const handleRetryJob = useCallback(async (retryJobId: string) => {
     const cached = await getCachedJob(retryJobId);
 
-    // REFACTOR: Try PhaseCache first as primary source of truth
-    // This avoids data duplication - scenes are stored only in phase cache
-    const phaseCacheData = getResumeDataFromPhaseCache(retryJobId);
-
-    // Check if we have enough data to retry (from either source)
-    const hasResumeData = cached?.resumeData || phaseCacheData;
-    if (!cached || !hasResumeData) {
+    // D1-only: Check if we have resume data from the job cache
+    if (!cached || !cached.resumeData) {
       console.error("Cannot retry job: missing cache or resume data");
 
       // If job has valid scenes, it's actually completed - just view it
@@ -1203,11 +1328,11 @@ export default function PromptPage() {
 
     const rd = cached.resumeData;
 
-    // Use PhaseCache as primary, fall back to resumeData for backwards compatibility
-    const existingScenes = phaseCacheData?.scenes ?? rd?.existingScenes ?? [];
-    const existingCharacters = phaseCacheData?.characterRegistry ?? rd?.existingCharacters ?? {};
-    const completedBatches = phaseCacheData?.completedBatches ?? rd?.completedBatches ?? 0;
-    const colorProfile = phaseCacheData?.colorProfile?.colorProfile ?? cached.colorProfile;
+    // D1-only: Resume data is the single source of truth
+    const existingScenes = rd.existingScenes ?? [];
+    const existingCharacters = rd.existingCharacters ?? {};
+    const completedBatches = rd.completedBatches ?? 0;
+    const colorProfile = rd.colorProfile ?? cached.colorProfile;
 
     // Pre-populate state with existing data
     setScenes(existingScenes);
@@ -1219,43 +1344,44 @@ export default function PromptPage() {
     // Restore color profile if it exists
     if (colorProfile) {
       setColorProfile(colorProfile);
-      setColorProfileConfidence(phaseCacheData?.colorProfile?.confidence ?? 0.8);
+      setColorProfileConfidence(0.8);
     }
 
     // Retry from the failed batch — restore all original settings
     // Convert legacy voice to AudioSettings for backward compat
     await handleSubmit({
-      workflow: rd?.workflow ?? "url-to-scenes",
+      workflow: rd.workflow ?? "url-to-scenes",
       videoUrl: cached.videoUrl,
-      scriptText: (rd?.workflow === "script-to-scenes" || rd?.workflow === "url-to-scenes")
+      scriptText: (rd.workflow === "script-to-scenes" || rd.workflow === "url-to-scenes")
         ? cached.script?.rawText
         : undefined,
-      mode: rd?.mode ?? "hybrid",
-      sceneCountMode: rd?.sceneCountMode ?? "auto",
-      sceneCount: rd?.sceneCount ?? 40,
-      batchSize: rd?.batchSize ?? 30,
+      mode: rd.mode ?? "hybrid",
+      sceneCountMode: rd.sceneCountMode ?? "auto",
+      sceneCount: rd.sceneCount ?? 40,
+      batchSize: rd.batchSize ?? 30,
       audio: {
-        voiceLanguage: rd?.voice ?? "no-voice",
+        voiceLanguage: rd.voice ?? "no-voice",
         music: true,
         soundEffects: true,
         environmentalAudio: true,
       },
-      useVideoTitle: rd?.useVideoTitle ?? true,
-      useVideoDescription: rd?.useVideoDescription ?? true,
-      useVideoChapters: rd?.useVideoChapters ?? true,
-      useVideoCaptions: rd?.useVideoCaptions ?? true,
-      negativePrompt: rd?.negativePrompt,
+      useVideoTitle: rd.useVideoTitle ?? true,
+      useVideoDescription: rd.useVideoDescription ?? true,
+      useVideoChapters: rd.useVideoChapters ?? true,
+      useVideoCaptions: rd.useVideoCaptions ?? true,
+      negativePrompt: rd.negativePrompt,
       extractColorProfile: !colorProfile, // Skip Phase 0 if we have cached color profile
       existingColorProfile: colorProfile,
-      mediaType: rd?.mediaType ?? "video",
-      startTime: rd?.startTime,
-      endTime: rd?.endTime,
-      selfieMode: rd?.selfieMode ?? false,
+      mediaType: rd.mediaType ?? "video",
+      startTime: rd.startTime,
+      endTime: rd.endTime,
+      selfieMode: rd.selfieMode ?? false,
       // Resume parameters
       resumeFromBatch: completedBatches,
       existingScenes,
       existingCharacters,
       resumeJobId: retryJobId, // Reuse the same job ID (matches server schema)
+      lastInteractionId: rd.lastInteractionId, // Gemini session continuity
     });
   }, [handleSubmit, handleViewJob, lang.prompt.cacheExpired, lang.prompt.jobExpiredCannotRetry]);
 

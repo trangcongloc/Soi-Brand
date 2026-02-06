@@ -621,7 +621,7 @@ export function createMockLogEntry(options: CreateMockLogEntryOptions = {}): Gem
     batchNumber: options.batchNumber,
     status: options.status ?? "completed",
     request: {
-      model: options.model ?? "gemini-2.0-flash-exp",
+      model: options.model ?? "gemini-2.5-flash",
       body: JSON.stringify({ contents: [], generationConfig: {} }),
       promptLength: 1500,
       videoUrl: options.videoUrl ?? "https://www.youtube.com/watch?v=test123",

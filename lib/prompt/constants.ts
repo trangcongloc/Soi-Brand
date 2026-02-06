@@ -85,7 +85,7 @@ export const BATCH_OVERLAP_SECONDS = 10;
 // ============================================================================
 
 // Gemini API
-export const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-exp";
+export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 export const DEFAULT_API_TIMEOUT_MS = 300000; // 5 minutes
 export const DEFAULT_MAX_RETRIES = 3;
 export const DEFAULT_RETRY_BASE_DELAY_MS = 1000;
@@ -108,6 +108,18 @@ export const SSE_FLUSH_RETRIES = 3; // Number of flush attempts
 
 // Phase 1 timeout (character extraction can hang if Gemini is slow)
 export const PHASE1_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+// Auto-retry configuration (client-side)
+export const AUTO_RETRY_MAX_ATTEMPTS = 3; // Max auto-retry attempts per batch
+export const AUTO_RETRY_BASE_DELAY_MS = 3000; // 3 seconds initial delay
+export const AUTO_RETRY_MAX_DELAY_MS = 15000; // 15 seconds max delay
+// Error types that should trigger auto-retry
+export const AUTO_RETRY_ERROR_TYPES = [
+  "PARSE_ERROR",
+  "TIMEOUT",
+  "NETWORK_ERROR",
+  "GEMINI_RATE_LIMIT",
+] as const;
 
 // ============================================================================
 // ESTIMATED VALUES (for recovery/fallback scenarios)

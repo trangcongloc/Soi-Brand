@@ -61,6 +61,9 @@ export const PromptRequestSchema = z.object({
   resumeFromBatch: z.number().int().min(0).optional(),
   existingScenes: z.array(z.any()).optional(),
   existingCharacters: z.record(z.string(), z.any()).optional(),
+  // Gemini Interactions API: Last interaction ID for session continuity
+  // Enables retry from any batch by continuing the Gemini chat session
+  lastInteractionId: z.string().optional(),
   // Phase 0: Color profile extraction
   extractColorProfile: z.boolean().default(true),
   existingColorProfile: z.any().optional(),

@@ -424,6 +424,7 @@ export interface PromptBatchCompleteEvent {
     batchNumber: number;
     scenes: Scene[];
     characters: CharacterRegistry;
+    lastInteractionId?: string; // Gemini session continuity for retry
   };
 }
 
@@ -516,6 +517,7 @@ export interface PromptResumeData {
   totalBatches: number;
   existingScenes: Scene[];
   existingCharacters: CharacterRegistry;
+  lastInteractionId?: string; // Gemini session continuity for retry
 }
 
 // ============================================================================
@@ -545,6 +547,9 @@ export interface CachedPromptJob {
   };
   // Resume data for partial/failed jobs
   logs?: GeminiLogEntry[]; // Cached log entries for scene request/response display
+  // Gemini Interactions API: Last interaction ID for session continuity
+  // Enables retry from any point by using previous_interaction_id
+  lastInteractionId?: string;
   resumeData?: {
     completedBatches: number;
     existingScenes: Scene[];
@@ -570,6 +575,8 @@ export interface CachedPromptJob {
     startTime?: string;
     endTime?: string;
     selfieMode?: boolean;
+    // Gemini Interactions API: Interaction ID for session continuity on resume
+    lastInteractionId?: string;
   };
 }
 

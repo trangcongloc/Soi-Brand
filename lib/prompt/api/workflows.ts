@@ -43,9 +43,11 @@ import {
   DEFAULT_SECONDS_PER_SCENE,
   BATCH_OVERLAP_SECONDS,
   PHASE1_TIMEOUT_MS,
+  DEFAULT_GEMINI_MODEL,
 } from "@/lib/prompt/constants";
 import type { PromptRequest } from "./schema";
 import { mapToPromptErrorType, formatErrorMessage } from "./helpers";
+import { getSession } from "@/lib/prompt/interactions";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -426,12 +428,17 @@ export async function runScriptToScenesHybrid(
           },
         });
 
+        // Get interaction ID for retry capability
+        const sessionInfo = getSession(jobId);
+
         sendEvent({
           event: "batchComplete",
           data: {
             batchNumber: batchNum,
             scenes: batchScenes,
             characters: result.characterRegistry,
+            // Include lastInteractionId for retry capability
+            ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
           },
         });
       }
@@ -496,6 +503,9 @@ export async function runScriptToScenesHybrid(
 /**
  * Run URL to Scenes - Direct mode (video → scenes, no script generation)
  * Uses time-based batching to analyze video segments directly
+ *
+ * @param providedCharacters - Pre-extracted characters from combined video analysis (skips Phase 1 if provided)
+ * @param providedBackground - Pre-extracted background from combined video analysis
  */
 export async function runUrlToScenesDirect(
   request: PromptRequest,
@@ -503,7 +513,9 @@ export async function runUrlToScenesDirect(
   jobId: string,
   videoDurationSeconds: number,
   sendEvent: (event: PromptSSEEvent) => void,
-  cinematicProfile?: CinematicProfile
+  cinematicProfile?: CinematicProfile,
+  providedCharacters?: CharacterSkeleton[],
+  providedBackground?: string
 ): Promise<{
   scenes: Scene[];
   characterRegistry: CharacterRegistry;
@@ -567,12 +579,32 @@ export async function runUrlToScenesDirect(
   });
 
   // ============================================================================
-  // PHASE 1: Extract characters FIRST (before scene generation)
+  // PHASE 1: Use pre-extracted characters OR extract them from video
+  // Skip extraction if providedCharacters is passed from combined video analysis
   // ============================================================================
-  let preExtractedCharacters: CharacterSkeleton[] = [];
-  let preExtractedBackground = "";
+  let preExtractedCharacters: CharacterSkeleton[] = providedCharacters ?? [];
+  let preExtractedBackground = providedBackground ?? "";
 
-  if (startBatch === 0 && Object.keys(characterRegistry).length === 0) {
+  // If characters were provided from combined video analysis, use them directly
+  if (providedCharacters && providedCharacters.length > 0) {
+    const extractedRegistry = extractionResultToRegistry({
+      characters: providedCharacters,
+      background: providedBackground || "",
+    });
+    for (const [name, details] of Object.entries(extractedRegistry)) {
+      if (!(name in characterRegistry)) {
+        characterRegistry[name] = details;
+      }
+    }
+
+    logger.info("VEO Using pre-extracted characters from video analysis", {
+      jobId,
+      charactersFound: providedCharacters.length,
+      characters: providedCharacters.map(c => c.name),
+      hasBackground: !!providedBackground,
+    });
+  } else if (startBatch === 0 && Object.keys(characterRegistry).length === 0) {
+    // No pre-extracted characters, need to extract them now (fallback for extractColorProfile=false)
     let pendingPhase1LogId: string | null = null;
 
     try {
@@ -659,7 +691,7 @@ export async function runUrlToScenesDirect(
             status: "completed",
             error: { type: "TIMEOUT", message: error.message },
             request: {
-              model: request.geminiModel || "gemini-2.0-flash-exp",
+              model: request.geminiModel || DEFAULT_GEMINI_MODEL,
               body: "",
               promptLength: 0,
               videoUrl: request.videoUrl,
@@ -833,12 +865,17 @@ export async function runUrlToScenesDirect(
           },
         });
 
+        // Get interaction ID for retry capability
+        const sessionInfo = getSession(jobId);
+
         sendEvent({
           event: "batchComplete",
           data: {
             batchNumber: batchNum,
             scenes: batchScenes,
             characters: result.characterRegistry,
+            // Include lastInteractionId for retry capability
+            ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
           },
         });
       }

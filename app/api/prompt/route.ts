@@ -68,6 +68,12 @@ import {
   generateEventId,
   eventTracker,
 } from "@/lib/prompt/api";
+import {
+  startSession,
+  getSession,
+  updateSession,
+  closeSession,
+} from "@/lib/prompt/interactions";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -140,6 +146,21 @@ export async function POST(request: NextRequest) {
   }
 
   const videoId = promptRequest.videoUrl ? (extractVideoId(promptRequest.videoUrl) ?? "") : "";
+
+  // Initialize or restore Gemini interaction session for retry capability
+  // Each job has a Gemini chat session that maintains context across batches
+  let session = getSession(jobId);
+  if (!session) {
+    session = startSession(jobId);
+    // If resuming with lastInteractionId, restore the session context
+    if (promptRequest.lastInteractionId) {
+      updateSession(jobId, promptRequest.lastInteractionId);
+      logger.info("VEO Session restored from lastInteractionId", {
+        jobId,
+        interactionId: promptRequest.lastInteractionId,
+      });
+    }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -310,6 +331,9 @@ async function handleUrlToScriptWorkflow(
     data: { script },
   });
 
+  // Get interaction ID for retry capability
+  const sessionInfo = getSession(jobId);
+
   sendEvent({
     event: "complete",
     data: {
@@ -328,11 +352,14 @@ async function handleUrlToScriptWorkflow(
         processingTime: "N/A",
         createdAt: new Date().toISOString(),
       },
+      // Include lastInteractionId for retry capability
+      ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
     },
   });
 
   serverProgress.delete(jobId);
   resetContinuityCache(jobId);
+  closeSession(jobId);
 }
 
 /**
@@ -456,11 +483,15 @@ async function handleUrlToScenesWorkflow(
     createdAt: new Date().toISOString(),
   };
 
+  // Get interaction ID for retry capability
+  const sessionInfo = getSession(jobId);
+
   logger.info("VEO Sending complete event", {
     jobId,
     scenesCount: result.scenes.length,
     mode: request.mode,
     workflow: request.workflow,
+    lastInteractionId: sessionInfo?.currentInteractionId,
   });
 
   sendEvent({
@@ -472,11 +503,14 @@ async function handleUrlToScenesWorkflow(
       summary,
       ...(script && { script }),
       ...(extractedColorProfile && { colorProfile: extractedColorProfile }),
+      // Include lastInteractionId for retry capability
+      ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
     },
   });
 
   serverProgress.delete(jobId);
   resetContinuityCache(jobId);
+  closeSession(jobId);
 }
 
 /**
@@ -759,6 +793,9 @@ async function handleScriptToScenesWorkflow(
     createdAt: new Date().toISOString(),
   };
 
+  // Get interaction ID for retry capability
+  const sessionInfo = getSession(jobId);
+
   sendEvent({
     event: "complete",
     data: {
@@ -766,11 +803,14 @@ async function handleScriptToScenesWorkflow(
       scenes: result.scenes,
       characterRegistry: result.characterRegistry,
       summary,
+      // Include lastInteractionId for retry capability
+      ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
     },
   });
 
   serverProgress.delete(jobId);
   resetContinuityCache(jobId);
+  closeSession(jobId);
 }
 
 /**
