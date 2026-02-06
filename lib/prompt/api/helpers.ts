@@ -117,23 +117,6 @@ export function generateEventId(jobId: string, batchNum: number, eventNum: numbe
 }
 
 /**
- * Parse event ID to extract job ID, batch number, and event number
- */
-export function parseEventId(eventId: string): { jobId: string; batchNum: number; eventNum: number } | null {
-  const parts = eventId.split(EVENT_ID_SEPARATOR);
-  if (parts.length < 3) return null;
-
-  // Job ID may contain dashes, so we need to reconstruct it
-  const eventNum = parseInt(parts[parts.length - 1], 10);
-  const batchNum = parseInt(parts[parts.length - 2], 10);
-  const jobId = parts.slice(0, -2).join(EVENT_ID_SEPARATOR);
-
-  if (isNaN(eventNum) || isNaN(batchNum)) return null;
-
-  return { jobId, batchNum, eventNum };
-}
-
-/**
  * Event tracker for stream recovery
  * Stores recent events in memory keyed by job ID
  */

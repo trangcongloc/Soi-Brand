@@ -534,3 +534,49 @@
 .phaseHeaderScript:hover {
   color: #ffe0b2;
 }
+
+/* ===== SETTINGS TAB ===== */
+
+.settingsView {
+  padding: 0.25rem 0;
+}
+
+.settingsGroup {
+  margin-bottom: 1rem;
+}
+
+.settingsGroupTitle {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  white-space: pre;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.15rem 0 0.15rem 1rem;
+  line-height: 1.8;
+}
+
+.settingsLabel {
+  color: rgba(255, 255, 255, 0.45);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.settingsValue {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.settingsValueOn {
+  color: #81c784;
+  font-weight: 600;
+}
+
+.settingsValueOff {
+  color: rgba(255, 255, 255, 0.3);
+}

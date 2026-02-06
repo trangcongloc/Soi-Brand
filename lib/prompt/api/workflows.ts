@@ -16,8 +16,6 @@ import {
   getCharacterDescription,
   serverProgress,
   createProgress,
-  markProgressFailed,
-  markProgressCompleted,
   formatTime,
   extractVideoId,
   extractCharactersFromVideo,
@@ -34,22 +32,18 @@ import {
   GeneratedScript,
   MediaType,
 } from "@/lib/prompt";
-import { processSceneBatch } from "@/lib/prompt/scene-processor";
 import type { VideoDescription } from "@/lib/youtube";
-import { handleAPIError } from "@/lib/error-handler";
 import { logger } from "@/lib/logger";
 import {
-  BATCH_DELAY_MS,
   DEFAULT_SECONDS_PER_SCENE,
   BATCH_OVERLAP_SECONDS,
   PHASE1_TIMEOUT_MS,
   DEFAULT_GEMINI_MODEL,
 } from "@/lib/prompt/constants";
 import type { PromptRequest } from "./schema";
-import { mapToPromptErrorType, formatErrorMessage } from "./helpers";
-import { getSession } from "@/lib/prompt/interactions";
-
-const isDev = process.env.NODE_ENV === "development";
+import { createPendingLog, createCompletedLog } from "./log-helpers";
+import { initializeBatchResume } from "./batch-error-handler";
+import { runBatchLoop } from "./batch-runner";
 
 /**
  * Run URL to Script workflow - generates script from video
@@ -80,22 +74,15 @@ export async function runUrlToScript(
 
   // Send pending log before API call
   const scriptLogId = `log_script_${Date.now()}`;
+  const requestBodyStr = JSON.stringify(requestBody);
   sendEvent({
     event: "log",
-    data: {
-      id: scriptLogId,
-      timestamp: new Date().toISOString(),
-      phase: "phase-script",
-      status: "pending",
-      request: {
-        model: request.geminiModel || "default",
-        body: JSON.stringify(requestBody),
-        promptLength: JSON.stringify(requestBody).length,
-        videoUrl: request.videoUrl,
-      },
-      response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
-      timing: { durationMs: 0, retries: 0 },
-    },
+    data: createPendingLog(scriptLogId, "phase-script", {
+      model: request.geminiModel || "default",
+      body: requestBodyStr,
+      promptLength: requestBodyStr.length,
+      videoUrl: request.videoUrl,
+    }),
   });
 
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
@@ -112,27 +99,11 @@ export async function runUrlToScript(
   // Send log update with completed data
   sendEvent({
     event: "logUpdate",
-    data: {
-      id: scriptLogId,
-      timestamp: new Date().toISOString(),
-      phase: "phase-script",
-      status: "completed",
-      request: {
-        model: meta.model,
-        body: JSON.stringify(requestBody),
-        promptLength: meta.promptLength,
-        videoUrl: request.videoUrl,
-      },
-      response: {
-        success: true,
-        finishReason: response.candidates?.[0]?.finishReason,
-        body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
-        responseLength: meta.responseLength,
-        parsedSummary: "script extracted",
-      },
-      timing: { durationMs: meta.durationMs, retries: meta.retries },
-      tokens: meta.tokens,
-    },
+    data: createCompletedLog(
+      scriptLogId, "phase-script",
+      { model: meta.model, body: requestBodyStr, promptLength: meta.promptLength, videoUrl: request.videoUrl },
+      response, meta, "script extracted",
+    ),
   });
 
   sendEvent({
@@ -175,21 +146,14 @@ export async function runScriptToScenesDirect(
 
   // Send pending log before API call
   const directLogId = `log_direct_scenes_${Date.now()}`;
+  const directRequestBodyStr = JSON.stringify(requestBody);
   sendEvent({
     event: "log",
-    data: {
-      id: directLogId,
-      timestamp: new Date().toISOString(),
-      phase: "phase-2",
-      status: "pending",
-      request: {
-        model: request.geminiModel || "default",
-        body: JSON.stringify(requestBody),
-        promptLength: JSON.stringify(requestBody).length,
-      },
-      response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
-      timing: { durationMs: 0, retries: 0 },
-    },
+    data: createPendingLog(directLogId, "phase-2", {
+      model: request.geminiModel || "default",
+      body: directRequestBodyStr,
+      promptLength: directRequestBodyStr.length,
+    }),
   });
 
   const { response, meta } = await callGeminiAPIWithRetry(requestBody, {
@@ -215,27 +179,11 @@ export async function runScriptToScenesDirect(
   // Send log update with completed data
   sendEvent({
     event: "logUpdate",
-    data: {
-      id: directLogId,
-      timestamp: new Date().toISOString(),
-      phase: "phase-2",
-      status: "completed",
-      request: {
-        model: meta.model,
-        body: JSON.stringify(requestBody),
-        promptLength: meta.promptLength,
-      },
-      response: {
-        success: true,
-        finishReason: response.candidates?.[0]?.finishReason,
-        body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
-        responseLength: meta.responseLength,
-        parsedItemCount: scenes.length,
-        parsedSummary: `${scenes.length} scenes`,
-      },
-      timing: { durationMs: meta.durationMs, retries: meta.retries },
-      tokens: meta.tokens,
-    },
+    data: createCompletedLog(
+      directLogId, "phase-2",
+      { model: meta.model, body: directRequestBodyStr, promptLength: meta.promptLength },
+      response, meta, `${scenes.length} scenes`, undefined, scenes.length,
+    ),
   });
 
   // Send character events
@@ -273,11 +221,6 @@ export async function runScriptToScenesHybrid(
   // PERF-001 FIX: Reset continuity cache at job start
   resetContinuityCache(jobId);
 
-  // Resume support
-  const startBatch = request.resumeFromBatch ?? 0;
-  let allScenes: Scene[] = request.existingScenes ?? [];
-  let characterRegistry: CharacterRegistry = request.existingCharacters ?? {};
-
   // Initialize progress tracking
   const progress = createProgress({
     jobId,
@@ -291,22 +234,11 @@ export async function runScriptToScenesHybrid(
     scriptText: request.scriptText,
   });
 
-  if (startBatch > 0) {
-    progress.completedBatches = startBatch;
-    progress.scenes = allScenes;
-    progress.characterRegistry = characterRegistry;
-    progress.status = "in_progress";
-
-    sendEvent({
-      event: "progress",
-      data: {
-        batch: startBatch,
-        total: totalBatches,
-        scenes: allScenes.length,
-        message: `Resuming from batch ${startBatch + 1}/${totalBatches} with ${allScenes.length} existing scenes`,
-      },
-    });
-  }
+  // Resume support
+  const { startBatch, allScenes: initScenes, characterRegistry: initChars } =
+    initializeBatchResume(request, totalBatches, progress, sendEvent);
+  let allScenes = initScenes;
+  let characterRegistry = initChars;
 
   serverProgress.set(jobId, progress);
 
@@ -314,30 +246,27 @@ export async function runScriptToScenesHybrid(
   const scriptLines = request.scriptText!.split("\n").filter((l) => l.trim());
   const linesPerBatch = Math.ceil(scriptLines.length / totalBatches);
 
-  for (let batchNum = startBatch; batchNum < totalBatches; batchNum++) {
-    const batchStart = batchNum * request.batchSize + 1;
-    const batchEnd = Math.min((batchNum + 1) * request.batchSize, request.sceneCount);
-    const batchSceneCount = batchEnd - batchStart + 1;
+  return runBatchLoop({
+    totalBatches,
+    startBatch,
+    initialScenes: allScenes,
+    initialCharacters: characterRegistry,
+    jobId,
+    apiKey,
+    model: request.geminiModel,
+    sendEvent,
+    startTime,
 
-    const scriptChunkStart = batchNum * linesPerBatch;
-    const scriptChunkEnd = Math.min((batchNum + 1) * linesPerBatch, scriptLines.length);
-    const scriptChunk = scriptLines.slice(scriptChunkStart, scriptChunkEnd).join("\n");
+    buildBatchRequest: (batchNum, { continuityContext }) => {
+      const batchStart = batchNum * request.batchSize + 1;
+      const batchEnd = Math.min((batchNum + 1) * request.batchSize, request.sceneCount);
+      const batchSceneCount = batchEnd - batchStart + 1;
 
-    sendEvent({
-      event: "progress",
-      data: {
-        batch: batchNum + 1,
-        total: totalBatches,
-        scenes: allScenes.length,
-        message: `Generating scenes ${batchStart}-${batchEnd} (batch ${batchNum + 1}/${totalBatches})`,
-      },
-    });
+      const scriptChunkStart = batchNum * linesPerBatch;
+      const scriptChunkEnd = Math.min((batchNum + 1) * linesPerBatch, scriptLines.length);
+      const scriptChunk = scriptLines.slice(scriptChunkStart, scriptChunkEnd).join("\n");
 
-    const continuityContext =
-      allScenes.length > 0 ? buildContinuityContextCached(jobId, allScenes, characterRegistry, true, 5) : "";
-
-    try {
-      const requestBody = buildScriptToScenesPrompt({
+      return buildScriptToScenesPrompt({
         scriptText: scriptChunk + (continuityContext ? `\n\n${continuityContext}` : ""),
         sceneCount: batchSceneCount,
         voiceLang: request.voice as VoiceLanguage,
@@ -349,155 +278,21 @@ export async function runScriptToScenesHybrid(
         preExtractedBackground: preExtractedBackground || undefined,
         selfieMode: request.selfieMode,
       });
+    },
 
-      const hybridLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
-      sendEvent({
-        event: "log",
-        data: {
-          id: hybridLogId,
-          timestamp: new Date().toISOString(),
-          phase: "phase-2",
-          batchNumber: batchNum,
-          status: "pending",
-          request: {
-            model: request.geminiModel || "default",
-            body: JSON.stringify(requestBody),
-            promptLength: JSON.stringify(requestBody).length,
-          },
-          response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
-          timing: { durationMs: 0, retries: 0 },
-        },
-      });
+    getProgressMessage: (batchNum, total) => {
+      const batchStart = batchNum * request.batchSize + 1;
+      const batchEnd = Math.min((batchNum + 1) * request.batchSize, request.sceneCount);
+      return `Generating scenes ${batchStart}-${batchEnd} (batch ${batchNum + 1}/${total})`;
+    },
 
-      const { response, meta: batchMeta } = await callGeminiAPIWithRetry(requestBody, {
-        apiKey,
-        model: request.geminiModel,
-        onRetry: (attempt) => {
-          sendEvent({
-            event: "progress",
-            data: {
-              batch: batchNum + 1,
-              total: totalBatches,
-              scenes: allScenes.length,
-              message: `Batch ${batchNum + 1} retry ${attempt}...`,
-            },
-          });
-        },
-      });
+    getLogInfo: () => ({}),
 
-      const batchScenes = parseGeminiResponse(response);
+    getBatchErrorOverrides: (_batchNum, logId) => ({ batchLabel: "Batch", logId }),
 
-      if (Array.isArray(batchScenes)) {
-        const result = processSceneBatch({
-          batchScenes,
-          existingScenes: allScenes,
-          existingCharacters: characterRegistry,
-          batchNum,
-          totalBatches,
-          jobId,
-          serverProgress,
-          sendEvent,
-        });
-
-        allScenes = result.scenes;
-        characterRegistry = result.characterRegistry;
-
-        sendEvent({
-          event: "logUpdate",
-          data: {
-            id: hybridLogId,
-            timestamp: new Date().toISOString(),
-            phase: "phase-2",
-            batchNumber: batchNum,
-            status: "completed",
-            request: {
-              model: batchMeta.model,
-              body: JSON.stringify(requestBody),
-              promptLength: batchMeta.promptLength,
-            },
-            response: {
-              success: true,
-              finishReason: response.candidates?.[0]?.finishReason,
-              body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
-              responseLength: batchMeta.responseLength,
-              parsedItemCount: batchScenes.length,
-              parsedSummary: `${batchScenes.length} scenes`,
-            },
-            timing: { durationMs: batchMeta.durationMs, retries: batchMeta.retries },
-            tokens: batchMeta.tokens,
-          },
-        });
-
-        // Get interaction ID for retry capability
-        const sessionInfo = getSession(jobId);
-
-        sendEvent({
-          event: "batchComplete",
-          data: {
-            batchNumber: batchNum,
-            scenes: batchScenes,
-            characters: result.characterRegistry,
-            // Include lastInteractionId for retry capability
-            ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
-          },
-        });
-      }
-
-      if (batchNum < totalBatches - 1) {
-        await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
-      }
-    } catch (err) {
-      const error = err as GeminiApiError;
-      const errorResult = handleAPIError(error, `Batch ${batchNum + 1}/${totalBatches} failed`);
-      const errorMessage = formatErrorMessage(error, `Batch ${batchNum + 1}/${totalBatches} failed`);
-
-      logger.error("VEO Batch Error", {
-        batch: batchNum + 1,
-        totalBatches,
-        type: errorResult.type,
-        status: error.status,
-        message: error.message,
-        apiError: error.response?.error?.message,
-        scenesCompleted: allScenes.length,
-        jobId,
-      });
-
-      const failedProgress = markProgressFailed(serverProgress.get(jobId)!, errorMessage);
-      serverProgress.set(jobId, failedProgress);
-
-      sendEvent({
-        event: "error",
-        data: {
-          type: mapToPromptErrorType(errorResult.type),
-          message: errorMessage,
-          retryable: errorResult.retryable,
-          failedBatch: batchNum + 1,
-          totalBatches,
-          scenesCompleted: allScenes.length,
-          ...(isDev && {
-            debug: {
-              status: error.status,
-              apiError: error.response?.error?.message,
-            },
-          }),
-        },
-      });
-
-      const elapsed = (Date.now() - startTime) / 1000;
-      return {
-        scenes: allScenes,
-        characterRegistry,
-        elapsed,
-        failedBatch: batchNum + 1,
-      };
-    }
-  }
-
-  const completedProgress = markProgressCompleted(serverProgress.get(jobId)!);
-  serverProgress.set(jobId, completedProgress);
-
-  const elapsed = (Date.now() - startTime) / 1000;
-  return { scenes: allScenes, characterRegistry, elapsed };
+    buildContinuityContext: (jId, scenes, chars) =>
+      scenes.length > 0 ? buildContinuityContextCached(jId, scenes, chars, true, 5) : "",
+  });
 }
 
 /**
@@ -533,11 +328,6 @@ export async function runUrlToScenesDirect(
   const secondsPerBatch = request.batchSize * secondsPerScene;
   const totalBatches = Math.max(1, Math.ceil(videoDurationSeconds / secondsPerBatch));
 
-  // Resume support
-  const startBatch = request.resumeFromBatch ?? 0;
-  let allScenes: Scene[] = request.existingScenes ?? [];
-  let characterRegistry: CharacterRegistry = request.existingCharacters ?? {};
-
   // Initialize progress tracking
   const progress = createProgress({
     jobId,
@@ -550,22 +340,11 @@ export async function runUrlToScenesDirect(
     totalBatches,
   });
 
-  if (startBatch > 0) {
-    progress.completedBatches = startBatch;
-    progress.scenes = allScenes;
-    progress.characterRegistry = characterRegistry;
-    progress.status = "in_progress";
-
-    sendEvent({
-      event: "progress",
-      data: {
-        batch: startBatch,
-        total: totalBatches,
-        scenes: allScenes.length,
-        message: `Resuming from batch ${startBatch + 1}/${totalBatches} with ${allScenes.length} existing scenes`,
-      },
-    });
-  }
+  // Resume support
+  const { startBatch, allScenes: initScenes, characterRegistry: initChars } =
+    initializeBatchResume(request, totalBatches, progress, sendEvent);
+  let allScenes = initScenes;
+  let characterRegistry = initChars;
 
   serverProgress.set(jobId, progress);
 
@@ -733,16 +512,15 @@ export async function runUrlToScenesDirect(
   // PHASE 2: Generate scenes using pre-extracted characters
   // ============================================================================
 
-  for (let batchNum = startBatch; batchNum < totalBatches; batchNum++) {
+  const getBatchInfo = (batchNum: number): DirectBatchInfo => {
     const batchStartSeconds = batchNum * secondsPerBatch;
     const batchEndSeconds = Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds);
     const batchSceneCount = Math.ceil((batchEndSeconds - batchStartSeconds) / secondsPerScene);
-
     const analysisStartSeconds = batchNum === 0
       ? batchStartSeconds
       : Math.max(0, batchStartSeconds - BATCH_OVERLAP_SECONDS);
 
-    const directBatchInfo: DirectBatchInfo = {
+    return {
       batchNum,
       totalBatches,
       startSeconds: batchStartSeconds,
@@ -752,31 +530,29 @@ export async function runUrlToScenesDirect(
       endTime: formatTime(batchEndSeconds),
       estimatedSceneCount: batchSceneCount,
     };
+  };
 
-    sendEvent({
-      event: "progress",
-      data: {
-        batch: batchNum + 1,
-        total: totalBatches,
-        scenes: allScenes.length,
-        message: `Generating scenes for video segment ${directBatchInfo.startTime}-${directBatchInfo.endTime} (batch ${batchNum + 1}/${totalBatches})`,
-      },
-    });
+  const batchResult = await runBatchLoop({
+    totalBatches,
+    startBatch,
+    initialScenes: allScenes,
+    initialCharacters: characterRegistry,
+    jobId,
+    apiKey,
+    model: request.geminiModel,
+    sendEvent,
+    startTime,
 
-    const continuityContext =
-      allScenes.length > 0 ? buildContinuityContextCached(jobId, allScenes, characterRegistry, true, 5) : "";
-
-    const directBatchLogId = `log_phase2_batch${batchNum}_${Date.now()}`;
-
-    try {
-      const requestBody = buildScenePrompt({
+    buildBatchRequest: (batchNum, { continuityContext }) => {
+      const info = getBatchInfo(batchNum);
+      return buildScenePrompt({
         videoUrl: request.videoUrl!,
-        sceneCount: batchSceneCount,
+        sceneCount: info.estimatedSceneCount,
         sceneCountMode: request.sceneCountMode as "auto" | "manual" | "gemini",
         voiceLang: request.voice as VoiceLanguage,
         audio: request.audio as AudioSettings | undefined,
         continuityContext,
-        directBatchInfo,
+        directBatchInfo: info,
         globalNegativePrompt: request.negativePrompt,
         cinematicProfile: cinematicProfile || undefined,
         mediaType: request.mediaType as MediaType,
@@ -784,181 +560,34 @@ export async function runUrlToScenesDirect(
         preExtractedBackground: preExtractedBackground || undefined,
         selfieMode: request.selfieMode,
       });
+    },
 
-      sendEvent({
-        event: "log",
-        data: {
-          id: directBatchLogId,
-          timestamp: new Date().toISOString(),
-          phase: "phase-2",
-          batchNumber: batchNum,
-          status: "pending",
-          request: {
-            model: request.geminiModel || "default",
-            body: JSON.stringify(requestBody),
-            promptLength: JSON.stringify(requestBody).length,
-            videoUrl: request.videoUrl,
-          },
-          response: { success: false, body: "", responseLength: 0, parsedSummary: "awaiting response..." },
-          timing: { durationMs: 0, retries: 0 },
-        },
-      });
+    getProgressMessage: (batchNum, total) => {
+      const info = getBatchInfo(batchNum);
+      return `Generating scenes for video segment ${info.startTime}-${info.endTime} (batch ${batchNum + 1}/${total})`;
+    },
 
-      const { response, meta: batchMeta } = await callGeminiAPIWithRetry(requestBody, {
-        apiKey,
-        model: request.geminiModel,
-        onRetry: (attempt) => {
-          sendEvent({
-            event: "progress",
-            data: {
-              batch: batchNum + 1,
-              total: totalBatches,
-              scenes: allScenes.length,
-              message: `Batch ${batchNum + 1} retry ${attempt}...`,
-            },
-          });
-        },
-      });
-
-      const batchScenes = parseGeminiResponse(response);
-
-      if (Array.isArray(batchScenes)) {
-        const result = processSceneBatch({
-          batchScenes,
-          existingScenes: allScenes,
-          existingCharacters: characterRegistry,
-          batchNum,
-          totalBatches,
-          jobId,
-          serverProgress,
-          sendEvent,
-          timeRange: `${directBatchInfo.startTime}-${directBatchInfo.endTime}`,
-        });
-
-        allScenes = result.scenes;
-        characterRegistry = result.characterRegistry;
-
-        sendEvent({
-          event: "logUpdate",
-          data: {
-            id: directBatchLogId,
-            timestamp: new Date().toISOString(),
-            phase: "phase-2",
-            batchNumber: batchNum,
-            status: "completed",
-            request: {
-              model: batchMeta.model,
-              body: JSON.stringify(requestBody),
-              promptLength: batchMeta.promptLength,
-              videoUrl: request.videoUrl,
-            },
-            response: {
-              success: true,
-              finishReason: response.candidates?.[0]?.finishReason,
-              body: response.candidates?.[0]?.content?.parts?.[0]?.text || "",
-              responseLength: batchMeta.responseLength,
-              parsedItemCount: batchScenes.length,
-              parsedSummary: `${batchScenes.length} scenes`,
-            },
-            timing: { durationMs: batchMeta.durationMs, retries: batchMeta.retries },
-            tokens: batchMeta.tokens,
-          },
-        });
-
-        // Get interaction ID for retry capability
-        const sessionInfo = getSession(jobId);
-
-        sendEvent({
-          event: "batchComplete",
-          data: {
-            batchNumber: batchNum,
-            scenes: batchScenes,
-            characters: result.characterRegistry,
-            // Include lastInteractionId for retry capability
-            ...(sessionInfo?.currentInteractionId && { lastInteractionId: sessionInfo.currentInteractionId }),
-          },
-        });
-      }
-
-      if (batchNum < totalBatches - 1) {
-        await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
-      }
-    } catch (err) {
-      const error = err as GeminiApiError;
-      const errorResult = handleAPIError(error, `Direct batch ${batchNum + 1}/${totalBatches} failed`);
-      const errorMessage = formatErrorMessage(error, `Direct batch ${batchNum + 1}/${totalBatches} failed`);
-
-      logger.error("VEO Direct Batch Error", {
-        batch: batchNum + 1,
-        totalBatches,
-        type: errorResult.type,
-        status: error.status,
-        message: error.message,
-        apiError: error.response?.error?.message,
-        scenesCompleted: allScenes.length,
-        jobId,
-        timeRange: `${formatTime(batchNum * secondsPerBatch)}-${formatTime(Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds))}`,
-      });
-
-      const failedProgress = markProgressFailed(serverProgress.get(jobId)!, errorMessage);
-      serverProgress.set(jobId, failedProgress);
-
-      sendEvent({
-        event: "logUpdate",
-        data: {
-          id: directBatchLogId,
-          timestamp: new Date().toISOString(),
-          phase: "phase-2",
-          batchNumber: batchNum,
-          status: "completed",
-          error: { type: errorResult.type, message: errorMessage },
-          request: {
-            model: request.geminiModel || "unknown",
-            body: "",
-            promptLength: 0,
-            videoUrl: request.videoUrl,
-          },
-          response: {
-            success: false,
-            body: "",
-            responseLength: 0,
-            parsedSummary: `Error: ${errorMessage}`,
-          },
-          timing: { durationMs: 0, retries: 0 },
-        },
-      });
-
-      sendEvent({
-        event: "error",
-        data: {
-          type: mapToPromptErrorType(errorResult.type),
-          message: errorMessage,
-          retryable: errorResult.retryable,
-          failedBatch: batchNum + 1,
-          totalBatches,
-          scenesCompleted: allScenes.length,
-          ...(isDev && {
-            debug: {
-              status: error.status,
-              apiError: error.response?.error?.message,
-            },
-          }),
-        },
-      });
-
-      const elapsed = (Date.now() - startTime) / 1000;
+    getLogInfo: (batchNum) => {
+      const info = getBatchInfo(batchNum);
       return {
-        scenes: allScenes,
-        characterRegistry,
-        elapsed,
-        failedBatch: batchNum + 1,
+        videoUrl: request.videoUrl,
+        timeRange: `${info.startTime}-${info.endTime}`,
       };
-    }
-  }
+    },
 
-  const completedProgress = markProgressCompleted(serverProgress.get(jobId)!);
-  serverProgress.set(jobId, completedProgress);
+    getBatchErrorOverrides: (batchNum, logId) => ({
+      batchLabel: "Direct batch",
+      logId,
+      requestModel: request.geminiModel,
+      videoUrl: request.videoUrl,
+      extraLogFields: {
+        timeRange: `${formatTime(batchNum * secondsPerBatch)}-${formatTime(Math.min((batchNum + 1) * secondsPerBatch, videoDurationSeconds))}`,
+      },
+    }),
 
-  const elapsed = (Date.now() - startTime) / 1000;
-  return { scenes: allScenes, characterRegistry, elapsed, colorProfile: cinematicProfile };
+    buildContinuityContext: (jId, scenes, chars) =>
+      scenes.length > 0 ? buildContinuityContextCached(jId, scenes, chars, true, 5) : "",
+  });
+
+  return { ...batchResult, colorProfile: cinematicProfile };
 }

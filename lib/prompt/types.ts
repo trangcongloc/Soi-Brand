@@ -521,6 +521,36 @@ export interface PromptResumeData {
 }
 
 // ============================================================================
+// Resume Config (settings-only, no duplicated scene/character data)
+// ============================================================================
+
+/**
+ * Configuration for resuming a job. Contains only settings/config -
+ * scene data and character registry live at the top level of CachedPromptJob.
+ * This eliminates the duplication where resumeData.existingScenes === job.scenes.
+ */
+export interface ResumeConfig {
+  completedBatches: number;
+  workflow: PromptWorkflow;
+  mode: PromptMode;
+  batchSize: number;
+  sceneCount: number;
+  voice: VoiceLanguage;
+  useVideoTitle: boolean;
+  useVideoDescription: boolean;
+  useVideoChapters: boolean;
+  useVideoCaptions: boolean;
+  negativePrompt?: string;
+  extractColorProfile: boolean;
+  mediaType: MediaType;
+  sceneCountMode: SceneCountMode;
+  startTime?: string;
+  endTime?: string;
+  selfieMode?: boolean;
+  lastInteractionId?: string;
+}
+
+// ============================================================================
 // Cached VEO Job
 // ============================================================================
 
@@ -550,6 +580,9 @@ export interface CachedPromptJob {
   // Gemini Interactions API: Last interaction ID for session continuity
   // Enables retry from any point by using previous_interaction_id
   lastInteractionId?: string;
+  /** New: Settings-only resume config (scenes/characters are at top level) */
+  resumeConfig?: ResumeConfig;
+  /** @deprecated Use resumeConfig instead. Kept for backward compat with old D1 data. */
   resumeData?: {
     completedBatches: number;
     existingScenes: Scene[];

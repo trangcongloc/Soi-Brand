@@ -114,10 +114,11 @@ export {
   getCachedJobList,
   isUsingCloudStorage,
   syncJobToCloud,
-  deleteJobFromLocal,
-  deleteJobFromCloud,
   fixOrphanedJobs,
 } from "./cache";
+
+// Resume helpers
+export { buildResumeConfig, getResumeConfig } from "./resume-helpers";
 
 // Form settings persistence
 export {

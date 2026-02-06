@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import type { GeminiLogEntry } from "@/lib/prompt/types";
+import type {
+  GeminiLogEntry,
+  PromptWorkflow,
+  PromptMode,
+  SceneCountMode,
+  AudioSettings,
+  MediaType,
+} from "@/lib/prompt/types";
 import { highlightJson } from "./json-highlight";
 import styles from "./PromptLogPanel.module.css";
 
-type LogMode = "compact" | "verbose";
+type LogMode = "compact" | "verbose" | "settings";
 
 // Phase timer tracking for per-phase elapsed time
 interface PhaseTimer {
@@ -17,6 +24,24 @@ interface PhaseTimer {
 
 type PhaseType = GeminiLogEntry["phase"];
 
+/** Active job settings for the Settings tab */
+interface ActiveJobSettings {
+  workflow: PromptWorkflow;
+  mode: PromptMode;
+  sceneCountMode: SceneCountMode;
+  sceneCount: number;
+  batchSize: number;
+  audio: AudioSettings;
+  mediaType: MediaType;
+  extractColorProfile: boolean;
+  useVideoTitle: boolean;
+  useVideoDescription: boolean;
+  useVideoChapters: boolean;
+  useVideoCaptions: boolean;
+  negativePrompt?: string;
+  selfieMode?: boolean;
+}
+
 interface VeoLogPanelProps {
   entries: GeminiLogEntry[];
   // Progress props
@@ -26,6 +51,8 @@ interface VeoLogPanelProps {
   message?: string;
   characters?: string[];
   onCancel?: () => void;
+  // Active job settings for the Settings tab
+  activeSettings?: ActiveJobSettings | null;
 }
 
 /**
@@ -192,16 +219,16 @@ function CompactEntry({ entry }: { entry: GeminiLogEntry }) {
               {formatDuration(entry.timing.durationMs)}
             </span>
             {hasError ? (
-              <span className={styles.statusErr}>ERR</span>
+              <span className={styles.statusErr}>ERR {entry.error?.type || ""}</span>
             ) : hasRetries ? (
               <>
                 <span className={styles.statusRetry}>
                   ERR {"\u2192"} RETRY({entry.timing.retries})
                 </span>
-                <span className={styles.statusOk}>{"\u2192"} OK</span>
+                <span className={styles.statusOk}>{"\u2192"} 200 OK</span>
               </>
             ) : (
-              <span className={styles.statusOk}>OK</span>
+              <span className={styles.statusOk}>200 OK</span>
             )}
           </>
         )}
@@ -217,6 +244,10 @@ function CompactEntry({ entry }: { entry: GeminiLogEntry }) {
         {formatChars(entry.request.promptLength)} chars{" "}
         {isPending ? (
           <span className={styles.pendingLabel}>Awaiting response...</span>
+        ) : hasError ? (
+          <span className={styles.statusErr}>
+            {"<"} Failed{entry.error?.type === "RETRY" ? " - Retrying..." : ` - ${entry.error?.message || "Unknown error"}`}
+          </span>
         ) : (
           <>
             <button
@@ -422,7 +453,79 @@ function PhaseGroupHeader({
 }
 
 /**
+ * Compact batch sub-header (shown between batch changes within phase-2)
+ */
+function CompactBatchHeader({
+  batchNumber,
+  entries,
+}: {
+  batchNumber: number;
+  entries: GeminiLogEntry[];
+}) {
+  const allComplete = entries.every(e => e.status !== "pending");
+  const completedDuration = calcGroupDuration(entries);
+
+  // Live timer for active batches (pending entries have durationMs=0)
+  const [liveElapsed, setLiveElapsed] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (allComplete) {
+      startTimeRef.current = null;
+      return;
+    }
+
+    // Use earliest entry timestamp as batch start
+    if (!startTimeRef.current && entries.length > 0) {
+      const earliest = Math.min(...entries.map(e => new Date(e.timestamp).getTime()));
+      startTimeRef.current = earliest;
+    }
+
+    const interval = setInterval(() => {
+      if (startTimeRef.current) {
+        setLiveElapsed(Date.now() - startTimeRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [allComplete, entries]);
+
+  const displayDuration = allComplete ? completedDuration : liveElapsed;
+
+  return (
+    <div className={styles.compactPhaseHeader}>
+      <span className={styles.compactPhaseLine}>─</span>
+      <span className={styles.phaseLabel2}>Batch {batchNumber + 1}</span>
+      <span className={styles.compactPhaseLine}>─</span>
+      <span className={allComplete ? styles.phaseTimeComplete : styles.phaseTimeActive}>
+        {allComplete ? `✓ ${formatDuration(displayDuration)}` : `${formatDuration(displayDuration)}...`}
+      </span>
+      <span className={styles.compactPhaseLine}>─</span>
+    </div>
+  );
+}
+
+/**
+ * Pre-compute batch groups for compact batch headers
+ */
+function computeBatchGroups(entries: GeminiLogEntry[]): Map<number, GeminiLogEntry[]> {
+  const groups = new Map<number, GeminiLogEntry[]>();
+  for (const entry of entries) {
+    if (entry.phase === "phase-2" && entry.batchNumber !== undefined) {
+      const batch = entry.batchNumber;
+      const existing = groups.get(batch);
+      if (existing) {
+        existing.push(entry);
+      } else {
+        groups.set(batch, [entry]);
+      }
+    }
+  }
+  return groups;
+}
+
+/**
  * Render compact entries with phase headers when phase changes
+ * and batch sub-headers within phase-2
  */
 function renderCompactWithPhaseHeaders(
   entries: GeminiLogEntry[],
@@ -430,6 +533,8 @@ function renderCompactWithPhaseHeaders(
 ): React.ReactNode[] {
   const result: React.ReactNode[] = [];
   let currentPhase: PhaseType | null = null;
+  let currentBatch: number | null = null;
+  const batchGroups = computeBatchGroups(entries);
 
   for (const entry of entries) {
     // Add phase header when phase changes
@@ -442,7 +547,24 @@ function renderCompactWithPhaseHeaders(
         />
       );
       currentPhase = entry.phase;
+      currentBatch = null; // Reset batch tracking on phase change
     }
+
+    // Add batch sub-header when batch changes within phase-2
+    if (entry.phase === "phase-2" && entry.batchNumber !== undefined && entry.batchNumber !== currentBatch) {
+      const batchEntries = batchGroups.get(entry.batchNumber);
+      if (batchEntries) {
+        result.push(
+          <CompactBatchHeader
+            key={`batch-header-${entry.batchNumber}-${entry.id}`}
+            batchNumber={entry.batchNumber}
+            entries={batchEntries}
+          />
+        );
+      }
+      currentBatch = entry.batchNumber;
+    }
+
     result.push(<CompactEntry key={entry.id} entry={entry} />);
   }
 
@@ -597,6 +719,135 @@ function VerboseGrouped({
   );
 }
 
+/**
+ * Settings view — read-only display of active job configuration
+ */
+function SettingsView({ settings }: { settings?: ActiveJobSettings | null }) {
+  if (!settings) {
+    return (
+      <div className={styles.empty}>No settings available</div>
+    );
+  }
+
+  const onOff = (value: boolean) => (
+    <span className={value ? styles.settingsValueOn : styles.settingsValueOff}>
+      {value ? "on" : "off"}
+    </span>
+  );
+
+  const sceneCountLabel =
+    settings.sceneCountMode === "auto"
+      ? `${settings.sceneCount} (auto)`
+      : settings.sceneCountMode === "gemini"
+        ? `${settings.sceneCount} (gemini)`
+        : String(settings.sceneCount);
+
+  return (
+    <div className={styles.settingsView}>
+      {/* Pipeline */}
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsGroupTitle}>
+          {"── Pipeline "}{"─".repeat(24)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Workflow</span>
+          <span className={styles.settingsValue}>{settings.workflow}</span>
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Mode</span>
+          <span className={styles.settingsValue}>{settings.mode}</span>
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Scene Count</span>
+          <span className={styles.settingsValue}>{sceneCountLabel}</span>
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Batch Size</span>
+          <span className={styles.settingsValue}>{settings.batchSize}</span>
+        </div>
+      </div>
+
+      {/* Output */}
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsGroupTitle}>
+          {"── Output "}{"─".repeat(26)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Media Type</span>
+          <span className={styles.settingsValue}>{settings.mediaType}</span>
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Color Prof.</span>
+          {onOff(settings.extractColorProfile)}
+        </div>
+      </div>
+
+      {/* Audio */}
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsGroupTitle}>
+          {"── Audio "}{"─".repeat(27)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Voice</span>
+          <span className={styles.settingsValue}>{settings.audio.voiceLanguage}</span>
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Music</span>
+          {onOff(settings.audio.music)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>SFX</span>
+          {onOff(settings.audio.soundEffects)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Ambient</span>
+          {onOff(settings.audio.environmentalAudio)}
+        </div>
+      </div>
+
+      {/* Analysis */}
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsGroupTitle}>
+          {"── Analysis "}{"─".repeat(24)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Title</span>
+          {onOff(settings.useVideoTitle)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Description</span>
+          {onOff(settings.useVideoDescription)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Chapters</span>
+          {onOff(settings.useVideoChapters)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Captions</span>
+          {onOff(settings.useVideoCaptions)}
+        </div>
+      </div>
+
+      {/* Advanced */}
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsGroupTitle}>
+          {"── Advanced "}{"─".repeat(24)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Selfie Mode</span>
+          {onOff(settings.selfieMode ?? false)}
+        </div>
+        <div className={styles.settingsRow}>
+          <span className={styles.settingsLabel}>Neg. Prompt</span>
+          <span className={settings.negativePrompt ? styles.settingsValue : styles.settingsValueOff}>
+            {settings.negativePrompt || "(none)"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VeoLogPanel({
   entries,
   batch,
@@ -605,6 +856,7 @@ export default function VeoLogPanel({
   message,
   characters,
   onCancel,
+  activeSettings,
 }: VeoLogPanelProps) {
   const [mode, setMode] = useState<LogMode>("compact");
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -617,6 +869,56 @@ export default function VeoLogPanel({
 
   // Track if we're actively streaming (for elapsed time reset)
   const isStreaming = batch !== undefined || !!message;
+
+  // When not streaming (viewing cached job), sanitize pending entries and compute timers
+  const displayEntries = useMemo(() => {
+    if (isStreaming) return entries;
+    // Mark stale "pending" entries as "completed" when viewing cached data
+    return entries.map(e => {
+      if (e.status !== "pending") return e;
+      return {
+        ...e,
+        status: "completed" as const,
+        response: {
+          ...e.response,
+          // Replace stale "awaiting response..." with meaningful text
+          parsedSummary: e.response.parsedSummary === "awaiting response..."
+            ? "(response not captured)"
+            : e.response.parsedSummary,
+        },
+      };
+    });
+  }, [entries, isStreaming]);
+
+  // Compute phase timers from cached log data when not streaming
+  const cachedPhaseTimers = useMemo(() => {
+    if (isStreaming || entries.length === 0) return new Map<string, PhaseTimer>();
+    const timers = new Map<string, PhaseTimer>();
+    for (const entry of entries) {
+      const existing = timers.get(entry.phase);
+      const entryTime = new Date(entry.timestamp).getTime();
+      const entryEnd = entryTime + entry.timing.durationMs;
+      if (!existing) {
+        timers.set(entry.phase, {
+          phase: entry.phase,
+          startTime: entryTime,
+          endTime: entryEnd,
+          elapsedSeconds: Math.floor(entry.timing.durationMs / 1000),
+        });
+      } else {
+        // Extend phase to cover all entries
+        const start = Math.min(existing.startTime, entryTime);
+        const end = Math.max(existing.endTime ?? entryEnd, entryEnd);
+        timers.set(entry.phase, {
+          ...existing,
+          startTime: start,
+          endTime: end,
+          elapsedSeconds: Math.floor((end - start) / 1000),
+        });
+      }
+    }
+    return timers;
+  }, [entries, isStreaming]);
 
   // Derive current phase from entries/message
   const currentPhase = useMemo(
@@ -653,10 +955,13 @@ export default function VeoLogPanel({
         });
       }
 
-      // Start new phase timer (only if not already tracked)
+      // Start new phase timer (replace if completed, e.g. after auto-retry)
       setPhaseTimers(prev => {
         const updated = new Map(prev);
-        if (!updated.has(currentPhase)) {
+        const existing = updated.get(currentPhase);
+        // Create new timer if none exists OR if existing was already completed
+        // (completed timers from a failed first attempt should be replaced on retry)
+        if (!existing || existing.endTime) {
           updated.set(currentPhase, {
             phase: currentPhase,
             startTime: Date.now(),
@@ -710,8 +1015,8 @@ export default function VeoLogPanel({
   // Using JSON serialization to detect in-place updates
   const entriesKey = useMemo(() => {
     // Create a simplified key based on entry IDs and statuses
-    return entries.map(e => `${e.id}:${e.status}`).join(',');
-  }, [entries]);
+    return displayEntries.map(e => `${e.id}:${e.status}`).join(',');
+  }, [displayEntries]);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -719,16 +1024,19 @@ export default function VeoLogPanel({
     }
   }, [entriesKey]);
 
+  // Use live timers when streaming, cached timers when viewing saved job
+  const effectivePhaseTimers = isStreaming ? phaseTimers : cachedPhaseTimers;
+
   // Compute totals
   const totals = useMemo(() => {
     let totalTokens = 0;
     let totalDuration = 0;
-    for (const entry of entries) {
+    for (const entry of displayEntries) {
       if (entry.tokens) totalTokens += entry.tokens.total;
       totalDuration += entry.timing.durationMs;
     }
-    return { totalTokens, totalDuration, count: entries.length };
-  }, [entries]);
+    return { totalTokens, totalDuration, count: displayEntries.length };
+  }, [displayEntries]);
 
   // BUG FIX #23: Compute progress percentage correctly
   // batch is 1-indexed from the API, so we should use it directly
@@ -788,6 +1096,12 @@ export default function VeoLogPanel({
 
       <div className={styles.modeTabs}>
         <button
+          className={`${styles.modeTab} ${mode === "settings" ? styles.modeTabActive : ""}`}
+          onClick={() => setMode("settings")}
+        >
+          Settings
+        </button>
+        <button
           className={`${styles.modeTab} ${mode === "compact" ? styles.modeTabActive : ""}`}
           onClick={() => setMode("compact")}
         >
@@ -802,18 +1116,20 @@ export default function VeoLogPanel({
       </div>
 
       <div className={styles.terminal} ref={terminalRef}>
-        {entries.length === 0 ? (
+        {mode === "settings" ? (
+          <SettingsView settings={activeSettings} />
+        ) : displayEntries.length === 0 ? (
           <div className={styles.empty}>{message || "Initializing..."}</div>
         ) : mode === "compact" ? (
           <>
-            {renderCompactWithPhaseHeaders(entries, phaseTimers)}
+            {renderCompactWithPhaseHeaders(displayEntries, effectivePhaseTimers)}
             <hr className={styles.separator} />
             <div className={styles.totalSummary}>
               Total: {totals.count} phase{totals.count !== 1 ? "s" : ""} | {formatChars(totals.totalTokens)} tokens | {formatDuration(totals.totalDuration)}
             </div>
           </>
         ) : (
-          <VerboseGrouped entries={entries} phaseTimers={phaseTimers} />
+          <VerboseGrouped entries={displayEntries} phaseTimers={effectivePhaseTimers} />
         )}
       </div>
     </div>

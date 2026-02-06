@@ -24,6 +24,9 @@ interface PendingWrite {
 const pendingWrites = new Map<string, PendingWrite>();
 let retryTimerId: ReturnType<typeof setTimeout> | null = null;
 
+// Serialize D1 writes to prevent race conditions (e.g., batchComplete overwriting complete)
+let writeChain = Promise.resolve();
+
 /**
  * Get database key from user settings
  */
@@ -242,59 +245,74 @@ export async function setCachedJob(
     return;
   }
 
-  // Get existing job to merge with (non-blocking)
-  let existingJob: CachedPromptJob | null = null;
-  try {
-    existingJob = await getCachedJob(jobId);
-  } catch {
-    // Continue without existing job
-  }
+  // Serialize writes through promise chain to prevent race conditions.
+  // Without this, a batchComplete write (in_progress, 188 scenes) can overwrite
+  // a complete write (completed, 214 scenes) if the PUT requests arrive out of order.
+  writeChain = writeChain.then(async () => {
+    // Get existing job to merge with
+    let existingJob: CachedPromptJob | null = null;
+    try {
+      existingJob = await getCachedJob(jobId);
+    } catch {
+      // Continue without existing job
+    }
 
-  // Build full job object
-  const job: CachedPromptJob = {
-    jobId,
-    videoId: data.videoId,
-    videoUrl: data.videoUrl,
-    summary: data.summary || existingJob?.summary || {
-      mode: "direct",
-      youtubeUrl: data.videoUrl,
+    // If existing job is already "completed", skip in_progress overwrites
+    // This prevents stale batch saves from reverting a completed job
+    if (existingJob?.status === "completed" && data.status === "in_progress") {
+      logger.info("[Cache] Skipping in_progress write: job already completed", jobId);
+      return;
+    }
+
+    // Build full job object
+    const job: CachedPromptJob = {
+      jobId,
       videoId: data.videoId,
-      targetScenes: 0,
-      actualScenes: 0,
-      voice: "no-voice",
-      charactersFound: 0,
-      characters: [],
-      processingTime: "",
-      createdAt: new Date().toISOString(),
-    },
-    scenes: data.scenes ?? existingJob?.scenes ?? [],
-    characterRegistry: data.characterRegistry ?? existingJob?.characterRegistry ?? {},
-    timestamp: data.timestamp || Date.now(),
-    status: data.status || existingJob?.status || "in_progress",
-    script: data.script ?? existingJob?.script,
-    colorProfile: data.colorProfile ?? existingJob?.colorProfile,
-    error: data.error ?? existingJob?.error,
-    logs: data.logs ?? existingJob?.logs ?? [],
-    resumeData: data.resumeData ?? existingJob?.resumeData,
-    expiresAt: data.expiresAt || existingJob?.expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
-  };
+      videoUrl: data.videoUrl,
+      summary: data.summary || existingJob?.summary || {
+        mode: "direct",
+        youtubeUrl: data.videoUrl,
+        videoId: data.videoId,
+        targetScenes: 0,
+        actualScenes: 0,
+        voice: "no-voice",
+        charactersFound: 0,
+        characters: [],
+        processingTime: "",
+        createdAt: new Date().toISOString(),
+      },
+      scenes: data.scenes ?? existingJob?.scenes ?? [],
+      characterRegistry: data.characterRegistry ?? existingJob?.characterRegistry ?? {},
+      timestamp: data.timestamp || Date.now(),
+      status: data.status || existingJob?.status || "in_progress",
+      script: data.script ?? existingJob?.script,
+      colorProfile: data.colorProfile ?? existingJob?.colorProfile,
+      error: "error" in data ? data.error : existingJob?.error,
+      logs: data.logs ?? existingJob?.logs ?? [],
+      resumeConfig: "resumeConfig" in data ? data.resumeConfig : existingJob?.resumeConfig,
+      resumeData: "resumeData" in data ? data.resumeData : existingJob?.resumeData,
+      expiresAt: data.expiresAt || existingJob?.expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+    };
 
-  try {
-    const response = await fetchWithTimeout(`/api/prompt/jobs/${jobId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(job),
-    });
+    try {
+      const response = await fetchWithTimeout(`/api/prompt/jobs/${jobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(job),
+      });
 
-    if (response.status === 401) {
-      logger.warn("[Cache] Invalid database key, job not saved");
-    } else if (!response.ok) {
+      if (response.status === 401) {
+        logger.warn("[Cache] Invalid database key, job not saved");
+      } else if (!response.ok) {
+        queueWriteForRetry(jobId, job);
+      }
+    } catch (error) {
+      logger.warn("[Cache] D1 write failed, queuing for retry:", error);
       queueWriteForRetry(jobId, job);
     }
-  } catch (error) {
-    logger.warn("[Cache] D1 write failed, queuing for retry:", error);
-    queueWriteForRetry(jobId, job);
-  }
+  }).catch(error => {
+    logger.warn("[Cache] Write chain error:", error);
+  });
 }
 
 /**
@@ -376,7 +394,5 @@ export function clearExpiredJobs(): number {
   return 0;
 }
 
-// Backward compatibility aliases
-export const deleteJobFromLocal = deleteCachedJob;
-export const deleteJobFromCloud = deleteCachedJob;
+// Backward compatibility alias — used by PromptHistoryPanel
 export const syncJobToCloud = async (_jobId: string): Promise<boolean> => true;

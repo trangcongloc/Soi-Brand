@@ -20,6 +20,7 @@ import {
   MediaType,
   SceneCountMode,
   GeminiLogEntry,
+  CachedPromptJob,
   setCachedJob,
   getCachedJob,
   getCachedJobList,
@@ -31,6 +32,8 @@ import {
   PromptProgress,
   extractVideoId,
   fixOrphanedJobs,
+  buildResumeConfig,
+  getResumeConfig,
 } from "@/lib/prompt";
 import {
   AUTO_RETRY_MAX_ATTEMPTS,
@@ -39,6 +42,7 @@ import {
   AUTO_RETRY_ERROR_TYPES,
 } from "@/lib/prompt/constants";
 // D1-only: Phase cache removed - logs are stored in CachedPromptJob.logs
+import { dispatchJobUpdateEvent } from "@/lib/prompt/storage-utils";
 import { PromptForm, PromptSceneDisplay, PromptHistoryPanel, PromptLogPanel } from "@/components/prompt";
 import styles from "./page.module.css";
 
@@ -299,6 +303,92 @@ export default function PromptPage() {
     }
   }, [error, state]);
 
+  // ============================================================================
+  // Consolidated job save helper - replaces 5 inline setCachedJob call sites
+  // ============================================================================
+  const saveJobState = useCallback(
+    (
+      status: "in_progress" | "completed" | "partial" | "failed",
+      options?: {
+        error?: CachedPromptJob["error"];
+        completedBatches?: number;
+        lastInteractionId?: string;
+        /** Override scenes/characters (e.g. from complete event) */
+        scenes?: Scene[];
+        characterRegistry?: CharacterRegistry;
+        summary?: PromptJobSummary;
+        script?: GeneratedScript;
+        colorProfile?: CinematicProfile;
+      },
+    ) => {
+      const currentJobId = jobIdRef.current;
+      const fd = formDataRef.current;
+      if (!currentJobId || !fd) return;
+
+      const currentScenes = options?.scenes ?? scenesRef.current;
+      const currentCharacters = options?.characterRegistry ?? characterRegistryRef.current;
+      const currentScript = options?.script ?? generatedScriptRef.current;
+      const currentColorProfile = options?.colorProfile ?? colorProfileRef.current;
+
+      // Sanitize logs: mark stale "pending" entries — show error for failed jobs, completed for success
+      const isFailed = status === "failed" || status === "in_progress";
+      const currentLogs = logEntriesRef.current.map(log =>
+        log.status === "pending" ? {
+          ...log,
+          status: "completed" as const,
+          ...(isFailed && {
+            error: { type: "INCOMPLETE", message: "Request did not complete" },
+            response: { ...log.response, success: false, parsedSummary: "(no response received)" },
+          }),
+        } : log
+      );
+
+      // Build summary: prefer provided > ref > default
+      const effectiveSummary: PromptJobSummary = options?.summary ?? summaryRef.current ?? {
+        mode: fd.mode,
+        videoId: fd.videoId || "",
+        youtubeUrl: fd.videoUrl || "",
+        targetScenes: fd.sceneCount,
+        actualScenes: currentScenes.length,
+        batches: Math.ceil(fd.sceneCount / fd.batchSize),
+        batchSize: fd.batchSize,
+        voice: fd.audio.voiceLanguage === "no-voice"
+          ? lang.prompt.settings.voiceOptions["no-voice"]
+          : fd.audio.voiceLanguage,
+        charactersFound: Object.keys(currentCharacters).length,
+        characters: Object.keys(currentCharacters),
+        processingTime: status === "completed" ? "" : lang.prompt.history.inProgress || "In progress...",
+        createdAt: new Date().toISOString(),
+      };
+
+      // Build resumeConfig only for non-completed jobs
+      const resumeConfig = status !== "completed"
+        ? buildResumeConfig(fd, options?.completedBatches ?? 0, options?.lastInteractionId)
+        : undefined;
+
+      setCachedJob(currentJobId, {
+        videoId: fd.videoId || "",
+        videoUrl: fd.videoUrl || "",
+        summary: { ...effectiveSummary, actualScenes: currentScenes.length },
+        scenes: currentScenes,
+        characterRegistry: currentCharacters,
+        script: currentScript || undefined,
+        colorProfile: currentColorProfile || undefined,
+        logs: currentLogs,
+        status,
+        error: status === "completed" ? undefined : options?.error,
+        lastInteractionId: options?.lastInteractionId,
+        resumeConfig,
+        // Clear old resumeData format on new writes
+        resumeData: undefined,
+      });
+
+      dispatchJobUpdateEvent(currentJobId);
+      setHasHistory(true);
+    },
+    [lang],
+  );
+
   const handleError = useCallback(
     (errorType: string, message?: string, failedBatch?: number, totalBatches?: number, scenesCompleted?: number, debug?: Record<string, unknown>, retryable = false) => {
       // Use the detailed message from API if available, fallback to translated error
@@ -321,92 +411,28 @@ export default function PromptPage() {
       setError(errorMessage);
       setState("error");
 
-      // Save failed job to cache if we have enough context
-      // Use refs to get the current values (avoids stale closure)
-      const currentJobId = jobIdRef.current;
-      const currentForm = formDataRef.current;
-      // BUG #1 FIX: Get current state values from refs immediately
-      const currentScenes = scenesRef.current;
-      const currentCharacters = characterRegistryRef.current;
-
-      if (currentJobId && currentForm) {
-        // Use summaryRef to avoid stale closure
-        const currentSummary = summaryRef.current;
-        const totalBatchesCalc = totalBatches
-          || (currentSummary && typeof currentSummary.batches === 'number' ? currentSummary.batches : undefined)
-          || Math.ceil(currentForm.sceneCount / currentForm.batchSize);
-
-        // Determine status: partial if some scenes were generated, failed if none
-        const status = currentScenes.length > 0 ? "partial" : "failed";
-
-        // Create minimal summary if not available
-        const effectiveSummary: PromptJobSummary = currentSummary || {
-          mode: currentForm.mode,
-          videoId: currentForm.videoId || "",
-          youtubeUrl: currentForm.videoUrl || "",
-          targetScenes: currentForm.sceneCount,
-          actualScenes: currentScenes.length,
-          batches: totalBatchesCalc,
-          batchSize: currentForm.batchSize,
-          voice: currentForm.audio.voiceLanguage === "no-voice" ? lang.prompt.settings.voiceOptions["no-voice"] : currentForm.audio.voiceLanguage,
-          charactersFound: Object.keys(currentCharacters).length,
-          characters: Object.keys(currentCharacters),
-          processingTime: lang.common.notAvailable || "N/A",
-          createdAt: new Date().toISOString(),
-        };
-
-        // BUG #1 FIX: Use refs for current state values (script and logs)
-        const currentScript = generatedScriptRef.current;
-        const currentLogs = logEntriesRef.current;
-
-        setCachedJob(currentJobId, {
-          videoId: currentForm.videoId || "",
-          videoUrl: currentForm.videoUrl || "",
-          summary: {
-            ...effectiveSummary,
-            actualScenes: currentScenes.length,
-          },
-          scenes: currentScenes,
-          characterRegistry: currentCharacters,
-          script: currentScript || undefined,
-          logs: currentLogs,
-          status,
-          error: {
-            message: errorMessage,
-            type: errorType as PromptErrorType,
-            failedBatch,
-            totalBatches: totalBatchesCalc,
-            retryable,
-          },
-          resumeData: retryable ? {
-            completedBatches: failedBatch ? failedBatch - 1 : 0,
-            existingScenes: currentScenes,
-            existingCharacters: currentCharacters,
-            workflow: currentForm.workflow,
-            mode: currentForm.mode,
-            batchSize: currentForm.batchSize,
-            sceneCount: currentForm.sceneCount,
-            voice: currentForm.audio.voiceLanguage,
-            useVideoTitle: currentForm.useVideoTitle,
-            useVideoDescription: currentForm.useVideoDescription,
-            useVideoChapters: currentForm.useVideoChapters,
-            useVideoCaptions: currentForm.useVideoCaptions,
-                negativePrompt: currentForm.negativePrompt,
-            extractColorProfile: currentForm.extractColorProfile,
-            mediaType: currentForm.mediaType,
-            sceneCountMode: currentForm.sceneCountMode,
-            startTime: currentForm.startTime,
-            endTime: currentForm.endTime,
-            selfieMode: currentForm.selfieMode,
-          } : undefined,
-        });
-
-        // Update history state
-        setHasHistory(true);
-      }
+      // Save failed job to cache
+      const status = scenesRef.current.length > 0 ? "partial" : "failed";
+      saveJobState(status as "partial" | "failed", {
+        error: retryable ? {
+          message: errorMessage,
+          type: errorType as PromptErrorType,
+          failedBatch,
+          totalBatches: totalBatches
+            || (summaryRef.current && typeof summaryRef.current.batches === 'number' ? summaryRef.current.batches : undefined)
+            || Math.ceil((formDataRef.current?.sceneCount ?? 0) / (formDataRef.current?.batchSize ?? 1)),
+          retryable,
+        } : {
+          message: errorMessage,
+          type: errorType as PromptErrorType,
+          failedBatch,
+          retryable: false,
+        },
+        completedBatches: failedBatch ? failedBatch - 1 : 0,
+      });
     },
     // BUG #1 FIX: Removed state dependencies - using refs instead to avoid stale closures
-    [lang]
+    [lang, saveJobState]
   );
 
   // Auto-retry logic for retryable errors
@@ -479,13 +505,14 @@ export default function PromptPage() {
           useVideoChapters: currentForm.useVideoChapters,
           useVideoCaptions: currentForm.useVideoCaptions,
           negativePrompt: currentForm.negativePrompt,
-          extractColorProfile: !currentColorProfile, // Skip if we have it
+          // On retry: never re-run Phase 0 — pass existing color profile
+          extractColorProfile: false,
           existingColorProfile: currentColorProfile || undefined,
           mediaType: currentForm.mediaType,
           selfieMode: currentForm.selfieMode || false,
           startTime: currentForm.startTime,
           endTime: currentForm.endTime,
-          // Resume parameters
+          // Resume parameters — only retry from the failed batch
           resumeFromBatch: completedBatches,
           existingScenes: currentScenes,
           existingCharacters: currentCharacters,
@@ -578,7 +605,27 @@ export default function PromptPage() {
         setColorProfile(null);
         setColorProfileConfidence(0);
       }
-      setLogEntries([]);
+      // Preserve logs from previous batches on retry, clear on fresh jobs
+      if (options.resumeFromBatch && options.resumeFromBatch > 0) {
+        // Mark stale "pending" logs from failed attempt with error status
+        const sanitized = logEntriesRef.current.map(log =>
+          log.status === "pending" ? {
+            ...log,
+            status: "completed" as const,
+            error: { type: "RETRY", message: "Failed — retrying" },
+            response: {
+              ...log.response,
+              success: false,
+              parsedSummary: "Failed — retrying from this batch",
+            },
+          } : log
+        );
+        setLogEntries(sanitized);
+        logEntriesRef.current = sanitized;
+      } else {
+        setLogEntries([]);
+        logEntriesRef.current = [];
+      }
 
       // SYNC-001 FIX: Initialize refs synchronously BEFORE SSE processing starts
       // This ensures handleError and handleCancel have correct values even before
@@ -587,7 +634,6 @@ export default function PromptPage() {
       characterRegistryRef.current = options.existingCharacters || {};
       generatedScriptRef.current = null;
       colorProfileRef.current = options.existingColorProfile || null;
-      logEntriesRef.current = [];
       summaryRef.current = null;
 
       // Save current form data for retry/error handling
@@ -622,54 +668,9 @@ export default function PromptPage() {
       abortControllerRef.current = new AbortController();
 
       // Save job as "in_progress" immediately
-      const initialSummary: PromptJobSummary = {
-        mode: options.mode,
-        videoId: formData.videoId || "",
-        youtubeUrl: options.videoUrl || "",
-        targetScenes: options.sceneCount,
-        actualScenes: options.existingScenes?.length || 0,
-        batches: Math.ceil(options.sceneCount / options.batchSize),
-        batchSize: options.batchSize,
-        voice: options.audio.voiceLanguage === "no-voice" ? lang.prompt.settings.voiceOptions["no-voice"] : options.audio.voiceLanguage,
-        charactersFound: Object.keys(options.existingCharacters || {}).length,
-        characters: Object.keys(options.existingCharacters || {}),
-        processingTime: lang.prompt.history.inProgress || "In progress...",
-        createdAt: new Date().toISOString(),
-      };
-
-      await setCachedJob(newJobId, {
-        videoId: formData.videoId || "",
-        videoUrl: options.videoUrl || "",
-        summary: initialSummary,
-        scenes: options.existingScenes || [],
-        characterRegistry: options.existingCharacters || {},
-        script: undefined,
-        colorProfile: options.existingColorProfile,
-        logs: [],
-        status: "in_progress",
-        resumeData: {
-          completedBatches: options.resumeFromBatch || 0,
-          existingScenes: options.existingScenes || [],
-          existingCharacters: options.existingCharacters || {},
-          workflow: options.workflow,
-          mode: options.mode,
-          batchSize: options.batchSize,
-          sceneCount: options.sceneCount,
-          voice: options.audio.voiceLanguage,
-          useVideoTitle: options.useVideoTitle,
-          useVideoDescription: options.useVideoDescription,
-          useVideoChapters: options.useVideoChapters,
-          useVideoCaptions: options.useVideoCaptions,
-          negativePrompt: options.negativePrompt,
-          extractColorProfile: options.extractColorProfile,
-          mediaType: options.mediaType,
-          sceneCountMode: options.sceneCountMode,
-          startTime: options.startTime,
-          endTime: options.endTime,
-          selfieMode: options.selfieMode,
-        },
+      saveJobState("in_progress", {
+        completedBatches: options.resumeFromBatch || 0,
       });
-      setHasHistory(true);
 
       // BUG FIX: Declare stream timeout ID outside try block for catch block access
       let streamTimeoutId: NodeJS.Timeout | null = null;
@@ -882,11 +883,6 @@ export default function PromptPage() {
                 const allScenes = [...currentScenes, ...event.data.scenes];
                 const allCharacters = mergedCharacters;
 
-                // BUG #3 FIX: Use refs for script and colorProfile
-                const currentScript = generatedScriptRef.current;
-                const currentColorProfile = colorProfileRef.current;
-                const currentLogs = logEntriesRef.current;
-
                 // CRITICAL FIX: Update refs synchronously BEFORE React state
                 // useEffect-based ref sync is async and can cause race conditions
                 // between rapid batch completions
@@ -897,68 +893,18 @@ export default function PromptPage() {
                 setScenes(allScenes);
                 setCharacterRegistry(allCharacters);
 
-                // BUG FIX: Calculate total batches and check if this is the last batch
-                // If last batch, don't include resumeData since complete event follows immediately
-                const totalBatches = Math.ceil(fd.sceneCount / fd.batchSize);
-                const isLastBatch = event.data.batchNumber >= totalBatches - 1;
-
-                // FIX: Store completedBatches as NEXT batch to process (batchNumber + 1)
-                // This ensures resume starts from the correct batch, not re-doing the completed one
+                // Check if this is the last batch - don't include resumeConfig since complete event follows
+                const batchTotalBatches = Math.ceil(fd.sceneCount / fd.batchSize);
+                const isLastBatch = event.data.batchNumber >= batchTotalBatches - 1;
                 const nextBatchToProcess = event.data.batchNumber + 1;
-
-                // Get lastInteractionId from event for retry capability
                 const lastInteractionId = event.data.lastInteractionId as string | undefined;
 
-                setCachedJob(jobIdRef.current, {
-                  videoId: fd.videoId || "",
-                  videoUrl: fd.videoUrl || "",
-                  summary: {
-                    mode: fd.mode,
-                    videoId: fd.videoId || "",
-                    youtubeUrl: fd.videoUrl || "",
-                    targetScenes: fd.sceneCount,
-                    actualScenes: allScenes.length,
-                    batches: totalBatches,
-                    batchSize: fd.batchSize,
-                    voice: fd.audio.voiceLanguage,
-                    charactersFound: Object.keys(allCharacters).length,
-                    characters: Object.keys(allCharacters),
-                    processingTime: `Batch ${event.data.batchNumber + 1}/${totalBatches}`,
-                    createdAt: new Date().toISOString(),
-                  },
+                // Save in_progress state (saveJobState reads refs for scenes/characters)
+                saveJobState("in_progress", {
+                  completedBatches: isLastBatch ? undefined : nextBatchToProcess,
+                  lastInteractionId,
                   scenes: allScenes,
                   characterRegistry: allCharacters,
-                  script: currentScript || undefined,
-                  colorProfile: currentColorProfile || undefined,
-                  logs: currentLogs,
-                  status: "in_progress",
-                  // Store lastInteractionId for retry with Gemini session continuity
-                  lastInteractionId,
-                  // Don't include resumeData for last batch - complete event will follow
-                  // This prevents infinite retry loops when clicking completed jobs
-                  resumeData: isLastBatch ? undefined : {
-                    completedBatches: nextBatchToProcess,
-                    existingScenes: allScenes,
-                    existingCharacters: allCharacters,
-                    workflow: fd.workflow,
-                    mode: fd.mode,
-                    batchSize: fd.batchSize,
-                    sceneCount: fd.sceneCount,
-                    voice: fd.audio.voiceLanguage,
-                    useVideoTitle: fd.useVideoTitle,
-                    useVideoDescription: fd.useVideoDescription,
-                    useVideoChapters: fd.useVideoChapters,
-                    useVideoCaptions: fd.useVideoCaptions,
-                    negativePrompt: fd.negativePrompt,
-                    extractColorProfile: fd.extractColorProfile,
-                    mediaType: fd.mediaType,
-                    sceneCountMode: fd.sceneCountMode,
-                    startTime: fd.startTime,
-                    endTime: fd.endTime,
-                    selfieMode: fd.selfieMode,
-                    // Include lastInteractionId for retry with Gemini session continuity
-                    lastInteractionId,
-                  },
                 });
               }
               break;
@@ -983,26 +929,15 @@ export default function PromptPage() {
                 }
                 setState("complete");
 
-                // Cache the result with script and color profile for regeneration
+                // Cache the completed result
                 if (event.data.scenes.length > 0) {
-                  // Use ref for logEntries to get current value
-                  const currentLogs = logEntriesRef.current;
-                  setCachedJob(event.data.jobId, {
-                    videoId: event.data.summary.videoId,
-                    videoUrl: event.data.summary.youtubeUrl,
-                    summary: event.data.summary,
+                  saveJobState("completed", {
                     scenes: event.data.scenes,
                     characterRegistry: event.data.characterRegistry,
-                    script: event.data.script, // Cache script for regeneration
-                    colorProfile: event.data.colorProfile, // Cache color profile
-                    logs: currentLogs, // Cache log entries for scene request/response
-                    status: "completed",
-                    // BUG FIX: Explicitly clear resumeData on completion
-                    // This prevents retry loops if user reloads before complete event was cached
-                    resumeData: undefined,
+                    summary: event.data.summary,
+                    script: event.data.script || undefined,
+                    colorProfile: event.data.colorProfile || undefined,
                   });
-                  // Update history state to reflect new job
-                  setHasHistory(true);
                 }
               }
 
@@ -1099,7 +1034,7 @@ export default function PromptPage() {
       }
     },
     // Removed colorProfile from deps - using colorProfileRef instead to avoid stale closures
-    [handleError, lang, geminiApiKey, geminiModel]
+    [handleError, lang, geminiApiKey, geminiModel, saveJobState]
   );
 
   // Keep ref updated for auto-retry
@@ -1127,82 +1062,23 @@ export default function PromptPage() {
     setRetryAttempt(0);
     setIsAutoRetrying(false);
 
-    // Save cancelled job to history using refs to avoid stale closure
-    const currentJobId = jobIdRef.current;
-    const currentForm = formDataRef.current;
-    // Use refs for current state values to avoid stale closures
-    const currentScenes = scenesRef.current;
-    const currentCharacters = characterRegistryRef.current;
-    const currentScript = generatedScriptRef.current;
-    const currentLogs = logEntriesRef.current;
-
-    if (currentJobId && currentForm) {
-      // Use summaryRef to avoid stale closure
-      const currentSummary = summaryRef.current;
-      const cancelledSummary: PromptJobSummary = currentSummary || {
-        mode: currentForm.mode,
-        youtubeUrl: currentForm.videoUrl || "",
-        videoId: currentForm.videoId || "",
-        targetScenes: currentForm.sceneCount,
-        actualScenes: currentScenes.length,
-        batches: Math.ceil(currentForm.sceneCount / currentForm.batchSize),
-        batchSize: currentForm.batchSize,
-        voice: currentForm.audio.voiceLanguage === "no-voice" ? lang.prompt.settings.voiceOptions["no-voice"] : currentForm.audio.voiceLanguage,
-        charactersFound: Object.keys(currentCharacters).length,
-        characters: Object.keys(currentCharacters),
-        processingTime: lang.prompt.history.cancelled,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Determine status: partial if some scenes were generated, failed if none
-      const status = currentScenes.length > 0 ? "partial" : "failed";
-
-      setCachedJob(currentJobId, {
-        videoId: currentForm.videoId || "",
-        videoUrl: currentForm.videoUrl || "",
-        summary: cancelledSummary,
-        scenes: currentScenes,
-        characterRegistry: currentCharacters,
-        script: currentScript || undefined,
-        logs: currentLogs,
-        status,
-        error: {
-          message: lang.prompt.history.jobCancelled,
-          type: "UNKNOWN_ERROR",
-          failedBatch: batch,
-          totalBatches: totalBatches,
-          retryable: true,
-        },
-        resumeData: {
-          completedBatches: Math.max(0, batch - 1), // BUG-001 FIX: Prevent negative value
-          existingScenes: currentScenes,
-          existingCharacters: currentCharacters,
-          workflow: currentForm.workflow,
-          mode: currentForm.mode,
-          batchSize: currentForm.batchSize,
-          sceneCount: currentForm.sceneCount,
-          voice: currentForm.audio.voiceLanguage,
-          useVideoTitle: currentForm.useVideoTitle,
-          useVideoDescription: currentForm.useVideoDescription,
-          useVideoChapters: currentForm.useVideoChapters,
-          useVideoCaptions: currentForm.useVideoCaptions,
-            negativePrompt: currentForm.negativePrompt,
-          extractColorProfile: currentForm.extractColorProfile,
-          mediaType: currentForm.mediaType,
-          sceneCountMode: currentForm.sceneCountMode,
-          startTime: currentForm.startTime,
-          endTime: currentForm.endTime,
-          selfieMode: currentForm.selfieMode,
-        },
-      });
-
-      setHasHistory(true);
-    }
+    // Save cancelled job to history
+    const cancelStatus = scenesRef.current.length > 0 ? "partial" : "failed";
+    saveJobState(cancelStatus as "partial" | "failed", {
+      error: {
+        message: lang.prompt.history.jobCancelled,
+        type: "UNKNOWN_ERROR",
+        failedBatch: batch,
+        totalBatches: totalBatches,
+        retryable: true,
+      },
+      completedBatches: Math.max(0, batch - 1),
+    });
 
     setState("idle");
   // Removed summary from deps - using summaryRef instead to avoid stale closures
   // batch and totalBatches are safe since they're only used for error metadata
-  }, [lang, batch, totalBatches]);
+  }, [lang, batch, totalBatches, saveJobState]);
 
   const handleResumeYes = useCallback(async () => {
     if (!resumeProgressData) {
@@ -1303,9 +1179,10 @@ export default function PromptPage() {
   // Handle retrying a failed job from the last successful batch
   const handleRetryJob = useCallback(async (retryJobId: string) => {
     const cached = await getCachedJob(retryJobId);
+    const config = cached ? getResumeConfig(cached) : null;
 
-    // D1-only: Check if we have resume data from the job cache
-    if (!cached || !cached.resumeData) {
+    // Check if we have resume config (handles both new and old format)
+    if (!cached || !config) {
       console.error("Cannot retry job: missing cache or resume data");
 
       // If job has valid scenes, it's actually completed - just view it
@@ -1315,7 +1192,6 @@ export default function PromptPage() {
         return;
       }
 
-      // Otherwise, show error to user
       setError(lang.prompt.cacheExpired || "Job cache expired. Cannot resume.");
       return;
     }
@@ -1326,13 +1202,11 @@ export default function PromptPage() {
       return;
     }
 
-    const rd = cached.resumeData;
-
-    // D1-only: Resume data is the single source of truth
-    const existingScenes = rd.existingScenes ?? [];
-    const existingCharacters = rd.existingCharacters ?? {};
-    const completedBatches = rd.completedBatches ?? 0;
-    const colorProfile = rd.colorProfile ?? cached.colorProfile;
+    // Scenes and characters always come from top-level (not resumeData)
+    const existingScenes = cached.scenes;
+    const existingCharacters = cached.characterRegistry;
+    const completedBatches = config.completedBatches ?? 0;
+    const cachedColorProfile = cached.colorProfile;
 
     // Pre-populate state with existing data
     setScenes(existingScenes);
@@ -1341,47 +1215,45 @@ export default function PromptPage() {
     if (cached.script) {
       setGeneratedScript(cached.script);
     }
-    // Restore color profile if it exists
-    if (colorProfile) {
-      setColorProfile(colorProfile);
+    if (cachedColorProfile) {
+      setColorProfile(cachedColorProfile);
       setColorProfileConfidence(0.8);
     }
 
     // Retry from the failed batch — restore all original settings
-    // Convert legacy voice to AudioSettings for backward compat
     await handleSubmit({
-      workflow: rd.workflow ?? "url-to-scenes",
+      workflow: config.workflow ?? "url-to-scenes",
       videoUrl: cached.videoUrl,
-      scriptText: (rd.workflow === "script-to-scenes" || rd.workflow === "url-to-scenes")
+      scriptText: (config.workflow === "script-to-scenes" || config.workflow === "url-to-scenes")
         ? cached.script?.rawText
         : undefined,
-      mode: rd.mode ?? "hybrid",
-      sceneCountMode: rd.sceneCountMode ?? "auto",
-      sceneCount: rd.sceneCount ?? 40,
-      batchSize: rd.batchSize ?? 30,
+      mode: config.mode ?? "hybrid",
+      sceneCountMode: config.sceneCountMode ?? "auto",
+      sceneCount: config.sceneCount ?? 40,
+      batchSize: config.batchSize ?? 30,
       audio: {
-        voiceLanguage: rd.voice ?? "no-voice",
+        voiceLanguage: config.voice ?? "no-voice",
         music: true,
         soundEffects: true,
         environmentalAudio: true,
       },
-      useVideoTitle: rd.useVideoTitle ?? true,
-      useVideoDescription: rd.useVideoDescription ?? true,
-      useVideoChapters: rd.useVideoChapters ?? true,
-      useVideoCaptions: rd.useVideoCaptions ?? true,
-      negativePrompt: rd.negativePrompt,
-      extractColorProfile: !colorProfile, // Skip Phase 0 if we have cached color profile
-      existingColorProfile: colorProfile,
-      mediaType: rd.mediaType ?? "video",
-      startTime: rd.startTime,
-      endTime: rd.endTime,
-      selfieMode: rd.selfieMode ?? false,
+      useVideoTitle: config.useVideoTitle ?? true,
+      useVideoDescription: config.useVideoDescription ?? true,
+      useVideoChapters: config.useVideoChapters ?? true,
+      useVideoCaptions: config.useVideoCaptions ?? true,
+      negativePrompt: config.negativePrompt,
+      extractColorProfile: !cachedColorProfile, // Skip Phase 0 if we have cached color profile
+      existingColorProfile: cachedColorProfile,
+      mediaType: config.mediaType ?? "video",
+      startTime: config.startTime,
+      endTime: config.endTime,
+      selfieMode: config.selfieMode ?? false,
       // Resume parameters
       resumeFromBatch: completedBatches,
       existingScenes,
       existingCharacters,
-      resumeJobId: retryJobId, // Reuse the same job ID (matches server schema)
-      lastInteractionId: rd.lastInteractionId, // Gemini session continuity
+      resumeJobId: retryJobId,
+      lastInteractionId: config.lastInteractionId,
     });
   }, [handleSubmit, handleViewJob, lang.prompt.cacheExpired, lang.prompt.jobExpiredCannotRetry]);
 
@@ -1521,6 +1393,7 @@ export default function PromptPage() {
                 message={loadingMessage}
                 characters={characters}
                 onCancel={handleCancel}
+                activeSettings={currentFormData}
               />
             </motion.div>
           )}
@@ -1675,8 +1548,6 @@ export default function PromptPage() {
                 colorProfile={colorProfile ?? undefined}
                 colorProfileConfidence={colorProfileConfidence}
                 logEntries={logEntries}
-                onViewJob={handleViewJob}
-                onRegenerateJob={handleRegenerateJob}
                 onRetryJob={handleRetryJob}
               />
             </motion.div>

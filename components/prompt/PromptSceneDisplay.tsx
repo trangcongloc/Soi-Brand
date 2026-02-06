@@ -6,7 +6,6 @@ import type { Scene, CharacterRegistry, PromptJobSummary, GeneratedScript, Cinem
 import { downloadJson as downloadJsonUtil, downloadText } from "@/lib/prompt/download-utils";
 import { getYouTubeThumbnail } from "@/lib/prompt/utils";
 import VeoCharacterPanel from "./PromptCharacterPanel";
-import VeoHistoryPanel from "./PromptHistoryPanel";
 import VeoColorProfilePanel from "./PromptColorProfilePanel";
 import VeoLogPanel from "./PromptLogPanel";
 import VeoSceneCards from "./PromptSceneCards";
@@ -14,7 +13,7 @@ import { highlightJson } from "./json-highlight";
 import styles from "./PromptSceneDisplay.module.css";
 import jsonStyles from "./PromptJsonView.module.css";
 
-// Batch-based pagination for JSON view (uses actual batch size from job)
+// Paginated JSON view (groups scenes into pages for readability)
 
 interface VeoSceneDisplayProps {
   scenes: Scene[];
@@ -25,13 +24,10 @@ interface VeoSceneDisplayProps {
   colorProfile?: CinematicProfile;
   colorProfileConfidence?: number;
   logEntries?: GeminiLogEntry[];
-  onViewJob?: (jobId: string) => void;
-  onRegenerateJob?: (jobId: string) => void;
   onRetryJob?: (jobId: string) => void;
-  onJobsChange?: () => void;
 }
 
-type TabType = "scenes" | "json" | "characters" | "color" | "history" | "logs";
+type TabType = "scenes" | "json" | "characters" | "color" | "logs";
 
 function VeoSceneDisplay({
   scenes,
@@ -42,10 +38,7 @@ function VeoSceneDisplay({
   colorProfile,
   colorProfileConfidence,
   logEntries,
-  onViewJob,
-  onRegenerateJob,
   onRetryJob,
-  onJobsChange,
 }: VeoSceneDisplayProps) {
   const lang = useLang();
   const [activeTab, setActiveTab] = useState<TabType>("scenes");
@@ -96,18 +89,18 @@ function VeoSceneDisplay({
     }
   }, [script, jobId, downloadJson]);
 
-  // Batch-based pagination for JSON view
-  const batchSize = summary.batchSize || 30; // Default to 30 if not specified
-  const totalBatches = useMemo(() => Math.ceil(scenes.length / batchSize), [scenes.length, batchSize]);
-  const hasMultipleBatches = totalBatches > 1;
+  // Paginated JSON view: group scenes into pages of batchSize for readability
+  const pageSize = summary.batchSize || 30;
+  const totalPages = useMemo(() => Math.ceil(scenes.length / pageSize), [scenes.length, pageSize]);
+  const hasMultiplePages = totalPages > 1;
 
   // Get scenes for current batch in JSON view
   const batchScenes = useMemo(() => {
-    if (!hasMultipleBatches) return scenes;
-    const start = jsonPage * batchSize;
-    const end = start + batchSize;
+    if (!hasMultiplePages) return scenes;
+    const start = jsonPage * pageSize;
+    const end = start + pageSize;
     return scenes.slice(start, end);
-  }, [scenes, jsonPage, batchSize, hasMultipleBatches]);
+  }, [scenes, jsonPage, pageSize, hasMultiplePages]);
 
   // Scenes JSON for the JSON tab (batch-based view)
   const scenesJson = useMemo(() => JSON.stringify(batchScenes, null, 2), [batchScenes]);
@@ -128,14 +121,14 @@ function VeoSceneDisplay({
     }
   }, [fullScenesJson]);
 
-  // Batch navigation controls for JSON view
-  const handleJsonPrevBatch = useCallback(() => {
+  // Page navigation controls for JSON view
+  const handleJsonPrevPage = useCallback(() => {
     setJsonPage(p => Math.max(0, p - 1));
   }, []);
 
-  const handleJsonNextBatch = useCallback(() => {
-    setJsonPage(p => Math.min(totalBatches - 1, p + 1));
-  }, [totalBatches]);
+  const handleJsonNextPage = useCallback(() => {
+    setJsonPage(p => Math.min(totalPages - 1, p + 1));
+  }, [totalPages]);
 
   const hasLogs = logEntries && logEntries.length > 0;
 
@@ -145,7 +138,6 @@ function VeoSceneDisplay({
     { key: "characters", label: lang.prompt.result.characters },
     ...(colorProfile ? [{ key: "color" as TabType, label: lang.prompt.result.color }] : []),
     ...(hasLogs ? [{ key: "logs" as TabType, label: "Logs" }] : []),
-    ...(onViewJob ? [{ key: "history" as TabType, label: lang.prompt.history.title }] : []),
   ];
 
   // Get video thumbnail URL
@@ -299,23 +291,23 @@ function VeoSceneDisplay({
           <VeoSceneCards scenes={scenes} />
         )}
 
-        {/* JSON Tab - Raw scenes JSON code view (batch-based) */}
+        {/* JSON Tab - Raw scenes JSON code view (paginated) */}
         {activeTab === "json" && (
           <div className={jsonStyles.jsonViewContainer}>
             <div className={jsonStyles.jsonHeader}>
               <h3>
                 Scenes ({scenes.length})
-                {hasMultipleBatches && (
+                {hasMultiplePages && (
                   <span style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '0.5rem', opacity: 0.7 }}>
-                    - Batch {jsonPage + 1}/{totalBatches} (scenes {jsonPage * batchSize + 1}-{Math.min((jsonPage + 1) * batchSize, scenes.length)})
+                    - Page {jsonPage + 1}/{totalPages} (scenes {jsonPage * pageSize + 1}-{Math.min((jsonPage + 1) * pageSize, scenes.length)})
                   </span>
                 )}
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                {hasMultipleBatches && (
+                {hasMultiplePages && (
                   <>
                     <button
-                      onClick={handleJsonPrevBatch}
+                      onClick={handleJsonPrevPage}
                       disabled={jsonPage === 0}
                       className={jsonStyles.copyButton}
                       style={{
@@ -327,15 +319,15 @@ function VeoSceneDisplay({
                       ← Prev
                     </button>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      Batch {jsonPage + 1} / {totalBatches}
+                      Page {jsonPage + 1} / {totalPages}
                     </span>
                     <button
-                      onClick={handleJsonNextBatch}
-                      disabled={jsonPage >= totalBatches - 1}
+                      onClick={handleJsonNextPage}
+                      disabled={jsonPage >= totalPages - 1}
                       className={jsonStyles.copyButton}
                       style={{
-                        opacity: jsonPage >= totalBatches - 1 ? 0.5 : 1,
-                        cursor: jsonPage >= totalBatches - 1 ? 'not-allowed' : 'pointer',
+                        opacity: jsonPage >= totalPages - 1 ? 0.5 : 1,
+                        cursor: jsonPage >= totalPages - 1 ? 'not-allowed' : 'pointer',
                         padding: '0.5rem 0.75rem'
                       }}
                     >
@@ -380,16 +372,6 @@ function VeoSceneDisplay({
           <VeoLogPanel entries={logEntries} />
         )}
 
-        {/* History Tab */}
-        {activeTab === "history" && onViewJob && (
-          <VeoHistoryPanel
-            onViewJob={onViewJob}
-            onRegenerateJob={onRegenerateJob}
-            onRetryJob={onRetryJob}
-            currentJobId={jobId}
-            onJobsChange={onJobsChange}
-          />
-        )}
       </div>
     </div>
   );
