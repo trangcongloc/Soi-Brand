@@ -18,7 +18,7 @@ import { validateAIResponseSchema, AIResponse } from "./schemas";
  * Extract and parse JSON from AI response
  * Handles markdown code blocks and attempts to repair common JSON issues
  */
-function extractAndParseJSON(text: string): any {
+function extractAndParseJSON(text: string): unknown {
     let jsonText = text.trim();
 
     // Remove markdown code block markers if present
@@ -277,12 +277,16 @@ export async function generateMarketingReport(
         };
 
         return report;
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error("Error generating marketing report", error);
 
         // Extract error details
-        const errorMessage = error?.message || "";
-        const errorStatus = error?.status || error?.response?.status;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorObj = typeof error === "object" && error !== null ? error as Record<string, unknown> : {};
+        const errorStatus = (errorObj.status as number | undefined) ??
+            (typeof errorObj.response === "object" && errorObj.response !== null
+                ? (errorObj.response as Record<string, unknown>).status as number | undefined
+                : undefined);
 
         // Check for JSON parsing errors specifically
         if (

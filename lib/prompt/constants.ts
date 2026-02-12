@@ -163,6 +163,13 @@ export const RECOVERY_MAX_DELAY_MS = 30000;
 export const RECOVERY_BACKOFF_MULTIPLIER = 2;
 
 // ============================================================================
+// IMAGE GENERATION
+// ============================================================================
+
+export const DEFAULT_CHARACTER_IMAGE_ASPECT_RATIO = "1:1";
+export const THINKING_BUDGET_IMAGE_GEN = 1024;
+
+// ============================================================================
 // FORM SETTINGS PERSISTENCE
 // ============================================================================
 
