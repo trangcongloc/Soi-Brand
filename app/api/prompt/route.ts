@@ -50,6 +50,7 @@ import {
   SSE_FLUSH_DELAY_MS,
   SSE_FLUSH_RETRIES,
 } from "@/lib/prompt/constants";
+import { UI_EVENT_TRACKER_CLEANUP_MS } from "@/lib/ui-config";
 
 // Import from extracted modules
 import {
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
         clearInterval(keepAliveInterval);
         clearTimeout(streamTimeout);
         // Clean up event tracker after a delay (allow recovery for a short window)
-        setTimeout(() => eventTracker.clear(jobId), 5 * 60 * 1000); // 5 minutes
+        setTimeout(() => eventTracker.clear(jobId), UI_EVENT_TRACKER_CLEANUP_MS);
         try {
           controller.close();
         } catch {

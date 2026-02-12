@@ -21,6 +21,7 @@ import { getUserSettings } from "@/lib/userSettings";
 import { extractChannelId, extractUsername } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { updateYouTubeQuota, updateGeminiQuota } from "@/lib/apiQuota";
+import { STORAGE_KEYS } from "@/lib/ui-config";
 import {
     getCachedReportsForChannel,
     setCachedReport,
@@ -28,7 +29,7 @@ import {
     resolveChannelId,
 } from "@/lib/cache";
 
-const CURRENT_REPORT_KEY = "soibrand_current_report";
+const CURRENT_REPORT_KEY = STORAGE_KEYS.CURRENT_REPORT;
 
 const staggerContainer = {
     initial: { opacity: 0 },
@@ -72,7 +73,7 @@ export default function Home() {
     const { lang, langCode } = useLanguage();
     const [showSplash, setShowSplash] = useState(() => {
         if (typeof window === "undefined") return false;
-        return !sessionStorage.getItem("soibrand-splash-shown");
+        return !sessionStorage.getItem(STORAGE_KEYS.SPLASH_SHOWN);
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -231,7 +232,7 @@ export default function Home() {
             <AnimatePresence>
                 {showSplash && (
                     <SplashScreen onComplete={() => {
-                        sessionStorage.setItem("soibrand-splash-shown", "true");
+                        sessionStorage.setItem(STORAGE_KEYS.SPLASH_SHOWN, "true");
                         setShowSplash(false);
                     }} />
                 )}

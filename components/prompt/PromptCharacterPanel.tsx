@@ -6,6 +6,7 @@ import { useLang } from "@/lib/lang";
 import { Scene, CharacterRegistry, getCharacterDescription } from "@/lib/prompt";
 import { getUserSettings } from "@/lib/userSettings";
 import { DEFAULT_IMAGE_MODEL } from "@/lib/geminiModels";
+import { API_ENDPOINTS } from "@/lib/ui-config";
 import styles from "./PromptCharacterPanel.module.css";
 
 interface VeoCharacterPanelProps {
@@ -56,7 +57,7 @@ function VeoCharacterPanel({ characterRegistry, scenes }: VeoCharacterPanelProps
 
       const model = settings.geminiImageModel || DEFAULT_IMAGE_MODEL;
 
-      const response = await fetch("/api/prompt/generate-image", {
+      const response = await fetch(API_ENDPOINTS.PROMPT_GENERATE_IMAGE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

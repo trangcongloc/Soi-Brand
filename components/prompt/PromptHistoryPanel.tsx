@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
 import { getCachedJobList, deleteCachedJob, CachedPromptJobInfo, isUsingCloudStorage, syncJobToCloud } from "@/lib/prompt";
 import { listenToJobUpdates } from "@/lib/prompt/storage-utils";
+import { CUSTOM_EVENTS } from "@/lib/ui-config";
 import styles from "./PromptHistoryPanel.module.css";
 
 interface VeoHistoryPanelProps {
@@ -79,11 +80,11 @@ function VeoHistoryPanel({ onViewJob, onRegenerateJob, onRetryJob, currentJobId,
     const handleKeyChange = () => {
       refreshJobs();
     };
-    window.addEventListener('database-key-changed', handleKeyChange);
+    window.addEventListener(CUSTOM_EVENTS.DATABASE_KEY_CHANGED, handleKeyChange);
 
     return () => {
       unsubscribe();
-      window.removeEventListener('database-key-changed', handleKeyChange);
+      window.removeEventListener(CUSTOM_EVENTS.DATABASE_KEY_CHANGED, handleKeyChange);
     };
   }, [refreshJobs]);
 

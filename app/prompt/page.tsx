@@ -44,6 +44,7 @@ import {
 // D1-only: Phase cache removed - logs are stored in CachedPromptJob.logs
 import { dispatchJobUpdateEvent } from "@/lib/prompt/storage-utils";
 import { PromptForm, PromptSceneDisplay, PromptHistoryPanel, PromptLogPanel } from "@/components/prompt";
+import { UI_ERROR_AUTO_DISMISS_MS, CUSTOM_EVENTS, API_ENDPOINTS } from "@/lib/ui-config";
 import styles from "./page.module.css";
 
 type PageState = "idle" | "loading" | "script-complete" | "complete" | "error";
@@ -181,10 +182,10 @@ export default function PromptPage() {
         if (mounted) setHasHistory(jobs.length > 0);
       });
     };
-    window.addEventListener('database-key-changed', handleDatabaseKeyChange);
+    window.addEventListener(CUSTOM_EVENTS.DATABASE_KEY_CHANGED, handleDatabaseKeyChange);
     return () => {
       mounted = false;
-      window.removeEventListener('database-key-changed', handleDatabaseKeyChange);
+      window.removeEventListener(CUSTOM_EVENTS.DATABASE_KEY_CHANGED, handleDatabaseKeyChange);
     };
   }, []);
 
@@ -238,14 +239,14 @@ export default function PromptPage() {
       if (settings.databaseKey) {
         const jobs = await getCachedJobList();
         setHasHistory(jobs.length > 0);
-        window.dispatchEvent(new CustomEvent('database-key-changed'));
+        window.dispatchEvent(new CustomEvent(CUSTOM_EVENTS.DATABASE_KEY_CHANGED));
       }
 
       // Verify API key if present
       if (settings.geminiApiKey) {
         setKeyStatus("verifying");
         try {
-          const response = await fetch("/api/prompt/verify-key", {
+          const response = await fetch(API_ENDPOINTS.PROMPT_VERIFY_KEY, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ apiKey: settings.geminiApiKey }),
@@ -298,7 +299,7 @@ export default function PromptPage() {
   // Auto dismiss error after 5 seconds (only for toast notifications, not error state)
   useEffect(() => {
     if (error && state !== "loading" && state !== "error") {
-      const timer = setTimeout(() => setError(null), 5000);
+      const timer = setTimeout(() => setError(null), UI_ERROR_AUTO_DISMISS_MS);
       return () => clearTimeout(timer);
     }
   }, [error, state]);
@@ -520,7 +521,7 @@ export default function PromptPage() {
         };
 
         // Dispatch custom event to trigger retry (handled in useEffect)
-        window.dispatchEvent(new CustomEvent('prompt-auto-retry', { detail: retryOptions }));
+        window.dispatchEvent(new CustomEvent(CUSTOM_EVENTS.PROMPT_AUTO_RETRY, { detail: retryOptions }));
       }, delay);
 
       return true;
@@ -537,8 +538,8 @@ export default function PromptPage() {
       handleSubmitRef.current?.(retryOptions);
     };
 
-    window.addEventListener('prompt-auto-retry', handleAutoRetryEvent);
-    return () => window.removeEventListener('prompt-auto-retry', handleAutoRetryEvent);
+    window.addEventListener(CUSTOM_EVENTS.PROMPT_AUTO_RETRY, handleAutoRetryEvent);
+    return () => window.removeEventListener(CUSTOM_EVENTS.PROMPT_AUTO_RETRY, handleAutoRetryEvent);
   }, []);
 
   // Reference to handleSubmit for auto-retry
@@ -688,7 +689,7 @@ export default function PromptPage() {
           ...(geminiModel && { geminiModel }),
         };
 
-        const response = await fetch("/api/prompt", {
+        const response = await fetch(API_ENDPOINTS.PROMPT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),

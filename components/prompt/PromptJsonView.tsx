@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Scene, CharacterRegistry, PromptJobSummary } from "@/lib/prompt/types";
+import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/ui-config";
 import styles from "./PromptJsonView.module.css";
 
 interface VeoJsonViewProps {
@@ -70,11 +71,11 @@ export function VeoJsonView({ scenes, characterRegistry, summary, jobId }: VeoJs
     try {
       await navigator.clipboard.writeText(JSON.stringify(jsonData, null, 2));
       setCopyStatus("Copied!");
-      setTimeout(() => setCopyStatus(""), 2000);
+      setTimeout(() => setCopyStatus(""), UI_COPY_STATUS_TIMEOUT_MS);
     } catch (err) {
       console.error("Failed to copy JSON:", err);
       setCopyStatus("Failed to copy");
-      setTimeout(() => setCopyStatus(""), 2000);
+      setTimeout(() => setCopyStatus(""), UI_COPY_STATUS_TIMEOUT_MS);
     }
   }, [jsonData]);
 

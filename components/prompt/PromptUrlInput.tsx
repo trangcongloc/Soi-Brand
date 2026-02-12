@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PromptWorkflow, extractVideoId, isValidYouTubeUrl, getYouTubeThumbnail } from "@/lib/prompt";
 import { useLang } from "@/lib/lang";
+import { UI_URL_VALIDATION_DEBOUNCE_MS } from "@/lib/ui-config";
 import styles from "./PromptForm.module.css";
 
 type ValidationStatus = "idle" | "loading" | "valid" | "invalid";
@@ -70,7 +71,7 @@ export function VeoUrlInput({
         setThumbnailUrl(null);
         setValidationStatus("invalid");
       }
-    }, 500);
+    }, UI_URL_VALIDATION_DEBOUNCE_MS);
 
     return () => clearTimeout(timeoutId);
   }, []);

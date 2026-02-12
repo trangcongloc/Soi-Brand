@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
 import { logger } from "@/lib/logger";
 import { Scene } from "@/lib/prompt";
+import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/ui-config";
 import { findNearestCinematicColor } from "@/lib/prompt/colorMapper";
 import styles from "./PromptSceneCard.module.css";
 
@@ -41,7 +42,7 @@ function VeoSceneCard({ scene, index }: VeoSceneCardProps) {
     try {
       await navigator.clipboard.writeText(scene.prompt);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), UI_COPY_STATUS_TIMEOUT_MS);
     } catch (err) {
       logger.error("Failed to copy:", err);
     }

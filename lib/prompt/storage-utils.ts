@@ -4,6 +4,7 @@
  */
 
 import { isBrowser } from "./browser-utils";
+import { CUSTOM_EVENTS } from "@/lib/ui-config";
 
 /**
  * Safely retrieves and parses a value from localStorage
@@ -71,7 +72,7 @@ export function dispatchJobUpdateEvent(jobId: string | null): void {
 
   // CustomEvent for same-tab updates
   window.dispatchEvent(
-    new CustomEvent("prompt-job-updated", { detail: { jobId } })
+    new CustomEvent(CUSTOM_EVENTS.PROMPT_JOB_UPDATED, { detail: { jobId } })
   );
 
   // BroadcastChannel for cross-tab updates
@@ -98,11 +99,11 @@ export function listenToJobUpdates(
     callback(e.data.jobId);
   };
 
-  window.addEventListener("prompt-job-updated", handleCustomEvent);
+  window.addEventListener(CUSTOM_EVENTS.PROMPT_JOB_UPDATED, handleCustomEvent);
   jobUpdateChannel?.addEventListener("message", handleBroadcast);
 
   return () => {
-    window.removeEventListener("prompt-job-updated", handleCustomEvent);
+    window.removeEventListener(CUSTOM_EVENTS.PROMPT_JOB_UPDATED, handleCustomEvent);
     jobUpdateChannel?.removeEventListener("message", handleBroadcast);
   };
 }

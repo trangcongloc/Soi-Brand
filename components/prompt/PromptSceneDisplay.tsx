@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useLang } from "@/lib/lang";
 import type { Scene, CharacterRegistry, PromptJobSummary, GeneratedScript, CinematicProfile, GeminiLogEntry } from "@/lib/prompt";
 import { downloadJson as downloadJsonUtil, downloadText } from "@/lib/prompt/download-utils";
+import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/ui-config";
 import { getYouTubeThumbnail } from "@/lib/prompt/utils";
 import VeoCharacterPanel from "./PromptCharacterPanel";
 import VeoColorProfilePanel from "./PromptColorProfilePanel";
@@ -114,10 +115,10 @@ function VeoSceneDisplay({
       // BUG FIX #14: Always copy full JSON, not just current page
       await navigator.clipboard.writeText(fullScenesJson);
       setScenesCopyStatus("Copied!");
-      setTimeout(() => setScenesCopyStatus(""), 2000);
+      setTimeout(() => setScenesCopyStatus(""), UI_COPY_STATUS_TIMEOUT_MS);
     } catch {
       setScenesCopyStatus("Failed");
-      setTimeout(() => setScenesCopyStatus(""), 2000);
+      setTimeout(() => setScenesCopyStatus(""), UI_COPY_STATUS_TIMEOUT_MS);
     }
   }, [fullScenesJson]);
 

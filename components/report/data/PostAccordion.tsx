@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import styles from "@/components/ReportDisplay.module.css";
 import { useLang, useLanguage } from "@/lib/lang";
+import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/ui-config";
 import {
     formatFullNumber,
     formatDuration,
@@ -31,7 +32,7 @@ export default function PostAccordion({
         const text = tags.join(", ");
         navigator.clipboard.writeText(text);
         setCopyStatus("Copied!");
-        setTimeout(() => setCopyStatus(null), 2000);
+        setTimeout(() => setCopyStatus(null), UI_COPY_STATUS_TIMEOUT_MS);
     };
 
     const toggleAccordion = (index: number) => {

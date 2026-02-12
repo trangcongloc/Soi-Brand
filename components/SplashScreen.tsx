@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { UI_SPLASH_COMPLETION_DELAY_MS } from "@/lib/ui-config";
 import styles from "./SplashScreen.module.css";
 
 interface SplashScreenProps {
@@ -101,7 +102,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                             delay: 0.3,
                         }}
                         onAnimationComplete={() => {
-                            setTimeout(onComplete, 200);
+                            setTimeout(onComplete, UI_SPLASH_COMPLETION_DELAY_MS);
                         }}
                     />
                 </div>

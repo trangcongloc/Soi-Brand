@@ -4,6 +4,7 @@ import { memo, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/lang";
 import { GeneratedScript } from "@/lib/prompt";
+import { UI_COPY_STATUS_TIMEOUT_MS } from "@/lib/ui-config";
 import styles from "./PromptLoadingState.module.css";
 
 interface VeoLoadingStateProps {
@@ -72,7 +73,7 @@ function VeoLoadingState({
     if (!generatedScript) return;
     navigator.clipboard.writeText(generatedScript.rawText);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), UI_COPY_STATUS_TIMEOUT_MS);
   }, [generatedScript]);
 
   return (

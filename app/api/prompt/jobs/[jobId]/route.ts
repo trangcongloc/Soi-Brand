@@ -14,6 +14,7 @@ import {
   eventTracker,
   createSSEEncoder,
 } from "@/lib/prompt/api/helpers";
+import { UI_SSE_REPLAY_DELAY_MS } from "@/lib/ui-config";
 
 export const runtime = "nodejs"; // Use Node.js runtime for zlib
 
@@ -148,7 +149,7 @@ function handleStreamRecovery(jobId: string, lastEventId: string | null): Respon
           if (streamClosed) break;
           controller.enqueue(sse.encode(trackedEvent.event, trackedEvent.eventId));
           // Small delay between events to not overwhelm client
-          await new Promise(r => setTimeout(r, 10));
+          await new Promise(r => setTimeout(r, UI_SSE_REPLAY_DELAY_MS));
         }
 
         // Send recovery complete event
